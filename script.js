@@ -3,7 +3,13 @@ const launchButton = document.querySelector('#launchButton');
 const desktop = document.querySelector('#desktop');
 const windows = [...document.querySelectorAll('.app-window')];
 const dockItems = [...document.querySelectorAll('.dock-item')];
+const pageViewport = document.querySelector('#pageViewport');
+const pageTrack = document.querySelector('#pageTrack');
+const pages = [...document.querySelectorAll('.app-page')];
+const pageDots = [...document.querySelectorAll('.page-dots i')];
+const pageCounter = document.querySelector('#pageCounter');
 let topZ = 60;
+let activePage = 0;
 
 function launch() {
   document.body.classList.add('is-launched');
@@ -32,8 +38,92 @@ function focusWindow(windowElement) {
   windowElement.style.zIndex = topZ;
   windows.forEach((item) => item.classList.remove('focused'));
   windowElement.classList.add('focused');
-  dockItems.forEach((item) => item.classList.toggle('active', item.dataset.open === windowElement.id));
 }
+
+function switchPage(index, animate = true) {
+  activePage = Math.max(0, Math.min(pages.length - 1, index));
+  pageTrack.classList.toggle('is-dragging', !animate);
+  pageTrack.style.transform = `translate3d(${-activePage * 100}%, 0, 0)`;
+  pages.forEach((page, pageIndex) => {
+    const isActive = pageIndex === activePage;
+    page.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    page.toggleAttribute('inert', !isActive);
+  });
+  dockItems.forEach((item, itemIndex) => {
+    const isActive = itemIndex === activePage;
+    item.classList.toggle('active', isActive);
+    if (isActive) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+  pageDots.forEach((dot, dotIndex) => dot.classList.toggle('active', dotIndex === activePage));
+  pageCounter.textContent = `${String(activePage + 1).padStart(2, '0')} / ${String(pages.length).padStart(2, '0')}`;
+}
+
+dockItems.forEach((item) => {
+  item.addEventListener('click', () => {
+    windows.filter((windowElement) => !windowElement.hidden).forEach(closeWindow);
+    switchPage(Number(item.dataset.page));
+  });
+});
+
+let swipePointer = null;
+let swipeStartX = 0;
+let swipeStartY = 0;
+let swipeStartedAt = 0;
+let swipeDeltaX = 0;
+let horizontalSwipe = false;
+
+pageViewport.addEventListener('pointerdown', (event) => {
+  if (!event.isPrimary || event.button !== 0) return;
+  swipePointer = event.pointerId;
+  swipeStartX = event.clientX;
+  swipeStartY = event.clientY;
+  swipeStartedAt = performance.now();
+  swipeDeltaX = 0;
+  horizontalSwipe = false;
+});
+
+pageViewport.addEventListener('pointermove', (event) => {
+  if (event.pointerId !== swipePointer) return;
+  const dx = event.clientX - swipeStartX;
+  const dy = event.clientY - swipeStartY;
+  if (!horizontalSwipe && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+    horizontalSwipe = true;
+    pageViewport.setPointerCapture(event.pointerId);
+    pageTrack.classList.add('is-dragging');
+  }
+  if (!horizontalSwipe) return;
+  const atEdge = (activePage === 0 && dx > 0) || (activePage === pages.length - 1 && dx < 0);
+  swipeDeltaX = atEdge ? dx * 0.28 : dx;
+  pageTrack.style.transform = `translate3d(calc(${-activePage * 100}% + ${swipeDeltaX}px), 0, 0)`;
+});
+
+function finishSwipe(event) {
+  if (event.pointerId !== swipePointer) return;
+  const elapsed = Math.max(performance.now() - swipeStartedAt, 1);
+  const isFlick = Math.abs(swipeDeltaX / elapsed) > 0.45;
+  const shouldChange = Math.abs(swipeDeltaX) > Math.min(90, pageViewport.clientWidth * 0.16) || isFlick;
+  let nextPage = activePage;
+  if (horizontalSwipe && shouldChange) nextPage += swipeDeltaX < 0 ? 1 : -1;
+  switchPage(nextPage);
+  swipePointer = null;
+  swipeDeltaX = 0;
+  window.setTimeout(() => { horizontalSwipe = false; }, 0);
+}
+
+pageViewport.addEventListener('pointerup', finishSwipe);
+pageViewport.addEventListener('pointercancel', finishSwipe);
+pageViewport.addEventListener('click', (event) => {
+  if (!horizontalSwipe) return;
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
+pageViewport.addEventListener('keydown', (event) => {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  event.preventDefault();
+  switchPage(activePage + (event.key === 'ArrowRight' ? 1 : -1));
+});
 
 function openWindow(id) {
   const windowElement = document.getElementById(id);
@@ -105,12 +195,17 @@ function makeDraggable(element, handle, bounds) {
 windows.forEach((windowElement) => makeDraggable(windowElement, windowElement.querySelector('.window-header'), desktop));
 
 document.querySelectorAll('.desktop-icon').forEach((icon) => {
+  const dragThreshold = 7;
+  let activePointer = null;
   let moved = false;
   let startX = 0;
   let startY = 0;
   let originX = 0;
   let originY = 0;
   icon.addEventListener('pointerdown', (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    event.preventDefault();
+    activePointer = event.pointerId;
     moved = false;
     icon.setPointerCapture(event.pointerId);
     const rect = icon.getBoundingClientRect();
@@ -124,23 +219,32 @@ document.querySelectorAll('.desktop-icon').forEach((icon) => {
     icon.style.zIndex = 30;
   });
   icon.addEventListener('pointermove', (event) => {
-    if (!icon.hasPointerCapture(event.pointerId)) return;
+    if (event.pointerId !== activePointer) return;
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
-    if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+    if (Math.hypot(dx, dy) >= dragThreshold) moved = true;
     if (moved) {
       icon.style.left = `${Math.max(4, Math.min(window.innerWidth - icon.offsetWidth - 4, originX + dx))}px`;
       icon.style.top = `${Math.max(55, Math.min(window.innerHeight - icon.offsetHeight - 85, originY + dy))}px`;
     }
   });
   icon.addEventListener('pointerup', (event) => {
-    if (!moved) openWindow(icon.dataset.open);
+    if (event.pointerId !== activePointer) return;
+    const distance = Math.hypot(event.clientX - startX, event.clientY - startY);
+    const wasDragged = moved || distance >= dragThreshold;
     if (icon.hasPointerCapture(event.pointerId)) icon.releasePointerCapture(event.pointerId);
+    activePointer = null;
+    if (!wasDragged) openWindow(icon.dataset.open);
   });
   icon.addEventListener('pointercancel', (event) => {
     if (icon.hasPointerCapture(event.pointerId)) icon.releasePointerCapture(event.pointerId);
+    activePointer = null;
+    moved = false;
   });
+  icon.addEventListener('dragstart', (event) => event.preventDefault());
 });
+
+switchPage(0, false);
 
 function updateClock() {
   document.querySelector('#clock').textContent = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
