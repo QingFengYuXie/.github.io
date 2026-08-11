@@ -2,24 +2,37 @@ const bootScreen = document.querySelector('#bootScreen');
 const launchButton = document.querySelector('#launchButton');
 const desktop = document.querySelector('#desktop');
 const windows = [...document.querySelectorAll('.app-window')];
+const dockItems = [...document.querySelectorAll('.dock-item')];
 let topZ = 60;
 
 function launch() {
+  document.body.classList.add('is-launched');
   bootScreen.classList.add('hidden');
-  sessionStorage.setItem('lightwind-booted', '1');
 }
 
-if (sessionStorage.getItem('lightwind-booted') === '1') bootScreen.classList.add('hidden');
 launchButton.addEventListener('click', launch);
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && !bootScreen.classList.contains('hidden')) launch();
+  if (event.key === 'Escape' && bootScreen.classList.contains('hidden')) {
+    const focusedWindow = document.querySelector('.app-window.focused:not([hidden])');
+    if (focusedWindow) closeWindow(focusedWindow);
+  }
 });
+
+if (new URLSearchParams(window.location.search).has('desktop')) launch();
+
+function syncDock(windowElement, isOpen) {
+  dockItems.forEach((item) => {
+    if (item.dataset.open === windowElement.id) item.classList.toggle('active', isOpen);
+  });
+}
 
 function focusWindow(windowElement) {
   topZ += 1;
   windowElement.style.zIndex = topZ;
   windows.forEach((item) => item.classList.remove('focused'));
   windowElement.classList.add('focused');
+  dockItems.forEach((item) => item.classList.toggle('active', item.dataset.open === windowElement.id));
 }
 
 function openWindow(id) {
@@ -33,21 +46,29 @@ function openWindow(id) {
     windowElement.dataset.positioned = 'true';
   }
   focusWindow(windowElement);
+  windowElement.classList.remove('window-enter');
+  requestAnimationFrame(() => windowElement.classList.add('window-enter'));
 }
 
-document.querySelectorAll('[data-open]').forEach((trigger) => {
+document.querySelectorAll('[data-open]:not(.desktop-icon)').forEach((trigger) => {
   trigger.addEventListener('click', () => openWindow(trigger.dataset.open));
 });
+
+function closeWindow(windowElement) {
+  windowElement.hidden = true;
+  windowElement.classList.remove('focused', 'window-enter');
+  syncDock(windowElement, false);
+}
 
 windows.forEach((windowElement) => {
   windowElement.addEventListener('pointerdown', () => focusWindow(windowElement));
   windowElement.querySelector('.close-button').addEventListener('click', (event) => {
     event.stopPropagation();
-    windowElement.hidden = true;
+    closeWindow(windowElement);
   });
   windowElement.querySelector('.minimize-button').addEventListener('click', (event) => {
     event.stopPropagation();
-    windowElement.hidden = true;
+    closeWindow(windowElement);
   });
 });
 
@@ -114,7 +135,10 @@ document.querySelectorAll('.desktop-icon').forEach((icon) => {
   });
   icon.addEventListener('pointerup', (event) => {
     if (!moved) openWindow(icon.dataset.open);
-    icon.releasePointerCapture(event.pointerId);
+    if (icon.hasPointerCapture(event.pointerId)) icon.releasePointerCapture(event.pointerId);
+  });
+  icon.addEventListener('pointercancel', (event) => {
+    if (icon.hasPointerCapture(event.pointerId)) icon.releasePointerCapture(event.pointerId);
   });
 });
 
