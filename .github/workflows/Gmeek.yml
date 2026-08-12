@@ -56,10 +56,6 @@ jobs:
         run: |
           cp -r ./* /opt/Gmeek/
           cd /opt/Gmeek/
-          mkdir -p static/os/assets/rem-pet
-          curl --fail --location --retry 3 --retry-delay 2 \
-            --output static/os/assets/rem-pet/spritesheet.webp \
-            https://raw.githubusercontent.com/legeling/awesome-codex-pet/main/pets/rem--l1/spritesheet.webp
           mkdir -p backup
           python Gmeek.py ${{ secrets.GITHUB_TOKEN }} ${{ github.repository }} --issue_number '${{ github.event.issue.number }}'
           rm -rf /tmp/Gmeek-dynamic /opt/Gmeek/docs/dynamic
