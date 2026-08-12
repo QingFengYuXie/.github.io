@@ -6,7 +6,7 @@
     <meta name="description" content="轻风雨斜 OS：一个程序员的个人桌面、作品集与博客。" />
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
-    <link rel="stylesheet" href="./styles.css?v=20260812-9" />
+    <link rel="stylesheet" href="./styles.css?v=20260813-1" />
     <link rel="stylesheet" href="../site-nav.css" />
     <script src="../site-nav.js" defer></script>
   </head>
@@ -45,8 +45,21 @@
         <span class="desktop-pet-sprite" aria-hidden="true"></span>
         <span class="desktop-pet-name">REM</span>
       </button>
+      <div class="pet-speech" id="petSpeech" role="status" aria-live="polite" hidden></div>
+
+      <aside class="desktop-status-card" aria-label="系统状态">
+        <div class="status-card-heading"><span><i></i> LIVE STATUS</span><button type="button" id="openPaletteButton" title="打开命令面板（Ctrl + K）">⌘K</button></div>
+        <p class="status-card-now">正在把小想法做成网页。</p>
+        <dl class="status-card-metrics">
+          <div><dt>FOCUS</dt><dd><i style="--value:68%"></i><b>68%</b></dd></div>
+          <div><dt>CURIOSITY</dt><dd><i style="--value:92%"></i><b>92%</b></dd></div>
+        </dl>
+        <a class="status-card-post" id="latestPost" href="/dynamic/">最近动态加载中… <b>↗</b></a>
+        <p class="status-card-runtime">UPTIME <span id="siteUptime">—</span></p>
+      </aside>
 
       <section class="desktop-icons" aria-label="桌面文件">
+        <button class="desktop-icon terminal-icon" data-open="terminalWindow" style="--x: 3; --y: 0"><span class="icon app-icon">$_</span><span>终端</span></button>
         <button class="desktop-icon" data-open="worksWindow" style="--x: 0; --y: 0"><span class="icon folder-icon">▰</span><span>作品集</span></button>
         <button class="desktop-icon" data-open="osWindow" style="--x: 1; --y: 0"><span class="icon folder-icon">▰</span><span>轻风雨斜 OS</span></button>
         <button class="desktop-icon" data-open="blogWindow" style="--x: 2; --y: 0"><span class="icon file-icon">.md</span><span>博客文章</span></button>
@@ -90,9 +103,30 @@
         <div class="window-content contact-content"><p class="eyebrow">CONTACT / 06</p><h2>来找我。</h2><p class="quote">“慢一点没有关系，重要的是不要停下来。”</p><a href="mailto:byliudazhi@foxmail.com">✉ byliudazhi@foxmail.com</a><a href="https://www.douyin.com/root/search/%E8%BD%BB%E9%A3%8E%E9%9B%A8?aid=84c5f2c1-b4d7-4435-a519-f9347f8b4471&type=general" target="_blank" rel="noreferrer">♪ 抖音：轻风雨 ↗</a></div>
       </section>
 
+      <section class="app-window terminal-window" id="terminalWindow" data-window="terminal" hidden>
+        <header class="window-header"><span><i class="mini-icon green-bg">$_</i> terminal — lightwind@universe</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
+        <div class="terminal-body" id="terminalOutput" aria-live="polite"><p><span>lightwind@universe</span>:<b>~</b>$ 欢迎来到轻风雨 OS。</p><p class="terminal-muted">输入 <code>help</code> 查看可用命令。</p></div>
+        <form class="terminal-input-row" id="terminalForm"><label for="terminalInput"><span>lightwind@universe</span>:<b>~</b>$</label><input id="terminalInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="终端命令" /></form>
+      </section>
+
+      <div class="desktop-context-menu" id="desktopContextMenu" role="menu" hidden>
+        <button type="button" data-context-action="arrange" role="menuitem">整理桌面</button>
+        <button type="button" data-context-action="reset-icons" role="menuitem">重置图标位置</button>
+        <button type="button" data-context-action="reset-pet" role="menuitem">重置宠物位置</button>
+        <button type="button" data-context-action="terminal" role="menuitem">打开终端</button>
+      </div>
+
+      <section class="command-palette" id="commandPalette" aria-label="命令面板" aria-modal="true" role="dialog" hidden>
+        <div class="command-palette-panel">
+          <div class="command-palette-input"><span>⌘</span><input id="commandPaletteInput" type="search" autocomplete="off" placeholder="搜索动态，或输入命令…" aria-label="搜索动态或命令" /><kbd>ESC</kbd></div>
+          <div class="command-palette-results" id="commandPaletteResults" role="listbox"></div>
+          <p class="command-palette-help">输入 <code>&gt;</code> 搜索命令 · Ctrl + K 打开或关闭</p>
+        </div>
+      </section>
+
     </main>
       </div>
     </div>
-    <script src="./script.js?v=20260812-9" defer></script>
+    <script src="./script.js?v=20260813-1" defer></script>
   </body>
 </html>

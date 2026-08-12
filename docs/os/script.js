@@ -56,7 +56,7 @@ document.addEventListener('keydown', (event) => {
     if (bootComplete) launch();
     else finishBootSequence();
   }
-  if (event.key === 'Escape' && bootScreen.classList.contains('hidden')) {
+  if (event.key === 'Escape' && bootScreen.classList.contains('hidden') && (!commandPalette || commandPalette.hidden)) {
     const focusedWindow = document.querySelector('.app-window.focused:not([hidden])');
     if (focusedWindow) closeWindow(focusedWindow);
   }
@@ -378,3 +378,236 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 30000);
+
+const terminalWindow = document.querySelector('#terminalWindow');
+const terminalOutput = document.querySelector('#terminalOutput');
+const terminalForm = document.querySelector('#terminalForm');
+const terminalInput = document.querySelector('#terminalInput');
+const contextMenu = document.querySelector('#desktopContextMenu');
+const commandPalette = document.querySelector('#commandPalette');
+const commandPaletteInput = document.querySelector('#commandPaletteInput');
+const commandPaletteResults = document.querySelector('#commandPaletteResults');
+const latestPost = document.querySelector('#latestPost');
+const siteUptime = document.querySelector('#siteUptime');
+const petSpeech = document.querySelector('#petSpeech');
+let paletteItems = [];
+let paletteActiveIndex = 0;
+let cachedPosts = [];
+let petSpeechTimer = 0;
+
+function safeText(value) {
+  return String(value).replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[character]));
+}
+
+function normalizeTestTitle(title) {
+  const match = String(title || '').match(/\?{6}\s*(\d{1,2})/);
+  return match ? `测试动态 ${match[1]}` : (title || '未命名动态');
+}
+
+function showPetSpeech(message, duration = 3000) {
+  if (!petSpeech || !desktopPet) return;
+  const petRect = desktopPet.getBoundingClientRect();
+  const desktopRect = desktop.getBoundingClientRect();
+  petSpeech.textContent = message;
+  petSpeech.hidden = false;
+  petSpeech.style.left = `${Math.max(12, petRect.left - desktopRect.left - 35)}px`;
+  petSpeech.style.top = `${Math.max(56, petRect.top - desktopRect.top - 54)}px`;
+  window.clearTimeout(petSpeechTimer);
+  petSpeechTimer = window.setTimeout(() => { petSpeech.hidden = true; }, duration);
+}
+
+if (desktopPet) {
+  desktopPet.addEventListener('pointerup', () => {
+    showPetSpeech(['蕾姆正在为你加油。', '写一点，再休息一下。', '检测到新的灵感。', '今天也要保持好奇。'][Math.floor(Math.random() * 4)]);
+  });
+  window.setTimeout(() => showPetSpeech('蕾姆已上线，点击我可以互动。', 4200), 2200);
+}
+
+function appendTerminalLine(content, className = '') {
+  if (!terminalOutput) return;
+  const line = document.createElement('p');
+  if (className) line.className = className;
+  line.innerHTML = content;
+  terminalOutput.append(line);
+  terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+function openTerminal() {
+  openWindow('terminalWindow');
+  window.setTimeout(() => terminalInput?.focus(), 80);
+}
+
+function terminalHelp() {
+  return '可用命令：<code>help</code> <code>about</code> <code>posts</code> <code>contact</code> <code>status</code> <code>theme</code> <code>clear</code>。';
+}
+
+function executeTerminalCommand(rawCommand) {
+  const command = rawCommand.trim().toLowerCase();
+  if (!command) return;
+  appendTerminalLine(`<span>lightwind@universe</span>:<b>~</b>$ ${safeText(rawCommand)}`);
+  if (command === 'help') appendTerminalLine(terminalHelp(), 'terminal-muted');
+  else if (command === 'about') { openWindow('aboutWindow'); appendTerminalLine('已打开 about.html。'); }
+  else if (command === 'posts' || command === 'dynamic') { appendTerminalLine('<a class="terminal-link" href="/dynamic/">正在打开动态 ↗</a>'); window.setTimeout(() => { window.location.href = '/dynamic/'; }, 350); }
+  else if (command === 'contact') { openWindow('contactWindow'); appendTerminalLine('已打开 contact.md。'); }
+  else if (command === 'status') appendTerminalLine('系统在线 · FOCUS 68% · CURIOSITY 92% · Rem: active');
+  else if (command === 'theme') { document.body.classList.toggle('desktop-soft-light'); appendTerminalLine('已切换桌面光效。'); }
+  else if (command === 'clear') { terminalOutput.innerHTML = ''; }
+  else appendTerminalLine(`command not found: ${safeText(command)}。输入 <code>help</code> 查看命令。`, 'terminal-error');
+}
+
+terminalForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  executeTerminalCommand(terminalInput.value);
+  terminalInput.value = '';
+});
+
+function commandItems() {
+  return [
+    { icon: '$_', title: '打开终端', detail: '> terminal', run: openTerminal },
+    { icon: '⌂', title: '打开关于', detail: '> about', run: () => openWindow('aboutWindow') },
+    { icon: '✦', title: '打开系统状态', detail: '> status', run: () => openWindow('nowWindow') },
+    { icon: '↗', title: '前往动态', detail: '> posts', run: () => { window.location.href = '/dynamic/'; } },
+    { icon: '✉', title: '打开联系', detail: '> contact', run: () => openWindow('contactWindow') },
+    { icon: '◌', title: '整理桌面', detail: '> arrange', run: arrangeIcons },
+    { icon: '◐', title: '切换桌面光效', detail: '> theme', run: () => document.body.classList.toggle('desktop-soft-light') }
+  ];
+}
+
+function getPaletteItems(query) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.startsWith('>')) {
+    const search = normalizedQuery.slice(1).trim();
+    return commandItems().filter((item) => `${item.title} ${item.detail}`.toLowerCase().includes(search));
+  }
+  const commands = commandItems().filter((item) => item.title.toLowerCase().includes(normalizedQuery));
+  const posts = cachedPosts
+    .filter((post) => normalizeTestTitle(post.postTitle).toLowerCase().includes(normalizedQuery))
+    .slice(0, 7)
+    .map((post) => ({
+      icon: '▤', title: normalizeTestTitle(post.postTitle), detail: post.createdDate || '动态',
+      run: () => { window.location.href = `/dynamic/${post.postUrl}`; }
+    }));
+  return [...commands, ...posts];
+}
+
+function renderPalette() {
+  if (!commandPaletteInput || !commandPaletteResults) return;
+  paletteItems = getPaletteItems(commandPaletteInput.value);
+  paletteActiveIndex = Math.max(0, Math.min(paletteActiveIndex, paletteItems.length - 1));
+  if (!paletteItems.length) {
+    commandPaletteResults.innerHTML = '<p class="command-palette-empty">没有找到匹配的命令或动态。</p>';
+    return;
+  }
+  commandPaletteResults.innerHTML = paletteItems.map((item, index) => (
+    `<button class="command-palette-result${index === paletteActiveIndex ? ' is-active' : ''}" type="button" data-palette-index="${index}" role="option"><i>${item.icon}</i><span>${safeText(item.title)}</span><small>${safeText(item.detail)}</small></button>`
+  )).join('');
+}
+
+function openPalette() {
+  if (!commandPalette) return;
+  commandPalette.hidden = false;
+  commandPaletteInput.value = '';
+  paletteActiveIndex = 0;
+  renderPalette();
+  window.setTimeout(() => commandPaletteInput.focus(), 30);
+}
+
+function closePalette() {
+  if (commandPalette) commandPalette.hidden = true;
+}
+
+function runPaletteItem(index = paletteActiveIndex) {
+  const item = paletteItems[index];
+  if (!item) return;
+  closePalette();
+  item.run();
+}
+
+document.querySelector('#openPaletteButton')?.addEventListener('click', openPalette);
+commandPaletteInput?.addEventListener('input', () => { paletteActiveIndex = 0; renderPalette(); });
+commandPaletteResults?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-palette-index]');
+  if (button) runPaletteItem(Number(button.dataset.paletteIndex));
+});
+commandPalette?.addEventListener('pointerdown', (event) => { if (event.target === commandPalette) closePalette(); });
+
+function arrangeIcons() {
+  const { columns } = gridCapacity();
+  desktopIcons.forEach((icon, index) => setIconCell(icon, index % columns, Math.floor(index / columns)));
+  saveIconGrid();
+  showPetSpeech('桌面已整理完成。');
+}
+
+function resetPetPosition() {
+  if (!desktopPet) return;
+  localStorage.removeItem('lightwind-rem-pet-position-v1');
+  desktopPet.style.left = '';
+  desktopPet.style.top = '';
+  desktopPet.style.right = '';
+  desktopPet.style.bottom = '';
+  showPetSpeech('蕾姆回到默认位置。');
+}
+
+function closeContextMenu() { if (contextMenu) contextMenu.hidden = true; }
+desktop.addEventListener('contextmenu', (event) => {
+  if (event.target.closest('.app-window, .desktop-pet, .desktop-context-menu, .command-palette')) return;
+  event.preventDefault();
+  const rect = desktop.getBoundingClientRect();
+  contextMenu.hidden = false;
+  contextMenu.style.left = `${Math.min(desktop.clientWidth - 170, Math.max(8, event.clientX - rect.left))}px`;
+  contextMenu.style.top = `${Math.min(desktop.clientHeight - 190, Math.max(54, event.clientY - rect.top))}px`;
+});
+document.addEventListener('pointerdown', (event) => { if (!event.target.closest('.desktop-context-menu')) closeContextMenu(); });
+contextMenu?.addEventListener('click', (event) => {
+  const action = event.target.dataset.contextAction;
+  closeContextMenu();
+  if (action === 'arrange') arrangeIcons();
+  if (action === 'reset-icons') { localStorage.removeItem(iconGridStorageKey); desktopIcons.forEach((icon, index) => setIconCell(icon, index % 3, Math.floor(index / 3))); showPetSpeech('图标位置已重置。'); }
+  if (action === 'reset-pet') resetPetPosition();
+  if (action === 'terminal') openTerminal();
+});
+
+function updateSiteUptime() {
+  if (!siteUptime) return;
+  const start = new Date('2026-08-11T00:00:00+08:00');
+  const days = Math.max(1, Math.floor((Date.now() - start.getTime()) / 86400000) + 1);
+  siteUptime.textContent = `${days} DAYS`;
+}
+
+async function loadLatestPost() {
+  try {
+    const response = await fetch('/dynamic/postList.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error('post list unavailable');
+    const data = await response.json();
+    cachedPosts = Object.entries(data)
+      .filter(([key, post]) => /^P\d+$/.test(key) && post?.postUrl)
+      .map(([key, post]) => ({ ...post, order: Number(key.slice(1)) }))
+      .sort((a, b) => b.order - a.order);
+    const latest = cachedPosts[0];
+    if (latest && latestPost) {
+      latestPost.href = `/dynamic/${latest.postUrl}`;
+      latestPost.innerHTML = `${safeText(normalizeTestTitle(latest.postTitle))}<b>↗</b>`;
+    }
+  } catch {
+    if (latestPost) latestPost.textContent = '前往查看全部动态 ↗';
+  }
+}
+
+document.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    if (commandPalette?.hidden) openPalette(); else closePalette();
+    return;
+  }
+  if (commandPalette && !commandPalette.hidden) {
+    if (event.key === 'Escape') { event.preventDefault(); closePalette(); }
+    if (event.key === 'ArrowDown') { event.preventDefault(); paletteActiveIndex = Math.min(paletteItems.length - 1, paletteActiveIndex + 1); renderPalette(); }
+    if (event.key === 'ArrowUp') { event.preventDefault(); paletteActiveIndex = Math.max(0, paletteActiveIndex - 1); renderPalette(); }
+    if (event.key === 'Enter') { event.preventDefault(); runPaletteItem(); }
+  }
+});
+
+updateSiteUptime();
+loadLatestPost();
