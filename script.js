@@ -1,5 +1,7 @@
 const bootScreen = document.querySelector('#bootScreen');
 const launchButton = document.querySelector('#launchButton');
+const bootLog = document.querySelector('#bootLog');
+const bootReady = document.querySelector('#bootReady');
 const desktop = document.querySelector('#desktop');
 const windows = [...document.querySelectorAll('.app-window')];
 const dockItems = [...document.querySelectorAll('.dock-item')];
@@ -8,15 +10,57 @@ const pageTrack = document.querySelector('#pageTrack');
 const pages = [...document.querySelectorAll('.site-page')];
 let topZ = 60;
 let activePage = 0;
+let bootComplete = false;
+
+const bootMessages = [
+  ['ok', 'Mounted /home/lightwind.'],
+  ['ok', 'Started udev Kernel Device Manager.'],
+  ['ok', 'Reached target Local File Systems.'],
+  ['ok', 'Started Network Manager.'],
+  ['ok', 'Connected to universe.network.'],
+  ['ok', 'Loaded personal workspace.'],
+  ['ok', 'Mounted /about /works /notes /now.'],
+  ['ok', 'Started Lightwind Display Manager.'],
+  ['info', 'Reached target Graphical Interface.']
+];
+
+function finishBootSequence() {
+  if (bootComplete) return;
+  bootComplete = true;
+  bootReady.hidden = false;
+  requestAnimationFrame(() => bootReady.classList.add('visible'));
+  launchButton.focus({ preventScroll: true });
+}
+
+function runBootSequence() {
+  bootMessages.forEach(([type, message], index) => {
+    window.setTimeout(() => {
+      const line = document.createElement('p');
+      line.className = `boot-log-line ${type}`;
+      line.innerHTML = type === 'ok'
+        ? `<span>[&nbsp; <b>OK</b> &nbsp;]</span> ${message}`
+        : `<span>[&nbsp;&nbsp;INFO&nbsp;]</span> ${message}`;
+      bootLog.append(line);
+      line.scrollIntoView({ block: 'nearest' });
+      if (index === bootMessages.length - 1) window.setTimeout(finishBootSequence, 280);
+    }, 180 + index * 145);
+  });
+}
 
 function launch() {
   document.body.classList.add('is-launched');
   bootScreen.classList.add('hidden');
 }
 
-launchButton.addEventListener('click', launch);
+launchButton.addEventListener('click', () => {
+  if (bootComplete) launch();
+  else finishBootSequence();
+});
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && !bootScreen.classList.contains('hidden')) launch();
+  if (event.key === 'Enter' && !bootScreen.classList.contains('hidden')) {
+    if (bootComplete) launch();
+    else finishBootSequence();
+  }
   if (event.key === 'Escape' && bootScreen.classList.contains('hidden')) {
     const focusedWindow = document.querySelector('.app-window.focused:not([hidden])');
     if (focusedWindow) closeWindow(focusedWindow);
@@ -24,6 +68,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 if (new URLSearchParams(window.location.search).has('desktop')) launch();
+else runBootSequence();
 
 function syncDock(windowElement, isOpen) {
   dockItems.forEach((item) => {

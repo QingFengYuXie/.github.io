@@ -7,7 +7,37 @@ button, a { font: inherit; }
 button { border: 0; cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 
-.boot-screen { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: #09101a; transition: opacity .6s, visibility .6s; }.boot-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }.boot-window { width: min(620px, 100%); overflow: hidden; border: 1px solid #3c5369; background: #101a25; box-shadow: 0 30px 90px rgba(0,0,0,.4); animation: boot-arrive .55s cubic-bezier(.2,.8,.2,1) both; }.boot-bar, .window-header { display: flex; align-items: center; justify-content: space-between; }.boot-bar { justify-content: flex-start; gap: 7px; padding: 10px 13px; color: #a9bfd1; border-bottom: 1px solid #314454; font-size: 12px; }.window-dot { width: 9px; height: 9px; border-radius: 50%; }.red { background: #ff6d68; }.yellow { background: #ffd05b; }.green { background: #83dc70; }.boot-bar > span:last-child { margin-left: 8px; }.boot-body { min-height: 260px; display: flex; flex-direction: column; justify-content: center; padding: 32px; color: #dceaf4; font-size: 13px; }.boot-muted { color: #8199ac; }.blink { color: var(--yellow); animation: blink 1s steps(2) infinite; }.boot-body button { width: fit-content; margin-top: 34px; padding: 11px 16px; color: var(--yellow); border: 1px solid #d4aa49; background: transparent; }.boot-body button:hover { color: #111; background: var(--yellow); }.boot-body button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }.boot-body button b { margin-left: 15px; } @keyframes blink { 50% { opacity: 0; } } @keyframes boot-arrive { from { opacity: 0; transform: translateY(18px) scale(.98); } }
+.boot-screen { position: fixed; inset: 0; z-index: 1000; overflow: hidden; color: #c9d0d5; background: #050706; transition: opacity .7s, visibility .7s; }
+.boot-screen::after { content: ''; position: absolute; inset: 0; opacity: .12; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,.045) 3px); mix-blend-mode: screen; }
+.boot-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.linux-boot { position: relative; z-index: 1; width: 100%; height: 100%; padding: clamp(18px, 3vw, 42px); overflow: hidden; color: #bfc7c2; background: radial-gradient(circle at 50% 45%, #111611 0, #060806 60%); font: 12px/1.5 'Cascadia Mono', Consolas, monospace; text-shadow: 0 0 5px rgba(187,255,197,.15); }
+.linux-boot-header { display: flex; justify-content: space-between; padding-bottom: 10px; color: #68726b; border-bottom: 1px solid #1c241e; font-size: 10px; letter-spacing: .8px; text-transform: uppercase; }
+.linux-boot-logo { position: absolute; top: clamp(64px, 10vh, 100px); right: clamp(25px, 6vw, 100px); display: flex; align-items: baseline; gap: 9px; color: #222b24; user-select: none; }
+.linux-boot-logo b { font-size: clamp(28px, 5vw, 72px); letter-spacing: -5px; }
+.linux-boot-logo span { color: #405544; font-size: clamp(13px, 2vw, 28px); }
+.linux-boot-log { position: absolute; left: clamp(18px, 4vw, 65px); right: clamp(18px, 4vw, 65px); bottom: clamp(220px, 31vh, 300px); max-height: 48vh; overflow: hidden; }
+.linux-boot-log p { margin: 2px 0; animation: linux-line .16s steps(2) both; }
+.boot-kernel { color: #7c8780; }
+.boot-log-line > span { display: inline-block; width: 92px; color: #727c75; }
+.boot-log-line.ok > span b { color: #64d26f; font-weight: 700; text-shadow: 0 0 8px rgba(100,210,111,.42); }
+.boot-log-line.info > span { color: #d7a746; }
+.linux-boot-ready { position: absolute; left: clamp(18px, 4vw, 65px); bottom: clamp(30px, 6vh, 62px); opacity: 0; transform: translateY(10px); transition: opacity .3s, transform .3s; }
+.linux-boot-ready.visible { opacity: 1; transform: none; }
+.linux-boot-ready p { margin: 3px 0; }
+.linux-boot-ready > p:first-child { margin-bottom: 15px; color: #e1e6e2; }
+.linux-boot-ready > p:first-child span { color: #73cb7c; }
+.boot-login b { color: #e2e6e3; font-weight: 400; }
+.boot-last-login { color: #68716a; }
+.boot-prompt span { color: #6ed37a; }
+.boot-prompt b { color: #5f9dd3; }
+.linux-boot-ready button { display: flex; align-items: center; gap: 28px; margin-top: 20px; padding: 10px 14px; color: #0b0e0b; border: 0; background: #a7d7a8; font-size: 11px; }
+.linux-boot-ready button:hover, .linux-boot-ready button:focus-visible { color: #fff; outline: 1px solid #76d17d; outline-offset: 3px; background: #23772d; }
+.linux-boot-ready button b { font-size: 14px; }
+.blink { animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes linux-line { from { opacity: 0; transform: translateY(2px); } }
+.boot-bar, .window-header { display: flex; align-items: center; justify-content: space-between; }
+.window-dot { width: 9px; height: 9px; border-radius: 50%; }.red { background: #ff6d68; }.yellow { background: #ffd05b; }.green { background: #83dc70; }
 
 .desktop { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: radial-gradient(circle at 50% 52%, rgba(255,255,255,.06), transparent 34%), linear-gradient(135deg, var(--blue-deep), var(--blue)); transition: transform .75s cubic-bezier(.2,.8,.2,1), filter .75s; }.desktop::before, .desktop::after { content: ''; position: absolute; pointer-events: none; }.desktop::before { inset: 0; opacity: .78; background-image: radial-gradient(circle, var(--yellow) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(255,255,255,.35) 0 1px, transparent 1.5px); background-position: 4% 10%, 16% 18%; background-size: 170px 140px, 230px 190px; }.desktop::after { left: 9%; bottom: -42%; width: 72%; height: 80%; opacity: .11; border: 1px solid #fff; border-radius: 50%; transform: rotate(-18deg); box-shadow: 0 0 0 50px rgba(255,255,255,.04), 0 0 0 100px rgba(255,255,255,.03); }.stars { position: absolute; z-index: 0; width: 6px; height: 6px; background: var(--yellow); transform: rotate(45deg); filter: drop-shadow(0 0 4px rgba(255,218,94,.8)); }.stars-a { left: 25%; top: 29%; }.stars-b { left: 54%; top: 19%; width: 4px; height: 4px; }.stars-c { left: 71%; top: 66%; width: 8px; height: 8px; }.aurora { position: absolute; z-index: 0; width: 33vw; height: 15vw; opacity: .12; border-radius: 50%; filter: blur(30px); background: #74dcff; transform: rotate(-20deg); }.aurora-a { left: 18%; bottom: -3%; }.aurora-b { right: 17%; top: 13%; background: #f7a7d8; }
 
