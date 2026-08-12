@@ -330,6 +330,40 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 }
 @media (max-width: 800px) { .desktop-pet { display: none; } }
 
+/* Interactive desktop additions */
+.pet-speech { position: absolute; z-index: 35; max-width: 220px; padding: 9px 12px; color: #f7e9eb; border: 1px solid rgba(255, 117, 134, .35); border-radius: 12px 12px 12px 2px; background: rgba(24, 12, 15, .92); box-shadow: 0 12px 28px rgba(0, 0, 0, .42); font-size: 11px; line-height: 1.5; pointer-events: none; }
+.desktop-status-card { position: absolute; z-index: 23; right: 22px; top: 70px; width: 224px; padding: 13px 14px; color: #d8c7ca; border: 1px solid rgba(255, 103, 120, .22); border-radius: 10px; background: rgba(16, 9, 11, .78); box-shadow: 0 16px 35px rgba(0, 0, 0, .38), inset 0 0 0 1px rgba(255,255,255,.025); backdrop-filter: blur(15px); }
+.status-card-heading { display: flex; align-items: center; justify-content: space-between; color: #8f777c; font: 700 9px/1 Monaco, Consolas, monospace; letter-spacing: 1px; }
+.status-card-heading span { display: flex; align-items: center; gap: 6px; }
+.status-card-heading i { width: 6px; height: 6px; border-radius: 50%; background: #53dc68; box-shadow: 0 0 10px rgba(83, 220, 104, .75); }
+.status-card-heading button { padding: 3px 5px; color: #d6b9be; border: 1px solid rgba(255, 116, 133, .2); border-radius: 4px; background: transparent; font: 700 8px/1 Monaco, Consolas, monospace; cursor: pointer; }
+.status-card-heading button:hover { color: #fff; border-color: rgba(255, 116, 133, .55); }
+.status-card-now { margin: 12px 0; color: #f1e5e7; font-size: 12px; line-height: 1.45; }
+.status-card-metrics { display: grid; gap: 8px; margin: 0; }
+.status-card-metrics div { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 7px; }
+.status-card-metrics dt { color: #8e7479; font: 700 8px/1 Monaco, Consolas, monospace; letter-spacing: .6px; }
+.status-card-metrics dd { display: grid; grid-template-columns: 1fr 28px; align-items: center; gap: 6px; margin: 0; }
+.status-card-metrics i { display: block; height: 4px; border-radius: 99px; background: linear-gradient(90deg, #8f1c2a var(--value), #392027 var(--value)); box-shadow: 0 0 10px rgba(223, 48, 68, .26); }
+.status-card-metrics b { color: #c9aeb2; font: 700 8px/1 Monaco, Consolas, monospace; }
+.status-card-post { display: flex; justify-content: space-between; gap: 8px; margin-top: 13px; padding-top: 10px; color: #d5aab0; border-top: 1px solid rgba(255,255,255,.08); font-size: 10px; line-height: 1.4; text-decoration: none; }
+.status-card-post:hover { color: #ff6d7e; }
+.status-card-runtime { margin: 11px 0 0; color: #80686d; font: 700 8px/1 Monaco, Consolas, monospace; letter-spacing: .7px; }
+.status-card-runtime span { color: #bea3a8; }
+.terminal-window { width: min(640px, calc(100vw - 40px)); }
+.terminal-body { height: min(42vh, 330px); padding: 17px; overflow: auto; color: #d7d0c0; background: #090708; font: 12px/1.65 Monaco, Consolas, monospace; }
+.terminal-body p { margin: 0 0 7px; }
+.terminal-body span, .terminal-input-row span { color: #55d66b; }.terminal-body b, .terminal-input-row b { color: #e89b64; }.terminal-muted { color: #8d7c80; }.terminal-error { color: #ff7b88; }.terminal-link { color: #6fd4ff; }
+.terminal-input-row { display: flex; align-items: center; gap: 7px; padding: 11px 15px; border-top: 1px solid #372128; background: #120b0d; font: 12px/1 Monaco, Consolas, monospace; }
+.terminal-input-row label { flex: 0 0 auto; }.terminal-input-row input { width: 100%; color: #f0e5e6; border: 0; outline: 0; background: transparent; font: inherit; }
+.desktop-context-menu { position: absolute; z-index: 80; width: 156px; padding: 6px; border: 1px solid rgba(255, 115, 132, .28); border-radius: 8px; background: rgba(25, 13, 16, .98); box-shadow: 0 16px 40px rgba(0,0,0,.48); backdrop-filter: blur(16px); }
+.desktop-context-menu button { display: block; width: 100%; padding: 8px 10px; color: #d8c7ca; border: 0; border-radius: 5px; background: transparent; text-align: left; font: 11px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; cursor: pointer; }.desktop-context-menu button:hover { color: #fff; background: rgba(207, 39, 60, .45); }
+.command-palette { position: fixed; z-index: 99999; inset: 0; display: grid; place-items: start center; padding-top: min(18vh, 160px); background: rgba(4, 2, 3, .54); backdrop-filter: blur(7px); }
+.command-palette-panel { width: min(620px, calc(100vw - 32px)); overflow: hidden; border: 1px solid rgba(255, 131, 146, .35); border-radius: 13px; background: #181012; box-shadow: 0 30px 90px rgba(0,0,0,.65), 0 0 35px rgba(191, 28, 48, .22); }
+.command-palette-input { display: flex; align-items: center; gap: 11px; padding: 14px 16px; border-bottom: 1px solid #3a2228; }.command-palette-input > span { color: #ff6a7a; font: 18px/1 Monaco, Consolas, monospace; }.command-palette-input input { width: 100%; color: #f3e7e9; border: 0; outline: 0; background: transparent; font: 14px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }.command-palette-input kbd { padding: 3px 5px; color: #a58a8e; border: 1px solid #4b3036; border-radius: 4px; font: 9px/1 Monaco, Consolas, monospace; }
+.command-palette-results { max-height: min(45vh, 350px); overflow: auto; padding: 7px; }.command-palette-result { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px; width: 100%; padding: 10px; color: #d8c6c9; border: 0; border-radius: 7px; background: transparent; text-align: left; cursor: pointer; }.command-palette-result:hover, .command-palette-result.is-active { color: #fff; background: rgba(194, 37, 57, .36); }.command-palette-result i { color: #ff7080; font-style: normal; }.command-palette-result small { color: #8f777b; }.command-palette-empty { margin: 14px 10px; color: #947d81; font-size: 12px; }.command-palette-help { margin: 0; padding: 10px 16px; color: #856d72; border-top: 1px solid #342026; font-size: 10px; }.command-palette-help code { color: #c6a1a7; }
+@media (max-width: 1050px) { .desktop-status-card { right: 18px; width: 200px; } }
+@media (max-width: 800px) { .desktop-status-card { display: none; } .command-palette { padding-top: 12vh; } }
+
 /* Desktop geometry and corner utilities */
 .desktop-topbar { justify-content: flex-end; gap: 24px; }
 .desktop-topbar .top-links { margin-left: 0; }
