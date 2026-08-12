@@ -6,6 +6,7 @@
     <meta name="description" content="轻风雨斜 OS：一个程序员的个人桌面、作品集与博客。" />
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
+    <script>if (!new URLSearchParams(window.location.search).has('boot')) document.documentElement.classList.add('skip-boot');</script>
     <link rel="stylesheet" href="./styles.css?v=20260813-1" />
     <link rel="stylesheet" href="../site-nav.css" />
     <script src="../site-nav.js" defer></script>
@@ -59,7 +60,7 @@
       </aside>
 
       <section class="desktop-icons" aria-label="桌面文件">
-        <button class="desktop-icon terminal-icon" data-open="terminalWindow" style="--x: 3; --y: 0"><span class="icon app-icon">$_</span><span>终端</span></button>
+        <button class="desktop-icon terminal-icon" data-open="terminalWindow" style="--x: 3; --y: 0" title="打开命令工具"><span class="icon app-icon">$_</span><span>终端</span></button>
         <button class="desktop-icon" data-open="worksWindow" style="--x: 0; --y: 0"><span class="icon folder-icon">▰</span><span>作品集</span></button>
         <button class="desktop-icon" data-open="osWindow" style="--x: 1; --y: 0"><span class="icon folder-icon">▰</span><span>轻风雨斜 OS</span></button>
         <button class="desktop-icon" data-open="blogWindow" style="--x: 2; --y: 0"><span class="icon file-icon">.md</span><span>博客文章</span></button>
