@@ -504,6 +504,7 @@ function renderPalette() {
 }
 
 function openPalette() {
+  return;
   if (!commandPalette) return;
   commandPalette.hidden = false;
   commandPaletteInput.value = '';
