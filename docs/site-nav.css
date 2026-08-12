@@ -2,7 +2,8 @@
   position: fixed;
   z-index: 9998;
   left: 50%;
-  top: max(16px, env(safe-area-inset-top));
+  top: auto;
+  bottom: max(18px, env(safe-area-inset-bottom));
   display: flex;
   gap: 4px;
   padding: 6px;
@@ -42,11 +43,13 @@
 @media (max-width: 600px) {
   .site-global-nav {
     left: auto;
-    right: max(12px, env(safe-area-inset-right));
-    top: max(10px, env(safe-area-inset-top));
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: max(10px, env(safe-area-inset-bottom));
     width: min(330px, calc(100vw - 80px));
     justify-content: center;
-    transform: none;
+    transform: translateX(-50%);
   }
 
   .site-global-nav a {
