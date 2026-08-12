@@ -1,3 +1,40 @@
+const themeRoot = document.documentElement;
+const themeToggle = document.querySelector('#themeToggle');
+const themeColorMeta = document.querySelector('#themeColorMeta');
+const themeStorageKey = 'lightwind-theme-v1';
+
+function readStoredTheme() {
+  try {
+    return localStorage.getItem(themeStorageKey) === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+function applyTheme(theme, persist = false) {
+  const nextTheme = theme === 'light' ? 'light' : 'dark';
+  const isLight = nextTheme === 'light';
+  themeRoot.dataset.theme = nextTheme;
+  if (themeColorMeta) themeColorMeta.content = isLight ? '#f5f1ee' : '#070506';
+  if (themeToggle) {
+    themeToggle.dataset.theme = nextTheme;
+    themeToggle.setAttribute('aria-pressed', String(isLight));
+    themeToggle.setAttribute('aria-label', isLight ? '切换到深色主题' : '切换到浅色主题');
+    themeToggle.title = isLight ? '切换到深色主题' : '切换到浅色主题';
+    themeToggle.querySelector('.theme-toggle-label').textContent = isLight ? '深色' : '浅色';
+  }
+  if (persist) {
+    try {
+      localStorage.setItem(themeStorageKey, nextTheme);
+    } catch {}
+  }
+}
+
+applyTheme(readStoredTheme());
+themeToggle?.addEventListener('click', () => {
+  applyTheme(themeRoot.dataset.theme === 'light' ? 'dark' : 'light', true);
+});
+
 const bootScreen = document.querySelector('#bootScreen');
 const launchButton = document.querySelector('#launchButton');
 const bootLog = document.querySelector('#bootLog');
