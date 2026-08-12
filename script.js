@@ -238,27 +238,104 @@ function makeDraggable(element, handle, bounds) {
 windows.forEach((windowElement) => makeDraggable(windowElement, windowElement.querySelector('.window-header'), desktop));
 
 let desktopIconZ = 30;
+const desktopIcons = [...document.querySelectorAll('.desktop-icon')];
+const iconGrid = document.querySelector('.desktop-icons');
+const iconGridStorageKey = 'lightwind-desktop-grid-v1';
+const iconCellWidth = 112;
+const iconCellHeight = 96;
 
-document.querySelectorAll('.desktop-icon').forEach((icon) => {
+function gridCapacity() {
+  return {
+    columns: Math.max(1, Math.floor(iconGrid.clientWidth / iconCellWidth)),
+    rows: Math.max(1, Math.floor(iconGrid.clientHeight / iconCellHeight))
+  };
+}
+
+function iconCell(icon) {
+  return {
+    x: Number(icon.style.getPropertyValue('--x')) || 0,
+    y: Number(icon.style.getPropertyValue('--y')) || 0
+  };
+}
+
+function setIconCell(icon, x, y) {
+  icon.style.setProperty('--x', x);
+  icon.style.setProperty('--y', y);
+}
+
+function nearestFreeCell(targetX, targetY, movingIcon) {
+  const { columns, rows } = gridCapacity();
+  const occupied = new Set(desktopIcons
+    .filter((icon) => icon !== movingIcon)
+    .map((icon) => {
+      const cell = iconCell(icon);
+      return `${cell.x}:${cell.y}`;
+    }));
+  const cells = [];
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < columns; x += 1) {
+      if (!occupied.has(`${x}:${y}`)) cells.push({ x, y });
+    }
+  }
+  cells.sort((a, b) => {
+    const distanceA = (a.x - targetX) ** 2 + (a.y - targetY) ** 2;
+    const distanceB = (b.x - targetX) ** 2 + (b.y - targetY) ** 2;
+    return distanceA - distanceB || a.y - b.y || a.x - b.x;
+  });
+  return cells[0] || iconCell(movingIcon);
+}
+
+function saveIconGrid() {
+  const positions = desktopIcons.map((icon, index) => ({ index, ...iconCell(icon) }));
+  localStorage.setItem(iconGridStorageKey, JSON.stringify(positions));
+}
+
+function restoreIconGrid() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(iconGridStorageKey));
+    if (!Array.isArray(saved)) return;
+    const { columns, rows } = gridCapacity();
+    const occupied = new Set();
+    desktopIcons.forEach((icon, index) => {
+      const position = saved.find((item) => item.index === index);
+      if (!position) return;
+      const targetX = Math.max(0, Math.min(columns - 1, Number(position.x) || 0));
+      const targetY = Math.max(0, Math.min(rows - 1, Number(position.y) || 0));
+      let cell = { x: targetX, y: targetY };
+      if (occupied.has(`${cell.x}:${cell.y}`)) {
+        const alternatives = [];
+        for (let y = 0; y < rows; y += 1) {
+          for (let x = 0; x < columns; x += 1) {
+            if (!occupied.has(`${x}:${y}`)) alternatives.push({ x, y });
+          }
+        }
+        alternatives.sort((a, b) => ((a.x - targetX) ** 2 + (a.y - targetY) ** 2) - ((b.x - targetX) ** 2 + (b.y - targetY) ** 2));
+        cell = alternatives[0] || cell;
+      }
+      occupied.add(`${cell.x}:${cell.y}`);
+      setIconCell(icon, cell.x, cell.y);
+    });
+  } catch {
+    localStorage.removeItem(iconGridStorageKey);
+  }
+}
+
+restoreIconGrid();
+
+desktopIcons.forEach((icon) => {
   const dragThreshold = 7;
-  let placeholder = null;
   let activePointer = null;
   let moved = false;
   let startX = 0;
   let startY = 0;
-  let originX = 0;
-  let originY = 0;
   icon.addEventListener('pointerdown', (event) => {
     if (!event.isPrimary || event.button !== 0) return;
     event.preventDefault();
     activePointer = event.pointerId;
     moved = false;
     icon.setPointerCapture(event.pointerId);
-    const rect = icon.getBoundingClientRect();
     startX = event.clientX;
     startY = event.clientY;
-    originX = rect.left;
-    originY = rect.top;
   });
   icon.addEventListener('pointermove', (event) => {
     if (event.pointerId !== activePointer) return;
@@ -266,23 +343,13 @@ document.querySelectorAll('.desktop-icon').forEach((icon) => {
     const dy = event.clientY - startY;
     if (!moved && Math.hypot(dx, dy) >= dragThreshold) {
       moved = true;
-      if (!placeholder) {
-        placeholder = document.createElement('span');
-        placeholder.className = 'desktop-icon-placeholder';
-        placeholder.setAttribute('aria-hidden', 'true');
-        placeholder.style.width = `${icon.offsetWidth}px`;
-        placeholder.style.height = `${icon.offsetHeight}px`;
-        icon.before(placeholder);
-      }
-      icon.style.position = 'fixed';
-      icon.style.left = `${originX}px`;
-      icon.style.top = `${originY}px`;
+      icon.classList.add('is-dragging');
+      iconGrid.classList.add('is-arranging');
       desktopIconZ += 1;
       icon.style.zIndex = desktopIconZ;
     }
     if (moved) {
-      icon.style.left = `${Math.max(4, Math.min(window.innerWidth - icon.offsetWidth - 4, originX + dx))}px`;
-      icon.style.top = `${Math.max(55, Math.min(window.innerHeight - icon.offsetHeight - 85, originY + dy))}px`;
+      icon.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.05)`;
     }
   });
   icon.addEventListener('pointerup', (event) => {
@@ -291,12 +358,33 @@ document.querySelectorAll('.desktop-icon').forEach((icon) => {
     const wasDragged = moved || distance >= dragThreshold;
     if (icon.hasPointerCapture(event.pointerId)) icon.releasePointerCapture(event.pointerId);
     activePointer = null;
-    if (!wasDragged) openWindow(icon.dataset.open);
+    if (!wasDragged) {
+      openWindow(icon.dataset.open);
+      return;
+    }
+    const gridRect = iconGrid.getBoundingClientRect();
+    const draggedRect = icon.getBoundingClientRect();
+    const targetX = Math.round((draggedRect.left - gridRect.left - 12) / iconCellWidth);
+    const targetY = Math.round((draggedRect.top - gridRect.top - 6) / iconCellHeight);
+    const { columns, rows } = gridCapacity();
+    const freeCell = nearestFreeCell(
+      Math.max(0, Math.min(columns - 1, targetX)),
+      Math.max(0, Math.min(rows - 1, targetY)),
+      icon
+    );
+    icon.style.transform = '';
+    icon.classList.remove('is-dragging');
+    iconGrid.classList.remove('is-arranging');
+    setIconCell(icon, freeCell.x, freeCell.y);
+    saveIconGrid();
   });
   icon.addEventListener('pointercancel', (event) => {
     if (icon.hasPointerCapture(event.pointerId)) icon.releasePointerCapture(event.pointerId);
     activePointer = null;
     moved = false;
+    icon.style.transform = '';
+    icon.classList.remove('is-dragging');
+    iconGrid.classList.remove('is-arranging');
   });
   icon.addEventListener('dragstart', (event) => event.preventDefault());
 });
@@ -305,7 +393,10 @@ const requestedPage = Number(new URLSearchParams(window.location.search).get('pa
 switchPage(Number.isInteger(requestedPage) ? requestedPage : 0, false);
 
 function updateClock() {
-  document.querySelector('#clock').textContent = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  const now = new Date();
+  const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' }).format(now);
+  const time = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+  document.querySelector('#clock').textContent = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}  ${weekday}  ${time}`;
 }
 updateClock();
 setInterval(updateClock, 30000);

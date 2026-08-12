@@ -268,12 +268,27 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 .contact-layout .page-contact-links span { color: #80686c; }
 .page-contact .page-watermark { color: rgba(255,50,73,.035); }
 
-/* Linux status green, classic folders, and Ubuntu Xenial wallpaper */
+/* Linux status green, classic folders, and Debian red spiral wallpaper */
 .boot-log-line.ok > span b, .linux-boot-ready > p:first-child span, .boot-prompt span { color: #53dc68; text-shadow: 0 0 9px rgba(67,224,91,.45); }
 .linux-boot-ready button { color: #061008; background: #52c966; box-shadow: 0 0 24px rgba(61,211,85,.22); }
 .linux-boot-ready button:hover, .linux-boot-ready button:focus-visible { color: #fff; border-color: #78ee8a; background: #278b39; outline-color: #67df79; }
 .folder-icon { color: #715719; background: linear-gradient(#ffe487 0 20%, #f1bf48 20%); box-shadow: 0 7px 18px rgba(0,0,0,.5), 0 0 18px rgba(232,178,47,.14); }
 .folder-icon::before { background: #ffe487; }
-.desktop { background-image: linear-gradient(90deg, rgba(7,3,8,.2), rgba(10,4,7,.26)), url('./assets/ubuntu-xerus-wallpaper.png'); background-size: cover, cover; background-position: center, center; background-repeat: no-repeat; }
+.desktop { background-image: linear-gradient(90deg, rgba(2,2,3,.06), rgba(4,1,2,.12)), url('./assets/debian-red-spiral-wallpaper.jpg'); background-size: cover, cover; background-position: center, center; background-repeat: no-repeat; }
 .desktop-art { opacity: 0; pointer-events: none; }
-@media (max-width: 800px) { .desktop { background-position: center, 58% center; } }
+@media (max-width: 800px) { .desktop { background-position: center, 62% center; } }
+
+/* Desktop geometry and corner utilities */
+.desktop-topbar { justify-content: flex-end; gap: 24px; }
+.desktop-topbar .top-links { margin-left: 0; }
+.os-brand { order: 2; font-style: normal; }
+.os-brand i { font-style: italic; }
+.desktop-clock { position: fixed; z-index: 18; right: 24px; bottom: 18px; margin: 0 !important; padding: 7px 11px; color: #d8c8ca; border: 1px solid rgba(255,70,88,.16); border-radius: 5px; background: rgba(8,4,5,.68); box-shadow: 0 6px 20px rgba(0,0,0,.28); backdrop-filter: blur(10px); font-size: 11px !important; letter-spacing: .3px; }
+.desktop-icons { --cell-w: 112px; --cell-h: 96px; top: 68px; right: 22px; bottom: 112px; left: 22px; display: block; width: auto; }
+.desktop-icons::before { content: ''; position: absolute; inset: -8px; opacity: 0; pointer-events: none; background-image: linear-gradient(rgba(255,64,82,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,64,82,.055) 1px, transparent 1px); background-size: var(--cell-w) var(--cell-h); transition: opacity .18s ease; }
+.desktop-icons.is-arranging::before { opacity: 1; }
+.desktop-icon { position: absolute; left: calc(var(--x) * var(--cell-w) + 12px); top: calc(var(--y) * var(--cell-h) + 6px); width: 88px; min-height: 82px; transition: left .2s ease, top .2s ease, transform .12s ease, filter .12s ease; }
+.desktop-icon.is-dragging { transition: none; filter: drop-shadow(0 12px 14px rgba(0,0,0,.55)); }
+.desktop-icon-placeholder { display: none; }
+@media (max-width: 1040px) and (min-width: 801px) { .desktop-icons { right: 18px; left: 18px; display: block; } .desktop-icon { width: 88px; } }
+@media (max-width: 800px) { .desktop-icons { display: none; } .desktop-clock { right: 12px; bottom: 86px; } }
