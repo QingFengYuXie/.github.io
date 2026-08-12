@@ -149,6 +149,7 @@ if (desktopPet) {
   let petOriginX = 0;
   let petOriginY = 0;
   let petMoved = false;
+  let petExcitedTimer = 0;
 
   try {
     const saved = JSON.parse(localStorage.getItem(petPositionKey));
@@ -206,8 +207,9 @@ if (desktopPet) {
       }));
       return;
     }
+    window.clearTimeout(petExcitedTimer);
     desktopPet.classList.add('is-excited');
-    window.setTimeout(() => desktopPet.classList.remove('is-excited'), 2200);
+    petExcitedTimer = window.setTimeout(() => desktopPet.classList.remove('is-excited'), 2200);
   });
 
   desktopPet.addEventListener('pointercancel', () => {
