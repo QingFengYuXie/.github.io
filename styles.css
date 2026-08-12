@@ -274,9 +274,9 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 .linux-boot-ready button:hover, .linux-boot-ready button:focus-visible { color: #fff; border-color: #78ee8a; background: #278b39; outline-color: #67df79; }
 .folder-icon { color: #715719; background: linear-gradient(#ffe487 0 20%, #f1bf48 20%); box-shadow: 0 7px 18px rgba(0,0,0,.5), 0 0 18px rgba(232,178,47,.14); }
 .folder-icon::before { background: #ffe487; }
-.desktop { background-color: #020203; background-image: linear-gradient(90deg, rgba(2,2,3,.02), rgba(4,1,2,.08)), url('./assets/debian-red-spiral-wallpaper.jpg'); background-size: cover, auto 90%; background-position: center, center 38%; background-repeat: no-repeat; }
+.desktop { background-color: #020203; background-image: linear-gradient(90deg, rgba(2,2,3,.02), rgba(4,1,2,.08)), url('./assets/debian-red-spiral-wallpaper.jpg'); background-size: cover, cover; background-position: center, center 56%; background-repeat: no-repeat; }
 .desktop-art { opacity: 0; pointer-events: none; }
-@media (max-width: 800px) { .desktop { background-size: cover, auto 84%; background-position: center, 58% 34%; } }
+@media (max-width: 800px) { .desktop { background-size: cover, cover; background-position: center, 62% 56%; } }
 
 /* Desktop geometry and corner utilities */
 .desktop-topbar { justify-content: flex-end; gap: 24px; }
