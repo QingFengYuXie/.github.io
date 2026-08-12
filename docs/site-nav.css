@@ -34,20 +34,10 @@
 }
 
 .site-global-nav a[aria-current="page"] {
-  color: #fff;
-  background: #cf263c;
-  box-shadow: 0 4px 12px rgba(207, 38, 60, .28);
+  color: var(--fgColor-onEmphasis, var(--color-fg-on-emphasis, #fff));
+  background: var(--bgColor-accent-emphasis, var(--color-accent-emphasis, #cf263c));
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--bgColor-accent-emphasis, var(--color-accent-emphasis, #cf263c)) 32%, transparent);
 }
-
-html:not([data-color-mode]) .site-global-nav {
-  border-color: rgba(255, 77, 94, .18);
-  background: rgba(18, 10, 12, .9);
-  box-shadow: 0 14px 38px rgba(0, 0, 0, .44);
-}
-
-html:not([data-color-mode]) .site-global-nav a { color: #a99498; }
-html:not([data-color-mode]) .site-global-nav a:hover { color: #fff; background: rgba(255, 77, 94, .1); }
-html:not([data-color-mode]) .site-global-nav a[aria-current="page"] { color: #fff; background: linear-gradient(135deg, #8d1826, #d12c3e); }
 
 @media (max-width: 600px) {
   .site-global-nav {
