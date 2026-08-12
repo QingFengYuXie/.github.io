@@ -140,6 +140,82 @@ function makeDraggable(element, handle, bounds) {
 
 windows.forEach((windowElement) => makeDraggable(windowElement, windowElement.querySelector('.window-header'), desktop));
 
+const desktopPet = document.querySelector('#desktopPet');
+if (desktopPet) {
+  const petPositionKey = 'lightwind-rem-pet-position-v1';
+  let petPointerId = null;
+  let petStartX = 0;
+  let petStartY = 0;
+  let petOriginX = 0;
+  let petOriginY = 0;
+  let petMoved = false;
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(petPositionKey));
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+      desktopPet.style.left = `${saved.x}px`;
+      desktopPet.style.top = `${saved.y}px`;
+      desktopPet.style.right = 'auto';
+      desktopPet.style.bottom = 'auto';
+    }
+  } catch {
+    localStorage.removeItem(petPositionKey);
+  }
+
+  desktopPet.addEventListener('pointerdown', (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    petPointerId = event.pointerId;
+    petMoved = false;
+    petStartX = event.clientX;
+    petStartY = event.clientY;
+    const rect = desktopPet.getBoundingClientRect();
+    const desktopRect = desktop.getBoundingClientRect();
+    petOriginX = rect.left - desktopRect.left;
+    petOriginY = rect.top - desktopRect.top;
+    desktopPet.setPointerCapture(event.pointerId);
+  });
+
+  desktopPet.addEventListener('pointermove', (event) => {
+    if (event.pointerId !== petPointerId) return;
+    const dx = event.clientX - petStartX;
+    const dy = event.clientY - petStartY;
+    if (!petMoved && Math.hypot(dx, dy) > 6) {
+      petMoved = true;
+      desktopPet.classList.add('is-dragging');
+    }
+    if (!petMoved) return;
+    const maxX = Math.max(8, desktop.clientWidth - desktopPet.offsetWidth - 8);
+    const maxY = Math.max(54, desktop.clientHeight - desktopPet.offsetHeight - 78);
+    const nextX = Math.max(8, Math.min(maxX, petOriginX + dx));
+    const nextY = Math.max(54, Math.min(maxY, petOriginY + dy));
+    desktopPet.style.left = `${nextX}px`;
+    desktopPet.style.top = `${nextY}px`;
+    desktopPet.style.right = 'auto';
+    desktopPet.style.bottom = 'auto';
+  });
+
+  desktopPet.addEventListener('pointerup', (event) => {
+    if (event.pointerId !== petPointerId) return;
+    if (desktopPet.hasPointerCapture(event.pointerId)) desktopPet.releasePointerCapture(event.pointerId);
+    petPointerId = null;
+    desktopPet.classList.remove('is-dragging');
+    if (petMoved) {
+      localStorage.setItem(petPositionKey, JSON.stringify({
+        x: parseFloat(desktopPet.style.left),
+        y: parseFloat(desktopPet.style.top)
+      }));
+      return;
+    }
+    desktopPet.classList.add('is-excited');
+    window.setTimeout(() => desktopPet.classList.remove('is-excited'), 2200);
+  });
+
+  desktopPet.addEventListener('pointercancel', () => {
+    petPointerId = null;
+    desktopPet.classList.remove('is-dragging');
+  });
+}
+
 let desktopIconZ = 30;
 const desktopIcons = [...document.querySelectorAll('.desktop-icon')];
 const iconGrid = document.querySelector('.desktop-icons');

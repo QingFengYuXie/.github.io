@@ -278,6 +278,50 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 .desktop-art { opacity: 0; pointer-events: none; }
 @media (max-width: 800px) { .desktop { background-size: cover, cover; background-position: center, 62% 56%; } }
 
+/* Rem desktop pet — source: legeling/awesome-codex-pet (rem--l1). */
+.desktop-pet {
+  --pet-row: 0;
+  position: absolute;
+  z-index: 28;
+  right: 148px;
+  bottom: 88px;
+  display: grid;
+  place-items: end center;
+  width: 144px;
+  height: 182px;
+  padding: 0;
+  color: #e9d8dd;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  filter: drop-shadow(0 14px 16px rgba(0, 0, 0, .48));
+  touch-action: none;
+  user-select: none;
+}
+.desktop-pet:active, .desktop-pet.is-dragging { cursor: grabbing; }
+.desktop-pet:focus-visible { outline: 2px solid #ff6474; outline-offset: 5px; border-radius: 10px; }
+.desktop-pet-sprite {
+  display: block;
+  width: 144px;
+  height: 156px;
+  background-image: url('./assets/rem-pet/spritesheet.webp');
+  background-repeat: no-repeat;
+  background-size: 1152px 1404px;
+  background-position: 0 calc(var(--pet-row) * -156px);
+  image-rendering: auto;
+  animation: rem-pet-idle 1.25s steps(8) infinite;
+  transition: filter .2s ease, transform .2s ease;
+}
+.desktop-pet:hover .desktop-pet-sprite, .desktop-pet:focus-visible .desktop-pet-sprite { filter: brightness(1.08); transform: translateY(-3px); }
+.desktop-pet.is-excited .desktop-pet-sprite { --pet-row: 1; animation-duration: .72s; }
+.desktop-pet-name { margin-top: -4px; padding: 3px 7px; color: rgba(255, 230, 234, .72); border: 1px solid rgba(255, 109, 127, .22); border-radius: 999px; background: rgba(14, 7, 9, .66); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); font: 700 9px/1 Monaco, Consolas, monospace; letter-spacing: 1.4px; opacity: 0; transform: translateY(-4px); transition: opacity .2s ease, transform .2s ease; }
+.desktop-pet:hover .desktop-pet-name, .desktop-pet:focus-visible .desktop-pet-name, .desktop-pet.is-excited .desktop-pet-name { opacity: 1; transform: translateY(0); }
+@keyframes rem-pet-idle {
+  from { background-position: 0 calc(var(--pet-row) * -156px); }
+  to { background-position: -1152px calc(var(--pet-row) * -156px); }
+}
+@media (max-width: 800px) { .desktop-pet { display: none; } }
+
 /* Desktop geometry and corner utilities */
 .desktop-topbar { justify-content: flex-end; gap: 24px; }
 .desktop-topbar .top-links { margin-left: 0; }
