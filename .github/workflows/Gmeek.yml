@@ -62,6 +62,24 @@ jobs:
           mkdir -p /tmp/Gmeek-dynamic /opt/Gmeek/docs/dynamic
           cp -a /opt/Gmeek/docs/. /tmp/Gmeek-dynamic/
           cp -a /tmp/Gmeek-dynamic/. /opt/Gmeek/docs/dynamic/
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          dynamic_dir = Path('/opt/Gmeek/docs/dynamic')
+          for page in dynamic_dir.glob('*.html'):
+              content = page.read_text(encoding='utf-8')
+              content = content.replace(
+                  'href="https://qfyx.top/index.html"',
+                  'href="https://qfyx.top/dynamic/"',
+              )
+              content = re.sub(
+                  r'href="https://qfyx.top/page(\d+)\.html"',
+                  r'href="https://qfyx.top/dynamic/page\1.html"',
+                  content,
+              )
+              page.write_text(content, encoding='utf-8')
+          PY
           cp /opt/Gmeek/static/root-redirect.html /opt/Gmeek/docs/index.html
           cp -a /opt/Gmeek/docs ${{ github.workspace }} 
           cp -a /opt/Gmeek/backup ${{ github.workspace }} 
