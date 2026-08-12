@@ -58,6 +58,11 @@ jobs:
           cd /opt/Gmeek/
           mkdir -p backup
           python Gmeek.py ${{ secrets.GITHUB_TOKEN }} ${{ github.repository }} --issue_number '${{ github.event.issue.number }}'
+          rm -rf /tmp/Gmeek-dynamic /opt/Gmeek/docs/dynamic
+          mkdir -p /tmp/Gmeek-dynamic /opt/Gmeek/docs/dynamic
+          cp -a /opt/Gmeek/docs/. /tmp/Gmeek-dynamic/
+          cp -a /tmp/Gmeek-dynamic/. /opt/Gmeek/docs/dynamic/
+          cp /opt/Gmeek/static/root-redirect.html /opt/Gmeek/docs/index.html
           cp -a /opt/Gmeek/docs ${{ github.workspace }} 
           cp -a /opt/Gmeek/backup ${{ github.workspace }} 
           cp /opt/Gmeek/blogBase.json ${{ github.workspace }} 

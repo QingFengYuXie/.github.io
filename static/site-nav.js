@@ -5,7 +5,7 @@
     const path = window.location.pathname.replace(/\/+$/, '') || '/';
     const current = path === '/os' ? 'os' : path === '/about.html' ? 'about' : 'feed';
     const items = [
-      { id: 'feed', label: '动态', href: '/' },
+      { id: 'feed', label: '动态', href: '/dynamic/' },
       { id: 'os', label: '我的 OS', href: '/os/' },
       { id: 'about', label: '关于', href: '/about.html' }
     ];
