@@ -5,9 +5,7 @@ const windows = [...document.querySelectorAll('.app-window')];
 const dockItems = [...document.querySelectorAll('.dock-item')];
 const pageViewport = document.querySelector('#pageViewport');
 const pageTrack = document.querySelector('#pageTrack');
-const pages = [...document.querySelectorAll('.app-page')];
-const pageDots = [...document.querySelectorAll('.page-dots i')];
-const pageCounter = document.querySelector('#pageCounter');
+const pages = [...document.querySelectorAll('.site-page')];
 let topZ = 60;
 let activePage = 0;
 
@@ -55,8 +53,7 @@ function switchPage(index, animate = true) {
     if (isActive) item.setAttribute('aria-current', 'page');
     else item.removeAttribute('aria-current');
   });
-  pageDots.forEach((dot, dotIndex) => dot.classList.toggle('active', dotIndex === activePage));
-  pageCounter.textContent = `${String(activePage + 1).padStart(2, '0')} / ${String(pages.length).padStart(2, '0')}`;
+  document.body.dataset.page = String(activePage);
 }
 
 dockItems.forEach((item) => {
@@ -75,6 +72,7 @@ let horizontalSwipe = false;
 
 pageViewport.addEventListener('pointerdown', (event) => {
   if (!event.isPrimary || event.button !== 0) return;
+  if (event.target.closest('button, a, .app-window, .desktop-icon')) return;
   swipePointer = event.pointerId;
   swipeStartX = event.clientX;
   swipeStartY = event.clientY;
@@ -244,7 +242,8 @@ document.querySelectorAll('.desktop-icon').forEach((icon) => {
   icon.addEventListener('dragstart', (event) => event.preventDefault());
 });
 
-switchPage(0, false);
+const requestedPage = Number(new URLSearchParams(window.location.search).get('page'));
+switchPage(Number.isInteger(requestedPage) ? requestedPage : 0, false);
 
 function updateClock() {
   document.querySelector('#clock').textContent = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
