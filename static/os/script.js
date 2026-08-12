@@ -62,8 +62,7 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-if (new URLSearchParams(window.location.search).has('boot')) runBootSequence();
-else launch();
+runBootSequence();
 
 function focusWindow(windowElement) {
   topZ += 1;
@@ -435,8 +434,7 @@ function appendTerminalLine(content, className = '') {
 }
 
 function openTerminal() {
-  openWindow('terminalWindow');
-  window.setTimeout(() => terminalInput?.focus(), 80);
+  // Terminal is intentionally disabled for the public desktop.
 }
 
 function terminalHelp() {
@@ -472,7 +470,7 @@ function commandItems() {
     { icon: '✉', title: '打开联系', detail: '> contact', run: () => openWindow('contactWindow') },
     { icon: '◌', title: '整理桌面', detail: '> arrange', run: arrangeIcons },
     { icon: '◐', title: '切换桌面光效', detail: '> theme', run: () => document.body.classList.toggle('desktop-soft-light') }
-  ];
+  ].filter((item) => item.detail !== '> terminal');
 }
 
 function getPaletteItems(query) {
