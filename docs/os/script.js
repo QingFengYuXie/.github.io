@@ -62,8 +62,8 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-if (new URLSearchParams(window.location.search).has('desktop')) launch();
-else runBootSequence();
+if (new URLSearchParams(window.location.search).has('boot')) runBootSequence();
+else launch();
 
 function focusWindow(windowElement) {
   topZ += 1;
