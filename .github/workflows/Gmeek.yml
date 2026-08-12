@@ -65,14 +65,12 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import re
-          from urllib.request import Request, urlopen
+          import shutil
 
           docs_dir = Path('/opt/Gmeek/docs')
+          dynamic_dir = docs_dir / 'dynamic'
           primer_path = docs_dir / 'primer.css'
-          primer_url = 'https://cdnjs.cloudflare.com/ajax/libs/Primer/21.0.7/primer.css'
-          request = Request(primer_url, headers={'User-Agent': 'Gmeek GitHub Pages build'})
-          with urlopen(request, timeout=60) as response:
-              primer_path.write_bytes(response.read())
+          shutil.copy2('/opt/Gmeek/static/primer.css', primer_path)
 
           for page in docs_dir.rglob('*.html'):
               content = page.read_text(encoding='utf-8')
@@ -83,20 +81,26 @@ jobs:
                   'href="https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/Primer/21.0.7/primer.css"',
                   'href="/primer.css"',
               )
-              content = content.replace(
-                  'href="https://qfyx.top/index.html"',
-                  'href="https://qfyx.top/dynamic/"',
-              )
-              content = re.sub(
-                  r'href="https://qfyx.top/page(\d+)\.html"',
-                  r'href="https://qfyx.top/dynamic/page\1.html"',
-                  content,
-              )
+              is_dynamic_page = dynamic_dir in page.parents
+              if is_dynamic_page:
+                  content = content.replace(
+                      'href="https://qfyx.top/index.html"',
+                      'href="https://qfyx.top/dynamic/"',
+                  )
+                  content = re.sub(
+                      r'href="https://qfyx.top/page(\d+)\.html"',
+                      r'href="https://qfyx.top/dynamic/page\1.html"',
+                      content,
+                  )
               # Keep the temporary test posts readable until their GitHub
               # Issues can be renamed with a valid GitHub token.
-              content = re.sub(r'\?{6}(\s+\d{2})', r'测试动态\1', content)
-              content = content.replace('href="tag.html#????"', 'href="tag.html#测试"')
-              content = content.replace('>????</a>', '>测试</a>')
+              content = re.sub(
+                  r'\?{6}(\s+\d{2})',
+                  lambda match: '\u6d4b\u8bd5\u52a8\u6001' + match.group(1),
+                  content,
+              )
+              content = content.replace('href="tag.html#????"', 'href="tag.html#\u6d4b\u8bd5"')
+              content = content.replace('>????</a>', '>\u6d4b\u8bd5</a>')
               page.write_text(content, encoding='utf-8')
           PY
           cp /opt/Gmeek/static/root-redirect.html /opt/Gmeek/docs/index.html
