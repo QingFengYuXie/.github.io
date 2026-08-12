@@ -192,8 +192,11 @@ function makeDraggable(element, handle, bounds) {
 
 windows.forEach((windowElement) => makeDraggable(windowElement, windowElement.querySelector('.window-header'), desktop));
 
+let desktopIconZ = 30;
+
 document.querySelectorAll('.desktop-icon').forEach((icon) => {
   const dragThreshold = 7;
+  let placeholder = null;
   let activePointer = null;
   let moved = false;
   let startX = 0;
@@ -211,16 +214,27 @@ document.querySelectorAll('.desktop-icon').forEach((icon) => {
     startY = event.clientY;
     originX = rect.left;
     originY = rect.top;
-    icon.style.position = 'fixed';
-    icon.style.left = `${originX}px`;
-    icon.style.top = `${originY}px`;
-    icon.style.zIndex = 30;
   });
   icon.addEventListener('pointermove', (event) => {
     if (event.pointerId !== activePointer) return;
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
-    if (Math.hypot(dx, dy) >= dragThreshold) moved = true;
+    if (!moved && Math.hypot(dx, dy) >= dragThreshold) {
+      moved = true;
+      if (!placeholder) {
+        placeholder = document.createElement('span');
+        placeholder.className = 'desktop-icon-placeholder';
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.style.width = `${icon.offsetWidth}px`;
+        placeholder.style.height = `${icon.offsetHeight}px`;
+        icon.before(placeholder);
+      }
+      icon.style.position = 'fixed';
+      icon.style.left = `${originX}px`;
+      icon.style.top = `${originY}px`;
+      desktopIconZ += 1;
+      icon.style.zIndex = desktopIconZ;
+    }
     if (moved) {
       icon.style.left = `${Math.max(4, Math.min(window.innerWidth - icon.offsetWidth - 4, originX + dx))}px`;
       icon.style.top = `${Math.max(55, Math.min(window.innerHeight - icon.offsetHeight - 85, originY + dy))}px`;
