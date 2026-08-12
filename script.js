@@ -117,7 +117,7 @@ let horizontalSwipe = false;
 
 pageViewport.addEventListener('pointerdown', (event) => {
   if (!event.isPrimary || event.button !== 0) return;
-  if (event.target.closest('button, a, .app-window, .desktop-icon')) return;
+  if (event.target.closest('button, a, input, .app-window, .desktop-icon, .os-code, .os-table-wrap')) return;
   swipePointer = event.pointerId;
   swipeStartX = event.clientX;
   swipeStartY = event.clientY;
