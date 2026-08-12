@@ -434,7 +434,8 @@ function appendTerminalLine(content, className = '') {
 }
 
 function openTerminal() {
-  // Terminal is intentionally disabled for the public desktop.
+  openWindow('terminalWindow');
+  window.setTimeout(() => terminalInput?.focus(), 80);
 }
 
 function terminalHelp() {
