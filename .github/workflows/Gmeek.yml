@@ -99,6 +99,32 @@ jobs:
                   lambda match: '\u6d4b\u8bd5\u52a8\u6001' + match.group(1),
                   content,
               )
+              def test_post_text(number):
+                  return (
+                      f'\u8fd9\u662f\u7b2c {number} \u7bc7\u6d4b\u8bd5\u52a8\u6001\uff0c'
+                      '\u7528\u4e8e\u9a8c\u8bc1\u6587\u7ae0\u8be6\u60c5\u3001\u5206\u9875\u548c\u8bc4\u8bba\u529f\u80fd\u3002'
+                  )
+
+              content = re.sub(
+                  r'(<meta name="description" content=")\?{3}\s+(\d+)[^"]*(">)',
+                  lambda match: match.group(1) + test_post_text(match.group(2)) + match.group(3),
+                  content,
+              )
+              content = re.sub(
+                  r'(<meta property="og:description" content=")\?{3}\s+(\d+)[^"]*(">)',
+                  lambda match: match.group(1) + test_post_text(match.group(2)) + match.group(3),
+                  content,
+              )
+              content = re.sub(
+                  r'(<div class="markdown-body" id="postBody">)\s*<p>\?{3}\s+(\d+).*?</p>\s*<p>\?{5,}.*?</p>(</div>)',
+                  lambda match: (
+                      match.group(1)
+                      + f'<p>{test_post_text(match.group(2))}</p>'
+                      + '<p>\u6d4b\u8bd5\u5185\u5bb9\u7531\u81ea\u52a8\u5316\u751f\u6210\uff0c\u9875\u9762\u663e\u793a\u6b63\u5e38\u5373\u53ef\u3002</p>'
+                      + match.group(3)
+                  ),
+                  content,
+              )
               content = content.replace('href="tag.html#????"', 'href="tag.html#\u6d4b\u8bd5"')
               content = content.replace('>????</a>', '>\u6d4b\u8bd5</a>')
               page.write_text(content, encoding='utf-8')
