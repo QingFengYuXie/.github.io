@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 9998;
   left: 50%;
-  bottom: max(16px, env(safe-area-inset-bottom));
+  top: max(16px, env(safe-area-inset-top));
   display: flex;
   gap: 4px;
   padding: 6px;
@@ -43,7 +43,7 @@
   .site-global-nav {
     left: auto;
     right: max(12px, env(safe-area-inset-right));
-    bottom: max(10px, env(safe-area-inset-bottom));
+    top: max(10px, env(safe-area-inset-top));
     width: min(330px, calc(100vw - 80px));
     justify-content: center;
     transform: none;
