@@ -3,6 +3,13 @@ const themeToggle = document.querySelector('#themeToggle');
 const themeColorMeta = document.querySelector('#themeColorMeta');
 const themeStorageKey = 'lightwind-theme-v1';
 
+function syncThemeColor() {
+  if (!themeColorMeta) return;
+  const isLight = themeRoot.dataset.theme === 'light';
+  const isHome = !document.body.dataset.page || document.body.dataset.page === '0';
+  themeColorMeta.content = isLight ? '#ffffff' : (isHome ? '#070506' : '#0d1117');
+}
+
 function readStoredTheme() {
   try {
     return localStorage.getItem(themeStorageKey) === 'light' ? 'light' : 'dark';
@@ -15,19 +22,20 @@ function applyTheme(theme, persist = false) {
   const nextTheme = theme === 'light' ? 'light' : 'dark';
   const isLight = nextTheme === 'light';
   themeRoot.dataset.theme = nextTheme;
-  if (themeColorMeta) themeColorMeta.content = isLight ? '#f5f1ee' : '#070506';
+  syncThemeColor();
   if (themeToggle) {
     themeToggle.dataset.theme = nextTheme;
     themeToggle.setAttribute('aria-pressed', String(isLight));
     themeToggle.setAttribute('aria-label', isLight ? '切换到深色主题' : '切换到浅色主题');
     themeToggle.title = isLight ? '切换到深色主题' : '切换到浅色主题';
-    themeToggle.querySelector('.theme-toggle-label').textContent = isLight ? '深色' : '浅色';
+    themeToggle.querySelector('.theme-toggle-label').textContent = isLight ? '深色主题' : '浅色主题';
   }
   if (persist) {
     try {
       localStorage.setItem(themeStorageKey, nextTheme);
     } catch {}
   }
+  document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: nextTheme } }));
 }
 
 applyTheme(readStoredTheme());
@@ -136,6 +144,7 @@ function switchPage(index, animate = true) {
     else item.removeAttribute('aria-current');
   });
   document.body.dataset.page = String(activePage);
+  syncThemeColor();
 }
 
 dockItems.forEach((item) => {

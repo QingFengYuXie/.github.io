@@ -20,6 +20,10 @@ if (osBlogApp) {
   const sourceState = document.querySelector('#osBlogSourceState');
   const pageElement = document.querySelector('.page-os');
 
+  function utterancesTheme() {
+    return document.documentElement.dataset.theme === 'light' ? 'github-light' : 'github-dark-orange';
+  }
+
   const fallbackPosts = [
     {
       id: 'welcome', title: '欢迎来到轻风雨斜 OS', date: '2026-08-12', labels: ['置顶', '系统'], comments: 0,
@@ -350,13 +354,22 @@ if (osBlogApp) {
     script.setAttribute('repo', repo);
     if (state.currentPost.number) script.setAttribute('issue-number', String(state.currentPost.number));
     else script.setAttribute('issue-term', 'title');
-    script.setAttribute('theme', 'github-dark-orange');
+    script.setAttribute('theme', utterancesTheme());
     script.setAttribute('crossorigin', 'anonymous');
     script.async = true;
     script.addEventListener('load', () => { button.hidden = true; });
     script.addEventListener('error', () => { button.disabled = false; button.textContent = '评论加载失败，点击重试'; });
     container.append(script);
   }
+
+  document.addEventListener('themechange', ({ detail }) => {
+    const frame = document.querySelector('#osComments iframe.utterances-frame');
+    if (!frame?.contentWindow) return;
+    frame.contentWindow.postMessage({
+      type: 'set-theme',
+      theme: detail?.theme === 'light' ? 'github-light' : 'github-dark-orange'
+    }, 'https://utteranc.es');
+  });
 
   function restoreFromUrl() {
     const params = new URLSearchParams(window.location.search);
