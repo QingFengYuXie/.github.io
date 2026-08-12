@@ -1,4 +1,4 @@
-# 轻风雨 OS · 个人空间
+# 轻风雨斜OS · 个人空间
 
 一个程序员的个人主页、作品集与博客，使用纯 HTML、CSS 和 JavaScript 构建，可直接部署到 GitHub Pages。
 
