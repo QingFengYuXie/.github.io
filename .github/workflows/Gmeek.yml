@@ -2,6 +2,12 @@ name: build Gmeek
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "config.json"
+      - "static/**"
+      - ".github/workflows/Gmeek.yml"
   issues:
     types: [opened, edited]
   schedule:
