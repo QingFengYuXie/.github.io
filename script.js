@@ -1,5 +1,5 @@
 const themeRoot = document.documentElement;
-const themeToggle = document.querySelector('#themeToggle');
+const themeToggles = [...document.querySelectorAll('[data-theme-toggle]')];
 const themeColorMeta = document.querySelector('#themeColorMeta');
 const themeStorageKey = 'lightwind-theme-v1';
 
@@ -11,6 +11,8 @@ function syncThemeColor() {
 }
 
 function readStoredTheme() {
+  const requestedTheme = new URLSearchParams(window.location.search).get('theme');
+  if (requestedTheme === 'light' || requestedTheme === 'dark') return requestedTheme;
   try {
     return localStorage.getItem(themeStorageKey) === 'light' ? 'light' : 'dark';
   } catch {
@@ -23,13 +25,14 @@ function applyTheme(theme, persist = false) {
   const isLight = nextTheme === 'light';
   themeRoot.dataset.theme = nextTheme;
   syncThemeColor();
-  if (themeToggle) {
-    themeToggle.dataset.theme = nextTheme;
-    themeToggle.setAttribute('aria-pressed', String(isLight));
-    themeToggle.setAttribute('aria-label', isLight ? '切换到深色主题' : '切换到浅色主题');
-    themeToggle.title = isLight ? '切换到深色主题' : '切换到浅色主题';
-    themeToggle.querySelector('.theme-toggle-label').textContent = isLight ? '深色主题' : '浅色主题';
-  }
+  themeToggles.forEach((toggle) => {
+    toggle.dataset.theme = nextTheme;
+    toggle.setAttribute('aria-pressed', String(isLight));
+    toggle.setAttribute('aria-label', isLight ? '切换到深色主题' : '切换到浅色主题');
+    toggle.title = isLight ? '切换到深色主题' : '切换到浅色主题';
+    const label = toggle.querySelector('.theme-toggle-label');
+    if (label) label.textContent = isLight ? '深色主题' : '浅色主题';
+  });
   if (persist) {
     try {
       localStorage.setItem(themeStorageKey, nextTheme);
@@ -39,8 +42,10 @@ function applyTheme(theme, persist = false) {
 }
 
 applyTheme(readStoredTheme());
-themeToggle?.addEventListener('click', () => {
-  applyTheme(themeRoot.dataset.theme === 'light' ? 'dark' : 'light', true);
+themeToggles.forEach((toggle) => {
+  toggle.addEventListener('click', () => {
+    applyTheme(themeRoot.dataset.theme === 'light' ? 'dark' : 'light', true);
+  });
 });
 
 const bootScreen = document.querySelector('#bootScreen');
@@ -112,7 +117,8 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-if (new URLSearchParams(window.location.search).has('desktop')) launch();
+const initialParams = new URLSearchParams(window.location.search);
+if (initialParams.has('desktop') || Number(initialParams.get('page')) > 0) launch();
 else runBootSequence();
 
 function syncDock(windowElement, isOpen) {
@@ -152,6 +158,10 @@ dockItems.forEach((item) => {
     windows.filter((windowElement) => !windowElement.hidden).forEach(closeWindow);
     switchPage(Number(item.dataset.page));
   });
+});
+
+document.querySelectorAll('[data-page-jump]').forEach((trigger) => {
+  trigger.addEventListener('click', () => switchPage(Number(trigger.dataset.pageJump)));
 });
 
 let swipePointer = null;

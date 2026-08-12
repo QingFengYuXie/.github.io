@@ -6,7 +6,7 @@ if (osBlogApp) {
   const repo = osBlogApp.dataset.repo;
   const apiBase = `https://api.github.com/repos/${repo}`;
   const cacheKey = `lightwind-os-issues:${repo}`;
-  const pageSize = 5;
+  const pageSize = 15;
   const state = { posts: [], query: '', tag: '全部', page: 1, currentPost: null, source: '内置文章' };
 
   const listView = document.querySelector('#osBlogListView');
@@ -15,6 +15,7 @@ if (osBlogApp) {
   const filter = document.querySelector('#osBlogFilter');
   const status = document.querySelector('#osBlogStatus');
   const pagination = document.querySelector('#osBlogPagination');
+  const searchTools = document.querySelector('#osBlogTools');
   const searchForm = document.querySelector('#osBlogSearch');
   const searchInput = document.querySelector('#osSearchInput');
   const sourceState = document.querySelector('#osBlogSourceState');
@@ -52,6 +53,10 @@ if (osBlogApp) {
   ];
 
   function normalizeIssue(issue) {
+    const labelColors = {};
+    (issue.labels || []).forEach((label) => {
+      if (typeof label !== 'string' && label?.name && label?.color) labelColors[label.name] = `#${label.color}`;
+    });
     return {
       id: `issue-${issue.number}`,
       number: issue.number,
@@ -62,6 +67,7 @@ if (osBlogApp) {
       updated: (issue.updated_at || '').slice(0, 10),
       comments: issue.comments || 0,
       labels: (issue.labels || []).map((label) => typeof label === 'string' ? label : label.name).filter(Boolean),
+      labelColors,
       sourceUrl: issue.html_url,
       author: issue.user?.login || 'QingFengYuXie'
     };
@@ -86,6 +92,32 @@ if (osBlogApp) {
     } catch {
       return '#';
     }
+  }
+
+  const iconPaths = {
+    post: 'M0 3.75C0 2.784.784 2 1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25Zm1.75-.25a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25v-8.5a.25.25 0 0 0-.25-.25ZM3.5 6.75A.75.75 0 0 1 4.25 6h7.5a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1-.75-.75Zm0 3A.75.75 0 0 1 4.25 9h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z',
+    pinned: 'M8.75 1.75a.75.75 0 0 0-1.5 0v6.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44ZM2.5 10a.75.75 0 0 0-1.5 0v3.25C1 14.216 1.784 15 2.75 15h10.5A1.75 1.75 0 0 0 15 13.25V10a.75.75 0 0 0-1.5 0v3.25a.25.25 0 0 1-.25.25H2.75a.25.25 0 0 1-.25-.25Z',
+    comment: 'M1.75 1h12.5C15.216 1 16 1.784 16 2.75v8.5A1.75 1.75 0 0 1 14.25 13H7.5l-3.876 2.907A1 1 0 0 1 2 15.107V13h-.25A1.75 1.75 0 0 1 0 11.25v-8.5C0 1.784.784 1 1.75 1Z'
+  };
+
+  const knownLabelColors = {
+    '置顶': '#d73a4a', pinned: '#d73a4a', '系统': '#8250df', '开发': '#d93f0b',
+    '生活': '#1a7f37', '思考': '#bf8700', '自动化': '#0969da', AI: '#db61a2',
+    'GitHub Pages': '#8250df', '软件': '#d93f0b', '日常': '#5767f2', '硬件': '#1a7f37'
+  };
+  const fallbackLabelColors = ['#0969da', '#8250df', '#1a7f37', '#d93f0b', '#bf8700', '#db61a2', '#006b75'];
+  const yearColors = ['#bc4c00', '#0969da', '#1f883d', '#a333d0'];
+
+  function colorForLabel(post, label) {
+    if (post?.labelColors?.[label]) return post.labelColors[label];
+    if (knownLabelColors[label]) return knownLabelColors[label];
+    const hash = [...label].reduce((total, character) => total + character.codePointAt(0), 0);
+    return fallbackLabelColors[hash % fallbackLabelColors.length];
+  }
+
+  function colorForDate(date = '') {
+    const year = Number(date.slice(0, 4)) || new Date().getFullYear();
+    return yearColors[Math.abs(year) % yearColors.length];
   }
 
   function inlineMarkdown(value = '') {
@@ -207,7 +239,10 @@ if (osBlogApp) {
   }
 
   function renderFilters() {
-    filter.innerHTML = labelCounts().map(([label, count]) => `<button class="${state.tag === label ? 'active' : ''}" type="button" data-tag="${escapeHtml(label)}">${escapeHtml(label)} <b>${String(count).padStart(2, '0')}</b></button>`).join('');
+    filter.innerHTML = labelCounts().map(([label, count]) => {
+      const color = label === '全部' ? '#24292f' : colorForLabel(null, label);
+      return `<button class="${state.tag === label ? 'active' : ''}" style="background-color:${color}" type="button" data-tag="${escapeHtml(label)}">${escapeHtml(label)} <b>${String(count).padStart(2, '0')}</b></button>`;
+    }).join('');
   }
 
   function renderPagination(totalPages) {
@@ -228,8 +263,9 @@ if (osBlogApp) {
     status.textContent = posts.length ? `共 ${posts.length} 篇文章 · ${state.source}` : '没有找到符合条件的文章。';
     postList.innerHTML = visible.map((post) => {
       const pinned = post.labels.some((label) => /^(置顶|pinned)$/i.test(label));
-      const label = post.labels.find((item) => !/^(置顶|pinned)$/i.test(item)) || '随笔';
-      return `<button class="os-post ${pinned ? 'pinned' : ''}" type="button" data-post-id="${escapeHtml(post.id)}"><span class="os-post-icon">${pinned ? '⌁' : '#'}</span><strong>${escapeHtml(post.title)}</strong><span class="os-comment">${post.comments}</span><em>${escapeHtml(pinned ? '置顶' : label)}</em><time>${escapeHtml(post.date)}</time></button>`;
+      const comment = post.comments > 0 ? `<span class="gm-label comment-label"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="${iconPaths.comment}"/></svg>${post.comments}</span>` : '';
+      const labels = post.labels.map((label) => `<span class="gm-label label-name" style="background-color:${colorForLabel(post, label)}">${escapeHtml(label)}</span>`).join('');
+      return `<button class="os-post ${pinned ? 'pinned' : ''}" type="button" data-post-id="${escapeHtml(post.id)}" aria-label="阅读 ${escapeHtml(post.title)}"><span class="os-post-main"><span class="os-post-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="${pinned ? iconPaths.pinned : iconPaths.post}"/></svg></span><span class="list-title">${escapeHtml(post.title)}</span></span><span class="list-labels">${comment}${labels}<time class="gm-label label-time" style="background-color:${colorForDate(post.date)}">${escapeHtml(post.date)}</time></span></button>`;
     }).join('');
     renderPagination(totalPages);
     sourceState.textContent = state.source;
@@ -294,14 +330,16 @@ if (osBlogApp) {
     const post = state.posts.find((item) => item.id === id);
     if (!post) return;
     state.currentPost = post;
+    osBlogApp.classList.add('is-post');
     listView.hidden = true;
     postView.hidden = false;
     document.querySelector('#osPostTitle').textContent = post.title;
-    document.querySelector('#osPostLabels').innerHTML = post.labels.map((label) => `<span>${escapeHtml(label)}</span>`).join('');
+    document.querySelector('#osPostLabels').innerHTML = post.labels.map((label) => `<span style="background-color:${colorForLabel(post, label)}">${escapeHtml(label)}</span>`).join('');
     document.querySelector('#osPostMeta').textContent = `${post.date}${post.updated && post.updated !== post.date ? ` · 更新于 ${post.updated}` : ''} · ${post.author || '轻风雨'} · ${post.comments} 条评论`;
     const source = document.querySelector('#osPostSource');
     source.href = post.sourceUrl || `https://github.com/${repo}/issues`;
-    source.textContent = post.sourceUrl ? '查看原始 Issue ↗' : '在 GitHub 中讨论 ↗';
+    source.title = post.sourceUrl ? '查看原始 Issue' : '在 GitHub 中讨论';
+    source.setAttribute('aria-label', source.title);
     document.querySelector('#osPostBody').innerHTML = post.bodyHtml || markdownToHtml(post.body);
     enhanceRenderedArticle();
     renderToc();
@@ -316,6 +354,7 @@ if (osBlogApp) {
 
   function closePost(updateHistory = true) {
     state.currentPost = null;
+    osBlogApp.classList.remove('is-post');
     document.title = defaultDocumentTitle;
     const description = document.querySelector('meta[name="description"]');
     if (description) description.content = defaultDescription;
@@ -337,6 +376,19 @@ if (osBlogApp) {
       area.remove();
     }
     if (button) {
+      if (button.classList.contains('gmeek-circle')) {
+        const previousTitle = button.title;
+        const previousLabel = button.getAttribute('aria-label');
+        button.classList.add('is-copied');
+        button.title = '已复制';
+        button.setAttribute('aria-label', '已复制');
+        window.setTimeout(() => {
+          button.classList.remove('is-copied');
+          button.title = previousTitle;
+          button.setAttribute('aria-label', previousLabel || previousTitle);
+        }, 1400);
+        return;
+      }
       const previous = button.textContent;
       button.textContent = '已复制';
       window.setTimeout(() => { button.textContent = previous; }, 1400);
@@ -377,7 +429,7 @@ if (osBlogApp) {
     state.tag = params.get('tag') || '全部';
     state.page = Math.max(1, Number(params.get('blogPage')) || 1);
     searchInput.value = state.query;
-    searchForm.hidden = !state.query;
+    searchTools.hidden = !state.query && state.tag === '全部';
     renderList();
     const postId = params.get('post');
     if (postId) openPost(postId, false);
@@ -430,8 +482,8 @@ if (osBlogApp) {
   }
 
   document.querySelector('#osSearchToggle').addEventListener('click', () => {
-    searchForm.hidden = !searchForm.hidden;
-    if (!searchForm.hidden) searchInput.focus();
+    searchTools.hidden = !searchTools.hidden;
+    if (!searchTools.hidden) searchInput.focus();
   });
   searchForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -485,13 +537,17 @@ if (osBlogApp) {
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.matches('input, textarea')) {
+      if (document.body.dataset.page !== '2') return;
       event.preventDefault();
-      searchForm.hidden = false;
+      searchTools.hidden = false;
       searchInput.focus();
     }
     if (event.key === 'Escape' && state.currentPost) closePost();
   });
   window.addEventListener('popstate', restoreFromUrl);
+
+  const copyrightYear = document.querySelector('#copyrightYear');
+  if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
 
   loadPosts();
 }
