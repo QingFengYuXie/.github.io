@@ -158,6 +158,35 @@ if (desktopPet) {
   let petOriginY = 0;
   let petMoved = false;
   let petExcitedTimer = 0;
+  let petDragFrame = 0;
+  let petPendingX = 0;
+  let petPendingY = 0;
+  let petBounds = null;
+
+  function applyPetPosition() {
+    petDragFrame = 0;
+    desktopPet.style.left = `${petPendingX}px`;
+    desktopPet.style.top = `${petPendingY}px`;
+    desktopPet.style.right = 'auto';
+    desktopPet.style.bottom = 'auto';
+  }
+
+  function queuePetPosition(x, y) {
+    petPendingX = x;
+    petPendingY = y;
+    if (!petDragFrame) petDragFrame = window.requestAnimationFrame(applyPetPosition);
+  }
+
+  function flushPetPosition() {
+    if (!petDragFrame) return;
+    window.cancelAnimationFrame(petDragFrame);
+    applyPetPosition();
+  }
+
+  desktopPet.addEventListener('pointerenter', () => desktopPet.classList.add('is-hovered'));
+  desktopPet.addEventListener('pointerleave', () => {
+    if (petPointerId === null) desktopPet.classList.remove('is-hovered');
+  });
 
   try {
     const saved = JSON.parse(localStorage.getItem(petPositionKey));
@@ -173,14 +202,22 @@ if (desktopPet) {
 
   desktopPet.addEventListener('pointerdown', (event) => {
     if (!event.isPrimary || event.button !== 0) return;
+    event.preventDefault();
     petPointerId = event.pointerId;
     petMoved = false;
+    desktopPet.dataset.petDragged = 'false';
     petStartX = event.clientX;
     petStartY = event.clientY;
     const rect = desktopPet.getBoundingClientRect();
     const desktopRect = desktop.getBoundingClientRect();
     petOriginX = rect.left - desktopRect.left;
     petOriginY = rect.top - desktopRect.top;
+    petPendingX = petOriginX;
+    petPendingY = petOriginY;
+    petBounds = {
+      maxX: Math.max(8, desktop.clientWidth - desktopPet.offsetWidth - 8),
+      maxY: Math.max(54, desktop.clientHeight - desktopPet.offsetHeight - 78)
+    };
     desktopPet.setPointerCapture(event.pointerId);
   });
 
@@ -190,24 +227,23 @@ if (desktopPet) {
     const dy = event.clientY - petStartY;
     if (!petMoved && Math.hypot(dx, dy) > 6) {
       petMoved = true;
+      desktopPet.dataset.petDragged = 'true';
       desktopPet.classList.add('is-dragging');
     }
     if (!petMoved) return;
-    const maxX = Math.max(8, desktop.clientWidth - desktopPet.offsetWidth - 8);
-    const maxY = Math.max(54, desktop.clientHeight - desktopPet.offsetHeight - 78);
-    const nextX = Math.max(8, Math.min(maxX, petOriginX + dx));
-    const nextY = Math.max(54, Math.min(maxY, petOriginY + dy));
-    desktopPet.style.left = `${nextX}px`;
-    desktopPet.style.top = `${nextY}px`;
-    desktopPet.style.right = 'auto';
-    desktopPet.style.bottom = 'auto';
+    const nextX = Math.max(8, Math.min(petBounds.maxX, petOriginX + dx));
+    const nextY = Math.max(54, Math.min(petBounds.maxY, petOriginY + dy));
+    queuePetPosition(nextX, nextY);
   });
 
   desktopPet.addEventListener('pointerup', (event) => {
     if (event.pointerId !== petPointerId) return;
+    flushPetPosition();
     if (desktopPet.hasPointerCapture(event.pointerId)) desktopPet.releasePointerCapture(event.pointerId);
     petPointerId = null;
+    petBounds = null;
     desktopPet.classList.remove('is-dragging');
+    if (!desktopPet.matches(':hover')) desktopPet.classList.remove('is-hovered');
     if (petMoved) {
       localStorage.setItem(petPositionKey, JSON.stringify({
         x: parseFloat(desktopPet.style.left),
@@ -221,8 +257,11 @@ if (desktopPet) {
   });
 
   desktopPet.addEventListener('pointercancel', () => {
+    flushPetPosition();
     petPointerId = null;
+    petBounds = null;
     desktopPet.classList.remove('is-dragging');
+    if (!desktopPet.matches(':hover')) desktopPet.classList.remove('is-hovered');
   });
 }
 
@@ -439,6 +478,10 @@ function showPetSpeech(message, duration = 3000) {
 
 if (desktopPet) {
   desktopPet.addEventListener('pointerup', () => {
+    if (desktopPet.dataset.petDragged === 'true') {
+      desktopPet.dataset.petDragged = 'false';
+      return;
+    }
     showPetSpeech(['蕾姆正在为你加油。', '写一点，再休息一下。', '检测到新的灵感。', '今天也要保持好奇。'][Math.floor(Math.random() * 4)]);
   });
   window.setTimeout(() => showPetSpeech('蕾姆已上线，点击我可以互动。', 4200), 2200);
