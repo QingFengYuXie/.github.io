@@ -1,5 +1,10 @@
 const bootScreen = document.querySelector('#bootScreen');
 const bootLog = document.querySelector('#bootLog');
+const bootProgress = document.querySelector('#bootProgress');
+const bootProgressFill = document.querySelector('#bootProgressFill');
+const bootProgressPet = document.querySelector('#bootProgressPet');
+const bootProgressValue = document.querySelector('#bootProgressValue');
+const bootProgressStatus = document.querySelector('#bootProgressStatus');
 const desktop = document.querySelector('#desktop');
 const windows = [...document.querySelectorAll('.app-window')];
 let topZ = 60;
@@ -17,9 +22,24 @@ const bootMessages = [
   ['info', 'Reached target Graphical Interface.']
 ];
 
+const bootStartDelay = 180;
+const bootStepDelay = 145;
+const bootCompleteDelay = 280;
+
+function updateBootProgress(index, status) {
+  const progress = Math.min(100, Math.round(((index + 1) / bootMessages.length) * 100));
+  bootProgress?.style.setProperty('--boot-progress', `${progress}%`);
+  if (bootProgressFill) bootProgressFill.style.width = `${progress}%`;
+  if (bootProgressPet) bootProgressPet.style.left = `${progress}%`;
+  if (bootProgress) bootProgress.setAttribute('aria-valuenow', String(progress));
+  if (bootProgressValue) bootProgressValue.textContent = `${progress}%`;
+  if (bootProgressStatus) bootProgressStatus.textContent = status;
+}
+
 function finishBootSequence() {
   if (bootComplete) return;
   bootComplete = true;
+  updateBootProgress(bootMessages.length - 1, 'Graphical interface ready. Launching desktop...');
   window.setTimeout(launch, 360);
 }
 
@@ -33,8 +53,9 @@ function runBootSequence() {
         : `<span>[&nbsp;&nbsp;INFO&nbsp;]</span> ${message}`;
       bootLog.append(line);
       line.scrollIntoView({ block: 'nearest' });
-      if (index === bootMessages.length - 1) window.setTimeout(finishBootSequence, 280);
-    }, 180 + index * 145);
+      updateBootProgress(index, message);
+      if (index === bootMessages.length - 1) window.setTimeout(finishBootSequence, bootCompleteDelay);
+    }, bootStartDelay + index * bootStepDelay);
   });
 }
 
