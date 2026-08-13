@@ -122,6 +122,22 @@
   animation: site-music-pulse 1.2s ease-in-out infinite;
 }
 
+body:not(.os-page) .title-right a[onclick^="modeSwitch"] {
+  position: fixed !important;
+  z-index: 10000 !important;
+  top: max(20px, env(safe-area-inset-top)) !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: max(20px, env(safe-area-inset-left)) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .os-page .desktop-clock-controls {
   position: fixed;
   z-index: 18;
@@ -224,6 +240,13 @@
     left: calc(max(12px, env(safe-area-inset-left)) + 50px);
     width: 42px;
     height: 42px;
+  }
+
+  body:not(.os-page) .title-right a[onclick^="modeSwitch"] {
+    top: max(12px, env(safe-area-inset-top)) !important;
+    left: max(12px, env(safe-area-inset-left)) !important;
+    width: 42px !important;
+    height: 42px !important;
   }
 
   .os-page .desktop-clock-controls {
