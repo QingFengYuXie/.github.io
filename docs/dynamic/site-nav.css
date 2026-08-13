@@ -81,6 +81,9 @@
     width: min(330px, calc(100vw - 80px));
     justify-content: center;
     transform: translateX(-50%);
+    background: var(--bgColor-default, var(--color-canvas-default, rgba(255, 255, 255, .98)));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .site-global-nav a {
