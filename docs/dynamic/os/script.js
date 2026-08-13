@@ -157,11 +157,21 @@ if (desktopPet) {
   let petOriginX = 0;
   let petOriginY = 0;
   let petMoved = false;
-  let petExcitedTimer = 0;
+  let petInteractionTimer = 0;
   let petDragFrame = 0;
   let petPendingX = 0;
   let petPendingY = 0;
   let petBounds = null;
+  let petHovered = false;
+  let petInteracting = false;
+
+  function syncPetState() {
+    let state = 'idle';
+    if (petPointerId !== null && petMoved) state = 'dragging';
+    else if (petInteracting) state = 'interacting';
+    else if (petHovered) state = 'hovered';
+    desktopPet.dataset.petState = state;
+  }
 
   function applyPetPosition() {
     petDragFrame = 0;
@@ -183,9 +193,14 @@ if (desktopPet) {
     applyPetPosition();
   }
 
-  desktopPet.addEventListener('pointerenter', () => desktopPet.classList.add('is-hovered'));
+  desktopPet.dataset.petState = 'idle';
+  desktopPet.addEventListener('pointerenter', () => {
+    petHovered = true;
+    syncPetState();
+  });
   desktopPet.addEventListener('pointerleave', () => {
-    if (petPointerId === null) desktopPet.classList.remove('is-hovered');
+    petHovered = false;
+    syncPetState();
   });
 
   try {
@@ -203,6 +218,8 @@ if (desktopPet) {
   desktopPet.addEventListener('pointerdown', (event) => {
     if (!event.isPrimary || event.button !== 0) return;
     event.preventDefault();
+    window.clearTimeout(petInteractionTimer);
+    petInteracting = false;
     petPointerId = event.pointerId;
     petMoved = false;
     desktopPet.dataset.petDragged = 'false';
@@ -219,6 +236,7 @@ if (desktopPet) {
       maxY: Math.max(54, desktop.clientHeight - desktopPet.offsetHeight - 78)
     };
     desktopPet.setPointerCapture(event.pointerId);
+    syncPetState();
   });
 
   desktopPet.addEventListener('pointermove', (event) => {
@@ -228,7 +246,7 @@ if (desktopPet) {
     if (!petMoved && Math.hypot(dx, dy) > 6) {
       petMoved = true;
       desktopPet.dataset.petDragged = 'true';
-      desktopPet.classList.add('is-dragging');
+      syncPetState();
     }
     if (!petMoved) return;
     const nextX = Math.max(8, Math.min(petBounds.maxX, petOriginX + dx));
@@ -242,26 +260,30 @@ if (desktopPet) {
     if (desktopPet.hasPointerCapture(event.pointerId)) desktopPet.releasePointerCapture(event.pointerId);
     petPointerId = null;
     petBounds = null;
-    desktopPet.classList.remove('is-dragging');
-    if (!desktopPet.matches(':hover')) desktopPet.classList.remove('is-hovered');
+    petHovered = desktopPet.matches(':hover');
     if (petMoved) {
+      syncPetState();
       localStorage.setItem(petPositionKey, JSON.stringify({
         x: parseFloat(desktopPet.style.left),
         y: parseFloat(desktopPet.style.top)
       }));
       return;
     }
-    window.clearTimeout(petExcitedTimer);
-    desktopPet.classList.add('is-excited');
-    petExcitedTimer = window.setTimeout(() => desktopPet.classList.remove('is-excited'), 2200);
+    petInteracting = true;
+    syncPetState();
+    petInteractionTimer = window.setTimeout(() => {
+      petInteracting = false;
+      syncPetState();
+    }, 2200);
   });
 
   desktopPet.addEventListener('pointercancel', () => {
     flushPetPosition();
     petPointerId = null;
     petBounds = null;
-    desktopPet.classList.remove('is-dragging');
-    if (!desktopPet.matches(':hover')) desktopPet.classList.remove('is-hovered');
+    petMoved = false;
+    petHovered = desktopPet.matches(':hover');
+    syncPetState();
   });
 }
 
