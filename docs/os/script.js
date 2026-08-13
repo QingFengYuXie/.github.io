@@ -1,7 +1,5 @@
 const bootScreen = document.querySelector('#bootScreen');
-const launchButton = document.querySelector('#launchButton');
 const bootLog = document.querySelector('#bootLog');
-const bootReady = document.querySelector('#bootReady');
 const desktop = document.querySelector('#desktop');
 const windows = [...document.querySelectorAll('.app-window')];
 let topZ = 60;
@@ -22,9 +20,7 @@ const bootMessages = [
 function finishBootSequence() {
   if (bootComplete) return;
   bootComplete = true;
-  bootReady.hidden = false;
-  requestAnimationFrame(() => bootReady.classList.add('visible'));
-  launchButton.focus({ preventScroll: true });
+  window.setTimeout(launch, 360);
 }
 
 function runBootSequence() {
@@ -47,15 +43,7 @@ function launch() {
   bootScreen.classList.add('hidden');
 }
 
-launchButton.addEventListener('click', () => {
-  if (bootComplete) launch();
-  else finishBootSequence();
-});
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && !bootScreen.classList.contains('hidden')) {
-    if (bootComplete) launch();
-    else finishBootSequence();
-  }
   if (event.key === 'Escape' && bootScreen.classList.contains('hidden') && (!commandPalette || commandPalette.hidden)) {
     const focusedWindow = document.querySelector('.app-window.focused:not([hidden])');
     if (focusedWindow) closeWindow(focusedWindow);
