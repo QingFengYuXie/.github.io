@@ -133,7 +133,9 @@
 }
 
 .os-page .desktop-clock-controls .site-music-toggle {
-  position: static;
+  position: fixed;
+  top: max(20px, env(safe-area-inset-top));
+  left: max(20px, env(safe-area-inset-left));
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
@@ -219,6 +221,8 @@
   }
 
   .os-page .desktop-clock-controls .site-music-toggle {
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
     width: 28px;
     height: 28px;
   }
