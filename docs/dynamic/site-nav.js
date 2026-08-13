@@ -75,7 +75,7 @@
   function mountMusicControl() {
     if (document.querySelector('.site-music-toggle')) return;
 
-    const themeButton = document.querySelector('.title-right a[onclick^="modeSwitch"]');
+    const themeButton = document.querySelector('.title-right a[onclick*="modeSwitch"]');
     const osMusicSlot = document.querySelector('#osMusicSlot');
     const button = document.createElement('button');
     const audio = document.createElement('audio');

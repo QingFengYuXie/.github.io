@@ -122,7 +122,7 @@
   animation: site-music-pulse 1.2s ease-in-out infinite;
 }
 
-body:not(.os-page) .title-right a[onclick^="modeSwitch"] {
+body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   position: fixed !important;
   z-index: 10000 !important;
   top: max(20px, env(safe-area-inset-top)) !important;
@@ -242,7 +242,7 @@ body:not(.os-page) .title-right a[onclick^="modeSwitch"] {
     height: 42px;
   }
 
-  body:not(.os-page) .title-right a[onclick^="modeSwitch"] {
+  body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
     top: max(12px, env(safe-area-inset-top)) !important;
     left: max(12px, env(safe-area-inset-left)) !important;
     width: 42px !important;
