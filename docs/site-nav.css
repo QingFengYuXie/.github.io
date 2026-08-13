@@ -129,14 +129,42 @@
   bottom: 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .os-page .desktop-clock-controls .site-music-toggle {
   position: static;
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
+  color: #b9a4a8;
+  border-color: rgba(255, 109, 104, .2);
+  border-radius: 5px;
+  background: rgba(10, 6, 8, .72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .025), 0 5px 16px rgba(0, 0, 0, .2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.os-page .desktop-clock-controls .site-music-toggle:hover {
+  color: #ff8a86;
+  background: rgba(31, 12, 15, .84);
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .035), 0 6px 18px rgba(0, 0, 0, .25);
+}
+
+.os-page .desktop-clock-controls .site-music-toggle:focus-visible {
+  outline: 1px solid #ff6d68;
+  outline-offset: 2px;
+}
+
+.os-page .desktop-clock-controls .site-music-toggle[data-music-state="playing"] {
+  color: #ff6d68;
+  border-color: rgba(255, 109, 104, .42);
+}
+
+.os-page .desktop-clock-controls .site-music-icon {
+  font-size: 15px;
 }
 
 .os-page .desktop-clock {
@@ -191,7 +219,11 @@
   }
 
   .os-page .desktop-clock-controls .site-music-toggle {
-    width: 42px;
-    height: 42px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .os-page .desktop-clock-controls .site-music-icon {
+    font-size: 14px;
   }
 }
