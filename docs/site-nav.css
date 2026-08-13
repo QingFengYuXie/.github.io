@@ -1,10 +1,16 @@
 .site-visit-stats {
+  position: absolute;
+  z-index: 9997;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
   width: min(1012px, calc(100% - 32px));
-  margin: 0 auto 12px;
+  margin: 0;
+  transform: translateX(-50%);
   color: var(--fgColor-muted, var(--color-fg-muted, #59636e));
   font: 500 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-align: center;
   letter-spacing: .1px;
+  pointer-events: none;
 }
 
 .site-visit-stats strong {
@@ -63,7 +69,6 @@
 @media (max-width: 600px) {
   .site-visit-stats {
     width: calc(100% - 88px);
-    margin-bottom: 8px;
     font-size: 11px;
   }
 
