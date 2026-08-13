@@ -64,6 +64,7 @@ jobs:
           cp -a /tmp/Gmeek-dynamic/. /opt/Gmeek/docs/dynamic/
           python - <<'PY'
           from pathlib import Path
+          import json
           import re
           import shutil
 
@@ -128,6 +129,34 @@ jobs:
               content = content.replace('href="tag.html#????"', 'href="tag.html#\u6d4b\u8bd5"')
               content = content.replace('>????</a>', '>\u6d4b\u8bd5</a>')
               page.write_text(content, encoding='utf-8')
+
+          # The temporary test Issues were created with literal question marks
+          # in their titles and label. Gmeek's search page reads postList.json
+          # directly, so repair both the root and /dynamic search indexes too.
+          for index_path in docs_dir.rglob('postList.json'):
+              data = json.loads(index_path.read_text(encoding='utf-8'))
+              for key, post in data.items():
+                  if not (key.startswith('P') and isinstance(post, dict)):
+                      continue
+                  post['postTitle'] = re.sub(
+                      r'^\?{6}\s+(\d{2})$',
+                      lambda match: '\u6d4b\u8bd5\u52a8\u6001 ' + match.group(1),
+                      post.get('postTitle', ''),
+                  )
+                  post['labels'] = [
+                      '\u6d4b\u8bd5' if label == '????' else label
+                      for label in post.get('labels', [])
+                  ]
+
+              label_colors = data.get('labelColorDict', {})
+              broken_label_color = label_colors.pop('????', None)
+              if broken_label_color and '\u6d4b\u8bd5' not in label_colors:
+                  label_colors['\u6d4b\u8bd5'] = broken_label_color
+
+              index_path.write_text(
+                  json.dumps(data, ensure_ascii=False),
+                  encoding='utf-8',
+              )
           PY
           cp /opt/Gmeek/static/root-redirect.html /opt/Gmeek/docs/index.html
           cp -a /opt/Gmeek/docs ${{ github.workspace }} 
