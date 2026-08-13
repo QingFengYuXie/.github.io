@@ -128,6 +128,15 @@ jobs:
               )
               content = content.replace('href="tag.html#????"', 'href="tag.html#\u6d4b\u8bd5"')
               content = content.replace('>????</a>', '>\u6d4b\u8bd5</a>')
+              issue_match = re.search(
+                  r'https://github\.com/[^/]+/[^/]+/issues/(\d+)',
+                  content,
+              )
+              if issue_match:
+                  content = content.replace(
+                      'script.setAttribute("issue-term","title");',
+                      f'script.setAttribute("issue-number","{issue_match.group(1)}");',
+                  )
               page.write_text(content, encoding='utf-8')
 
           # The temporary test Issues were created with literal question marks
