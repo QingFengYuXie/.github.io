@@ -1,3 +1,23 @@
+.site-visit-stats {
+  width: min(1012px, calc(100% - 32px));
+  margin: 0 auto 12px;
+  color: var(--fgColor-muted, var(--color-fg-muted, #59636e));
+  font: 500 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-align: center;
+  letter-spacing: .1px;
+}
+
+.site-visit-stats strong {
+  color: var(--fgColor-default, var(--color-fg-default, #1f2328));
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-visit-stats > span {
+  margin: 0 7px;
+  color: var(--borderColor-default, var(--color-border-default, #d0d7de));
+}
+
 .site-global-nav {
   position: fixed;
   z-index: 9998;
@@ -41,6 +61,12 @@
 }
 
 @media (max-width: 600px) {
+  .site-visit-stats {
+    width: calc(100% - 88px);
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+
   .site-global-nav {
     left: auto;
     left: 50%;
