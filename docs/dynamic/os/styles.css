@@ -307,6 +307,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   filter: drop-shadow(0 14px 16px rgba(0, 0, 0, .48));
   touch-action: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .desktop-pet:active, .desktop-pet.is-dragging { cursor: grabbing; }
 .desktop-pet:focus-visible { outline: 2px solid #ff6474; outline-offset: 5px; border-radius: 10px; }
@@ -321,12 +322,13 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   image-rendering: auto;
   animation: rem-pet-idle 1.25s steps(8) infinite;
   transition: filter .2s ease, transform .2s ease;
+  will-change: background-position, transform;
 }
-.desktop-pet:hover .desktop-pet-sprite, .desktop-pet:focus-visible .desktop-pet-sprite { filter: brightness(1.08); transform: translateY(-3px); animation: rem-pet-stand 1.05s steps(6) infinite; }
+.desktop-pet:hover .desktop-pet-sprite, .desktop-pet.is-hovered .desktop-pet-sprite, .desktop-pet:focus-visible .desktop-pet-sprite { filter: brightness(1.08); transform: translateY(-3px); animation: rem-pet-stand 1.05s steps(6) infinite; }
 .desktop-pet.is-dragging .desktop-pet-sprite { animation: rem-pet-walk .68s steps(8) infinite; }
 .desktop-pet.is-excited .desktop-pet-sprite { animation: rem-pet-wave .72s steps(4) 3; }
 .desktop-pet-name { margin-top: -4px; padding: 3px 7px; color: rgba(255, 230, 234, .72); border: 1px solid rgba(255, 109, 127, .22); border-radius: 999px; background: rgba(14, 7, 9, .66); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); font: 700 9px/1 Monaco, Consolas, monospace; letter-spacing: 1.4px; opacity: 0; transform: translateY(-4px); transition: opacity .2s ease, transform .2s ease; }
-.desktop-pet:hover .desktop-pet-name, .desktop-pet:focus-visible .desktop-pet-name, .desktop-pet.is-excited .desktop-pet-name { opacity: 1; transform: translateY(0); }
+.desktop-pet:hover .desktop-pet-name, .desktop-pet.is-hovered .desktop-pet-name, .desktop-pet:focus-visible .desktop-pet-name, .desktop-pet.is-excited .desktop-pet-name { opacity: 1; transform: translateY(0); }
 @keyframes rem-pet-idle {
   from { background-position: 0 0; }
   to { background-position: -1152px 0; }
