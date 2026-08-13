@@ -168,6 +168,8 @@ jobs:
               )
           PY
           cp /opt/Gmeek/static/root-redirect.html /opt/Gmeek/docs/index.html
+          cp /opt/Gmeek/static/site-nav.css /opt/Gmeek/docs/site-nav.css
+          cp /opt/Gmeek/static/site-nav.js /opt/Gmeek/docs/site-nav.js
           cp -a /opt/Gmeek/docs ${{ github.workspace }} 
           cp -a /opt/Gmeek/backup ${{ github.workspace }} 
           cp /opt/Gmeek/blogBase.json ${{ github.workspace }} 
