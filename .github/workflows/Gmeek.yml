@@ -170,6 +170,11 @@ jobs:
           cp /opt/Gmeek/static/root-redirect.html /opt/Gmeek/docs/index.html
           cp /opt/Gmeek/static/site-nav.css /opt/Gmeek/docs/site-nav.css
           cp /opt/Gmeek/static/site-nav.js /opt/Gmeek/docs/site-nav.js
+          rm -rf /opt/Gmeek/docs/os
+          cp -a /opt/Gmeek/static/os /opt/Gmeek/docs/os
+          rm -rf /opt/Gmeek/docs/dynamic/os
+          mkdir -p /opt/Gmeek/docs/dynamic
+          cp -a /opt/Gmeek/static/os /opt/Gmeek/docs/dynamic/os
           cp -a /opt/Gmeek/docs ${{ github.workspace }} 
           cp -a /opt/Gmeek/backup ${{ github.workspace }} 
           cp /opt/Gmeek/blogBase.json ${{ github.workspace }} 
