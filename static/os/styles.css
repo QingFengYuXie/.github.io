@@ -314,7 +314,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   animation: rem-pet-idle 1.25s steps(8) infinite;
   transition: filter .2s ease, transform .2s ease;
 }
-.desktop-pet:hover .desktop-pet-sprite, .desktop-pet:focus-visible .desktop-pet-sprite { filter: brightness(1.08); transform: translateY(-3px); }
+.desktop-pet:hover .desktop-pet-sprite, .desktop-pet:focus-visible .desktop-pet-sprite { filter: brightness(1.08); transform: translateY(-3px); animation: rem-pet-stand 1.05s steps(6) infinite; }
 .desktop-pet.is-dragging .desktop-pet-sprite { animation: rem-pet-walk .68s steps(8) infinite; }
 .desktop-pet.is-excited .desktop-pet-sprite { animation: rem-pet-wave .72s steps(4) 3; }
 .desktop-pet-name { margin-top: -4px; padding: 3px 7px; color: rgba(255, 230, 234, .72); border: 1px solid rgba(255, 109, 127, .22); border-radius: 999px; background: rgba(14, 7, 9, .66); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); font: 700 9px/1 Monaco, Consolas, monospace; letter-spacing: 1.4px; opacity: 0; transform: translateY(-4px); transition: opacity .2s ease, transform .2s ease; }
@@ -330,6 +330,10 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 @keyframes rem-pet-wave {
   from { background-position: 0 -468px; }
   to { background-position: -576px -468px; }
+}
+@keyframes rem-pet-stand {
+  from { background-position: 0 -936px; }
+  to { background-position: -864px -936px; }
 }
 @media (max-width: 800px) { .desktop-pet { display: none; } }
 
