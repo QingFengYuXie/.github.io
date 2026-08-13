@@ -7,10 +7,10 @@
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
     <link rel="stylesheet" href="./styles.css?v=20260813-11" />
-    <link rel="stylesheet" href="../site-nav.css?v=20260813-15" />
-    <script src="../site-nav.js?v=20260813-14" defer></script>
+    <link rel="stylesheet" href="../site-nav.css?v=20260813-16" />
+    <script src="../site-nav.js?v=20260813-15" defer></script>
   </head>
-  <body>
+  <body class="os-page">
     <div class="boot-screen" id="bootScreen">
       <div class="linux-boot" role="log" aria-live="polite" aria-label="轻风雨斜 OS 启动日志">
         <header class="linux-boot-header"><span>Lightwind GNU/Linux</span><span>tty1</span></header>
@@ -38,7 +38,10 @@
       <div class="desktop-topbar">
         <nav class="top-links"><button data-open="aboutWindow">About</button><button data-open="osWindow">Values</button><button data-open="nowWindow">Now</button></nav>
         <div class="os-brand">轻风雨斜 <i>OS</i></div>
-        <time class="desktop-clock" id="clock">2026/8/12&nbsp;&nbsp;星期三&nbsp;&nbsp;12:16</time>
+        <div class="desktop-clock-controls">
+          <div id="osMusicSlot"></div>
+          <time class="desktop-clock" id="clock">2026/8/12&nbsp;&nbsp;星期三&nbsp;&nbsp;12:16</time>
+        </div>
       </div>
 
       <div class="desktop-art" aria-hidden="true"><div class="avatar-orbit"></div><img src="assets/avatar.webp" alt="" decoding="async" /></div>
