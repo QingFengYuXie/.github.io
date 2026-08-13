@@ -2,6 +2,7 @@
   const siteStartedAt = Date.UTC(2026, 7, 11);
   const musicSource = 'https://aqqmusic.tc.qq.com/C400004JYkhl1ccbXL.m4a?guid=570938557&vkey=42950A34D64304D428C93616A08F00B56C650CCEEC25DEA15B6B2E62C3299994155260AC0D1FF6780BA27D7AFDF908AFFF7A7B76698B075B__v2b94c62d&uin=&fromtag=120032';
   const musicPreferenceKey = 'lightwind-background-music-enabled-v1';
+  const musicPositionKey = 'lightwind-background-music-position-v1';
 
   function getCurrentPath() {
     return window.location.pathname.replace(/\/+$/, '') || '/';
@@ -75,14 +76,24 @@
     if (document.querySelector('.site-music-toggle')) return;
 
     const themeButton = document.querySelector('.title-right a[onclick^="modeSwitch"]');
+    const osMusicSlot = document.querySelector('#osMusicSlot');
     const button = document.createElement('button');
     const audio = document.createElement('audio');
     let musicEnabled = true;
+    let resumePosition = 0;
+    let positionRestored = false;
 
     try {
       musicEnabled = window.localStorage.getItem(musicPreferenceKey) !== 'off';
     } catch {
       musicEnabled = true;
+    }
+
+    try {
+      const savedPosition = Number(window.sessionStorage.getItem(musicPositionKey));
+      if (Number.isFinite(savedPosition) && savedPosition >= 0) resumePosition = savedPosition;
+    } catch {
+      resumePosition = 0;
     }
 
     button.type = 'button';
@@ -93,12 +104,12 @@
     audio.className = 'site-background-audio';
     audio.src = musicSource;
     audio.loop = true;
-    audio.autoplay = true;
     audio.preload = 'auto';
     audio.volume = 0.42;
     audio.setAttribute('aria-hidden', 'true');
 
-    if (themeButton?.parentNode) themeButton.parentNode.insertBefore(button, themeButton.nextSibling);
+    if (osMusicSlot) osMusicSlot.append(button);
+    else if (themeButton?.parentNode) themeButton.parentNode.insertBefore(button, themeButton.nextSibling);
     else document.body.append(button);
     document.body.append(audio);
 
@@ -107,6 +118,15 @@
         window.localStorage.setItem(musicPreferenceKey, musicEnabled ? 'on' : 'off');
       } catch {
         // Private browsing or blocked storage should not disable the player.
+      }
+    }
+
+    function saveMusicPosition() {
+      if (!Number.isFinite(audio.currentTime)) return;
+      try {
+        window.sessionStorage.setItem(musicPositionKey, String(audio.currentTime));
+      } catch {
+        // Private browsing or blocked storage should not interrupt playback.
       }
     }
 
@@ -128,11 +148,30 @@
       }
     }
 
+    function restoreMusicPosition() {
+      if (positionRestored || audio.readyState < 1 || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+      if (resumePosition > 0) {
+        const safePosition = Math.min(resumePosition % audio.duration, Math.max(0, audio.duration - 0.25));
+        try {
+          audio.currentTime = safePosition;
+        } catch {
+          // The media can still be played from the beginning if seeking is unavailable.
+        }
+      }
+      positionRestored = true;
+      if (musicEnabled) requestPlay();
+    }
+
     function setMusicEnabled(enabled) {
       musicEnabled = enabled;
       savePreference();
-      if (musicEnabled) requestPlay();
-      else audio.pause();
+      if (musicEnabled) {
+        restoreMusicPosition();
+        requestPlay();
+      } else {
+        audio.pause();
+        saveMusicPosition();
+      }
       updateButton();
     }
 
@@ -141,6 +180,8 @@
     });
     audio.addEventListener('play', () => updateButton('playing'));
     audio.addEventListener('pause', () => updateButton());
+    audio.addEventListener('loadedmetadata', restoreMusicPosition);
+    audio.addEventListener('canplay', restoreMusicPosition);
     audio.addEventListener('error', () => {
       if (musicEnabled) updateButton('blocked');
     });
@@ -152,11 +193,24 @@
     document.addEventListener('pointerdown', unlockMusic, { passive: true });
     document.addEventListener('keydown', unlockMusic);
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && musicEnabled && audio.paused) requestPlay();
+      if (document.hidden) saveMusicPosition();
+      else if (musicEnabled && audio.paused) {
+        restoreMusicPosition();
+        requestPlay();
+      }
     });
+    window.addEventListener('pagehide', saveMusicPosition);
+    window.setInterval(saveMusicPosition, 1000);
 
     updateButton();
-    if (musicEnabled) requestPlay();
+    if (musicEnabled) {
+      if (resumePosition > 0 && audio.readyState < 1) {
+        audio.load();
+      } else {
+        restoreMusicPosition();
+        requestPlay();
+      }
+    }
   }
 
   function initializeSiteChrome() {

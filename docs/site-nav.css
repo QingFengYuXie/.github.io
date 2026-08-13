@@ -122,6 +122,27 @@
   animation: site-music-pulse 1.2s ease-in-out infinite;
 }
 
+.os-page .desktop-clock-controls {
+  position: fixed;
+  z-index: 18;
+  right: 24px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.os-page .desktop-clock-controls .site-music-toggle {
+  position: static;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+}
+
+.os-page .desktop-clock {
+  position: static;
+}
+
 .site-background-audio {
   display: none;
 }
@@ -160,6 +181,16 @@
   .site-music-toggle {
     top: max(12px, env(safe-area-inset-top));
     left: calc(max(12px, env(safe-area-inset-left)) + 50px);
+    width: 42px;
+    height: 42px;
+  }
+
+  .os-page .desktop-clock-controls {
+    right: 12px;
+    bottom: 86px;
+  }
+
+  .os-page .desktop-clock-controls .site-music-toggle {
     width: 42px;
     height: 42px;
   }
