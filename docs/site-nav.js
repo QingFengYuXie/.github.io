@@ -1,5 +1,7 @@
 (() => {
   const siteStartedAt = Date.UTC(2026, 7, 11);
+  const musicSource = 'https://aqqmusic.tc.qq.com/C400004JYkhl1ccbXL.m4a?guid=570938557&vkey=42950A34D64304D428C93616A08F00B56C650CCEEC25DEA15B6B2E62C3299994155260AC0D1FF6780BA27D7AFDF908AFFF7A7B76698B075B__v2b94c62d&uin=&fromtag=120032';
+  const musicPreferenceKey = 'lightwind-background-music-enabled-v1';
 
   function getCurrentPath() {
     return window.location.pathname.replace(/\/+$/, '') || '/';
@@ -69,9 +71,98 @@
     window.setTimeout(() => observer.disconnect(), 60000);
   }
 
+  function mountMusicControl() {
+    if (document.querySelector('.site-music-toggle')) return;
+
+    const themeButton = document.querySelector('.title-right a[onclick^="modeSwitch"]');
+    const button = document.createElement('button');
+    const audio = document.createElement('audio');
+    let musicEnabled = true;
+
+    try {
+      musicEnabled = window.localStorage.getItem(musicPreferenceKey) !== 'off';
+    } catch {
+      musicEnabled = true;
+    }
+
+    button.type = 'button';
+    button.className = 'site-music-toggle';
+    button.setAttribute('aria-pressed', String(musicEnabled));
+    button.innerHTML = '<span class="site-music-icon" aria-hidden="true">♫</span><span class="site-music-label">音乐</span>';
+
+    audio.className = 'site-background-audio';
+    audio.src = musicSource;
+    audio.loop = true;
+    audio.autoplay = true;
+    audio.preload = 'auto';
+    audio.volume = 0.42;
+    audio.setAttribute('aria-hidden', 'true');
+
+    if (themeButton?.parentNode) themeButton.parentNode.insertBefore(button, themeButton.nextSibling);
+    else document.body.append(button);
+    document.body.append(audio);
+
+    function savePreference() {
+      try {
+        window.localStorage.setItem(musicPreferenceKey, musicEnabled ? 'on' : 'off');
+      } catch {
+        // Private browsing or blocked storage should not disable the player.
+      }
+    }
+
+    function updateButton(state = audio.paused ? 'paused' : 'playing') {
+      const isPlaying = musicEnabled && state === 'playing';
+      const isBlocked = musicEnabled && state === 'blocked';
+      button.dataset.musicState = isPlaying ? 'playing' : isBlocked ? 'blocked' : 'paused';
+      button.setAttribute('aria-pressed', String(musicEnabled));
+      button.setAttribute('aria-label', isPlaying ? '关闭背景音乐' : '开启背景音乐');
+      button.title = isPlaying ? '关闭背景音乐' : isBlocked ? '点击开启背景音乐' : '开启背景音乐';
+      button.querySelector('.site-music-label').textContent = isPlaying ? '音乐' : '静音';
+    }
+
+    function requestPlay() {
+      if (!musicEnabled) return;
+      const playPromise = audio.play();
+      if (playPromise?.then) {
+        playPromise.then(() => updateButton('playing')).catch(() => updateButton('blocked'));
+      }
+    }
+
+    function setMusicEnabled(enabled) {
+      musicEnabled = enabled;
+      savePreference();
+      if (musicEnabled) requestPlay();
+      else audio.pause();
+      updateButton();
+    }
+
+    button.addEventListener('click', () => {
+      setMusicEnabled(musicEnabled && !audio.paused ? false : true);
+    });
+    audio.addEventListener('play', () => updateButton('playing'));
+    audio.addEventListener('pause', () => updateButton());
+    audio.addEventListener('error', () => {
+      if (musicEnabled) updateButton('blocked');
+    });
+
+    const unlockMusic = (event) => {
+      if (!musicEnabled || event.target.closest?.('.site-music-toggle')) return;
+      if (audio.paused) requestPlay();
+    };
+    document.addEventListener('pointerdown', unlockMusic, { passive: true });
+    document.addEventListener('keydown', unlockMusic);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && musicEnabled && audio.paused) requestPlay();
+    });
+
+    updateButton();
+    if (musicEnabled) requestPlay();
+  }
+
   function initializeSiteChrome() {
     mountGlobalNavigation();
     mountVisitStats();
+    mountMusicControl();
   }
 
   if (document.readyState === 'loading') {
