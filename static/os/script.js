@@ -369,14 +369,25 @@ desktopIcons.forEach((icon) => {
   icon.addEventListener('dragstart', (event) => event.preventDefault());
 });
 
+const clockElement = document.querySelector('#clock');
+const weekdayFormatter = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' });
+const timeFormatter = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+
 function updateClock() {
+  if (!clockElement) return;
   const now = new Date();
-  const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' }).format(now);
-  const time = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
-  document.querySelector('#clock').textContent = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}  ${weekday}  ${time}`;
+  const weekday = weekdayFormatter.format(now);
+  const time = timeFormatter.format(now);
+  clockElement.textContent = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}  ${weekday}  ${time}`;
 }
-updateClock();
-setInterval(updateClock, 30000);
+let clockTimer = 0;
+function scheduleClockUpdate() {
+  window.clearTimeout(clockTimer);
+  updateClock();
+  clockTimer = window.setTimeout(scheduleClockUpdate, document.hidden ? 120000 : 30000);
+}
+scheduleClockUpdate();
+document.addEventListener('visibilitychange', scheduleClockUpdate);
 
 const terminalWindow = document.querySelector('#terminalWindow');
 const terminalOutput = document.querySelector('#terminalOutput');
@@ -578,7 +589,7 @@ function updateSiteUptime() {
 
 async function loadLatestPost() {
   try {
-    const response = await fetch('/dynamic/postList.json', { cache: 'no-store' });
+    const response = await fetch('/dynamic/postList.json', { cache: 'no-cache' });
     if (!response.ok) throw new Error('post list unavailable');
     const data = await response.json();
     cachedPosts = Object.entries(data)
