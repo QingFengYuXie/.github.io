@@ -75,7 +75,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  width: min(292px, calc(100vw - 120px));
+  width: min(252px, calc(100vw - 120px));
   min-height: 54px;
   padding: 7px 8px 7px 12px;
   overflow: hidden;
@@ -167,6 +167,38 @@
 .site-music-player[data-music-state="blocked"] .site-music-status,
 .site-music-player[data-music-state="error"] .site-music-status { color: var(--fgColor-danger, var(--color-danger-fg, #cf222e)); }
 
+html[data-color-mode="light"] body:not(.os-page) .site-music-player {
+  border-color: color-mix(in srgb, #0969da 22%, var(--borderColor-default, var(--color-border-default, #d0d7de)));
+  background: linear-gradient(112deg, rgba(9, 105, 218, .1), transparent 38%), color-mix(in srgb, var(--bgColor-default, var(--color-canvas-default, #fff)) 92%, transparent);
+}
+
+html[data-color-mode="light"] body:not(.os-page) .site-music-player:hover {
+  border-color: color-mix(in srgb, #0969da 44%, var(--borderColor-default, var(--color-border-default, #d0d7de)));
+}
+
+html[data-color-mode="light"] body:not(.os-page) .site-music-status {
+  color: color-mix(in srgb, #0969da 72%, var(--fgColor-muted, var(--color-fg-muted, #6e7781)));
+}
+
+html[data-color-mode="light"] body:not(.os-page) .site-music-mode[data-music-mode="shuffle"] {
+  color: #0969da;
+  background: rgba(9, 105, 218, .1);
+}
+
+html[data-color-mode="light"] body:not(.os-page) .site-music-play {
+  border-color: #0969da;
+  background: linear-gradient(145deg, #2f81f7, #0969da);
+  box-shadow: 0 5px 14px rgba(9, 105, 218, .26);
+}
+
+html[data-color-mode="light"] body:not(.os-page) .site-music-play:hover:not(:disabled) {
+  background: linear-gradient(145deg, #539bf7, #0969da);
+}
+
+html[data-color-mode="light"] body:not(.os-page) .site-music-player[data-music-state="playing"] .site-music-play {
+  box-shadow: 0 5px 15px rgba(9, 105, 218, .32), 0 0 0 3px rgba(9, 105, 218, .12);
+}
+
 .site-music-live-status {
   position: absolute;
   width: 1px;
@@ -216,7 +248,7 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   right: auto;
   bottom: 18px;
   left: 24px;
-  width: 300px;
+  width: 268px;
   min-height: 54px;
   padding: 7px 8px 7px 12px;
   color: #b9a4a8;
@@ -271,7 +303,7 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   .site-music-player {
     top: max(12px, env(safe-area-inset-top));
     right: max(12px, env(safe-area-inset-right));
-    width: min(286px, calc(100vw - 70px));
+    width: min(252px, calc(100vw - 70px));
     min-height: 52px;
     gap: 5px;
     padding: 6px 7px 6px 10px;
@@ -299,7 +331,7 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
     right: auto;
     bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px));
     left: 12px;
-    width: min(296px, calc(100vw - 24px));
+    width: min(268px, calc(100vw - 24px));
   }
 }
 
