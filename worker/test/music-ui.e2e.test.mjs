@@ -5,7 +5,6 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright-core';
 
 const edgeExecutable = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const staticRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../static');
@@ -168,7 +167,10 @@ async function waitForTrack(page, trackId) {
   await page.waitForFunction((id) => document.querySelector('.site-music-player')?.dataset.trackId === id, trackId);
 }
 
-test('Edge music player and admin library regression', { skip: process.platform !== 'win32' || !existsSync(edgeExecutable) }, async (t) => {
+const canRunEdge = process.platform === 'win32' && existsSync(edgeExecutable);
+
+test('Edge music player and admin library regression', { skip: !canRunEdge }, async (t) => {
+  const { chromium } = await import('playwright-core');
   const { server, origin } = await startServer();
   const browser = await chromium.launch({ executablePath: edgeExecutable, headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -190,6 +192,11 @@ test('Edge music player and admin library regression', { skip: process.platform 
       assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).position), 'fixed');
       assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).right), '20px');
       assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').evaluate((element) => getComputedStyle(element).left), '20px');
+      assert.equal(await page.locator('.site-music-controls [data-music-action]').count(), 4);
+      assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
+      assert.equal(await page.locator('[data-music-action="mode"]').getAttribute('data-music-mode'), 'sequence');
+      assert.equal(await page.locator('.site-music-disc').evaluate((element) => getComputedStyle(element).animationName), 'site-music-disc-spin');
+      assert.equal(await page.locator('.site-music-disc').evaluate((element) => getComputedStyle(element).animationPlayState), 'running');
 
       await page.locator('[data-music-action="next"]').click();
       await waitForTrack(page, 'track-b');
@@ -207,6 +214,19 @@ test('Edge music player and admin library regression', { skip: process.platform 
         await waitForTrack(page, 'track-b');
         assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).right), '20px');
       }
+
+      await page.locator('[data-music-action="mode"]').click();
+      assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'shuffle');
+      assert.equal(await page.evaluate(() => localStorage.getItem('lightwind-background-music-mode-v1')), 'shuffle');
+      await page.locator('[data-music-action="next"]').click();
+      await waitForTrack(page, 'track-a');
+      await page.locator('[data-music-action="previous"]').click();
+      await waitForTrack(page, 'track-b');
+      await page.reload();
+      await waitForTrack(page, 'track-b');
+      assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'shuffle');
+      await page.locator('[data-music-action="mode"]').click();
+      assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
 
       await page.setViewportSize({ width: 390, height: 844 });
       const themeBox = await page.locator('.title-right a[onclick*="modeSwitch"]').boundingBox();
