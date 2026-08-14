@@ -453,12 +453,19 @@ function normalizeDesktopNavigation(value) {
   return { version: Number(value.version) || 1, updatedAt: Number(value.updatedAt) || 0, items };
 }
 
-function faviconUrl(url) {
+function faviconUrls(url) {
   try {
     const parsed = new URL(url, window.location.origin);
-    return ['http:', 'https:'].includes(parsed.protocol) ? `${parsed.origin}/favicon.ico` : '';
+    if (!['http:', 'https:'].includes(parsed.protocol)) return [];
+    return [
+      `${parsed.origin}/favicon.ico`,
+      `${parsed.origin}/favicon.svg`,
+      `${parsed.origin}/favicon.png`,
+      `${parsed.origin}/apple-touch-icon.png`,
+      `${parsed.origin}/apple-touch-icon-precomposed.png`
+    ];
   } catch {
-    return '';
+    return [];
   }
 }
 
@@ -466,21 +473,29 @@ function makeFavicon(link, fallback = '↗') {
   const wrapper = document.createElement('span');
   wrapper.className = 'navigation-favicon';
   wrapper.style.setProperty('--navigation-color', link.color || '#e8d9dc');
-  if (link.icon) {
-    wrapper.textContent = link.icon;
-    return wrapper;
-  }
-  const source = faviconUrl(link.url);
-  if (!source) {
-    wrapper.textContent = fallback;
+  const sources = faviconUrls(link.url);
+  const fallbackIcon = link.icon || fallback;
+  if (!sources.length) {
+    wrapper.textContent = fallbackIcon;
     return wrapper;
   }
   const image = document.createElement('img');
-  image.src = source;
   image.alt = '';
   image.decoding = 'async';
-  image.addEventListener('error', () => { image.remove(); wrapper.textContent = fallback; }, { once: true });
+  image.referrerPolicy = 'no-referrer';
+  let sourceIndex = 0;
+  const loadNextSource = () => {
+    if (sourceIndex >= sources.length) {
+      image.remove();
+      wrapper.textContent = fallbackIcon;
+      return;
+    }
+    image.src = sources[sourceIndex];
+    sourceIndex += 1;
+  };
+  image.addEventListener('error', loadNextSource);
   wrapper.append(image);
+  loadNextSource();
   return wrapper;
 }
 
