@@ -390,6 +390,79 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 .desktop-topbar .top-links { margin-left: 0; }
 .os-brand { order: 2; font-style: normal; }
 .os-brand i { font-style: italic; }
+.desktop-web-search {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 28px;
+  align-items: center;
+  width: min(340px, 34vw);
+  height: 34px;
+  padding: 0 4px 0 11px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(255, 249, 250, .11), rgba(83, 37, 45, .08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(13px) saturate(1.15);
+  -webkit-backdrop-filter: blur(13px) saturate(1.15);
+  transform: translate(-50%, -50%);
+  transition: width .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.desktop-web-search:focus-within {
+  width: min(370px, 38vw);
+  border-color: rgba(255, 78, 101, .42);
+  background: linear-gradient(145deg, rgba(255, 250, 251, .15), rgba(126, 28, 44, .12));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 10px 28px rgba(0, 0, 0, .34), 0 0 20px rgba(221, 42, 65, .1);
+}
+.desktop-search-icon {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid rgba(226, 210, 214, .68);
+  border-radius: 50%;
+}
+.desktop-search-icon::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  width: 5px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: rgba(226, 210, 214, .68);
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+.desktop-web-search input {
+  min-width: 0;
+  height: 100%;
+  padding: 0 7px;
+  color: #f2e7e9;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: 11px/1.2 ui-monospace, SFMono-Regular, Consolas, 'Microsoft YaHei', monospace;
+}
+.desktop-web-search input::placeholder { color: rgba(198, 177, 181, .58); }
+.desktop-web-search input::-webkit-search-cancel-button { filter: invert(1); opacity: .45; }
+.desktop-web-search button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: rgba(225, 205, 209, .68);
+  border-radius: 7px;
+  background: transparent;
+  transition: color .18s ease, background .18s ease;
+}
+.desktop-web-search button:hover,
+.desktop-web-search button:focus-visible { color: #fff; outline: 0; background: rgba(216, 45, 68, .3); }
+@media (max-width: 900px) { .desktop-web-search { width: min(300px, 38vw); } .desktop-web-search:focus-within { width: min(320px, 41vw); } }
+@media (max-width: 560px) {
+  .desktop-web-search, .desktop-web-search:focus-within { left: 12px; width: calc(100vw - 160px); min-width: 145px; transform: translateY(-50%); }
+  .desktop-web-search input { font-size: 10px; }
+}
 .desktop-clock { position: fixed; z-index: 18; right: 24px; bottom: 18px; margin: 0 !important; padding: 7px 11px; color: #d8c8ca; border: 1px solid rgba(255,70,88,.16); border-radius: 5px; background: rgba(8,4,5,.68); box-shadow: 0 6px 20px rgba(0,0,0,.28); backdrop-filter: blur(10px); font-size: 11px !important; letter-spacing: .3px; }
 .desktop-icons { --cell-w: 112px; --cell-h: 96px; top: 68px; right: 22px; bottom: 112px; left: 22px; display: block; width: auto; }
 .desktop-icons::before { content: ''; position: absolute; inset: -8px; opacity: 0; pointer-events: none; background-image: linear-gradient(rgba(255,64,82,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,64,82,.055) 1px, transparent 1px); background-size: var(--cell-w) var(--cell-h); transition: opacity .18s ease; }

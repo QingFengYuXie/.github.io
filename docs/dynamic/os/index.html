@@ -6,7 +6,7 @@
     <meta name="description" content="轻风雨斜 OS：一个程序员的个人桌面、作品集与博客。" />
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
-    <link rel="stylesheet" href="./styles.css?v=20260814-15" />
+    <link rel="stylesheet" href="./styles.css?v=20260814-16" />
     <link rel="stylesheet" href="../site-nav.css?v=20260813-21" />
     <script data-cfasync="false" src="../site-nav.js?v=20260813-16" defer></script>
   </head>
@@ -37,6 +37,11 @@
       <div class="aurora aurora-a"></div><div class="aurora aurora-b"></div>
       <div class="desktop-topbar">
         <nav class="top-links"><button data-open="aboutWindow">About</button><button data-open="osWindow">Values</button><button data-open="nowWindow">Now</button></nav>
+        <form class="desktop-web-search" action="https://www.bing.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
+          <span class="desktop-search-icon" aria-hidden="true"></span>
+          <input type="search" name="q" maxlength="200" autocomplete="off" placeholder="使用 Bing 搜索…" aria-label="使用 Bing 搜索" required />
+          <button type="submit" aria-label="搜索" title="使用 Bing 搜索">↗</button>
+        </form>
         <div class="os-brand"><a class="os-admin-link" href="/admin/" title="进入桌面管理后台">轻风雨斜 <i>OS</i></a><span class="os-brand-music" id="osMusicSlot"></span></div>
         <div class="desktop-clock-controls">
           <time class="desktop-clock" id="clock">2026/8/12&nbsp;&nbsp;星期三&nbsp;&nbsp;12:16</time>
