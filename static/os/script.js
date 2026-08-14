@@ -462,7 +462,8 @@ function faviconUrls(url) {
       `${parsed.origin}/favicon.svg`,
       `${parsed.origin}/favicon.png`,
       `${parsed.origin}/apple-touch-icon.png`,
-      `${parsed.origin}/apple-touch-icon-precomposed.png`
+      `${parsed.origin}/apple-touch-icon-precomposed.png`,
+      `https://favicon.im/${parsed.hostname}?larger=true`
     ];
   } catch {
     return [];
