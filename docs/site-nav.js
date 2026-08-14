@@ -14,6 +14,7 @@
   const musicPlaybackStateKey = 'lightwind-background-music-state-v2';
   const legacyMusicPositionKey = 'lightwind-background-music-position-v1';
   const musicLibraryCacheKey = 'lightwind-music-library-cache-v1';
+  const musicPlaybackModeKey = 'lightwind-background-music-mode-v1';
 
   function getCurrentPath() {
     return window.location.pathname.replace(/\/+$/, '') || '/';
@@ -90,6 +91,7 @@
     const audio = document.createElement('audio');
     const title = document.createElement('strong');
     const status = document.createElement('span');
+    const modeButton = document.createElement('button');
     const previousButton = document.createElement('button');
     const playButton = document.createElement('button');
     const nextButton = document.createElement('button');
@@ -101,6 +103,8 @@
     let playAfterLoad = false;
     let playbackExhausted = false;
     let playRequestSerial = 0;
+    let playbackMode = 'sequence';
+    let shuffleHistory = [];
     const failedTracks = new Set();
     let savedPlaybackState = { trackId: '', currentTime: 0 };
 
@@ -108,6 +112,12 @@
       musicEnabled = window.localStorage.getItem(musicPreferenceKey) !== 'off';
     } catch {
       musicEnabled = true;
+    }
+
+    try {
+      playbackMode = window.localStorage.getItem(musicPlaybackModeKey) === 'shuffle' ? 'shuffle' : 'sequence';
+    } catch {
+      playbackMode = 'sequence';
     }
 
     try {
@@ -132,14 +142,18 @@
     player.className = 'site-music-player';
     player.setAttribute('role', 'group');
     player.setAttribute('aria-label', '背景音乐播放器');
-    player.innerHTML = '<span class="site-music-copy"><span class="site-music-status">正在加载</span></span><span class="site-music-controls"></span>';
+    player.innerHTML = '<span class="site-music-disc" aria-hidden="true"><i></i></span><span class="site-music-copy"><span class="site-music-status">正在加载</span></span><span class="site-music-controls"></span>';
     title.className = 'site-music-title';
     title.textContent = '正在加载音乐…';
-    player.querySelector('.site-music-copy').append(title);
+    player.querySelector('.site-music-copy').prepend(title);
     status.className = 'site-music-live-status';
     status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
     player.append(status);
+
+    modeButton.type = 'button';
+    modeButton.className = 'site-music-control site-music-mode';
+    modeButton.dataset.musicAction = 'mode';
 
     previousButton.type = 'button';
     previousButton.className = 'site-music-control';
@@ -162,7 +176,7 @@
     nextButton.title = '下一首';
     nextButton.innerHTML = '<span aria-hidden="true">⏭</span>';
 
-    player.querySelector('.site-music-controls').append(previousButton, playButton, nextButton);
+    player.querySelector('.site-music-controls').append(modeButton, previousButton, playButton, nextButton);
 
     audio.className = 'site-background-audio';
     audio.preload = 'metadata';
@@ -236,6 +250,14 @@
       }
     }
 
+    function savePlaybackMode() {
+      try {
+        window.localStorage.setItem(musicPlaybackModeKey, playbackMode);
+      } catch {
+        // The selected mode remains active for this page when storage is blocked.
+      }
+    }
+
     function savePlaybackState() {
       const track = currentTrack();
       if (!track) return;
@@ -265,14 +287,25 @@
         error: '播放失败',
         empty: '音乐库为空'
       };
+      const modeLabel = playbackMode === 'shuffle' ? '随机播放' : '顺序循环';
       player.dataset.musicState = state;
       player.dataset.trackId = track?.id || '';
+      player.dataset.playbackMode = playbackMode;
       title.textContent = state === 'error' ? '音乐暂时无法播放' : (track?.title || '暂无音乐');
-      player.querySelector('.site-music-status').textContent = labels[state] || labels.paused;
+      player.querySelector('.site-music-status').textContent = `${modeLabel} · ${labels[state] || labels.paused}`;
       status.textContent = state === 'error' ? '音乐暂时无法播放' : '';
       playButton.disabled = !track;
       previousButton.disabled = tracks.length < 2;
       nextButton.disabled = tracks.length < 2;
+      modeButton.disabled = !track;
+      modeButton.dataset.musicMode = playbackMode;
+      modeButton.setAttribute('aria-label', playbackMode === 'shuffle'
+        ? '当前为随机播放，点击切换到顺序循环'
+        : '当前为顺序循环，点击切换到随机播放');
+      modeButton.title = playbackMode === 'shuffle' ? '随机播放（切换到顺序循环）' : '顺序循环（切换到随机播放）';
+      modeButton.innerHTML = playbackMode === 'shuffle'
+        ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h3c5 0 5 12 10 12h3m-3-3 3 3-3 3M4 18h3c2.1 0 3.4-2.3 4.7-5M17 3l3 3-3 3"/></svg>'
+        : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7h12m-3-3 3 3-3 3m5 7H7m3 3-3-3 3-3"/></svg>';
       playButton.setAttribute('aria-label', isPlaying ? '暂停音乐' : '播放音乐');
       playButton.title = isPlaying ? '暂停' : '播放';
       playButton.innerHTML = `<span aria-hidden="true">${isPlaying ? 'Ⅱ' : '▶'}</span>`;
@@ -342,6 +375,8 @@
       const previousSources = tracks.map((track) => `${track.id}\n${track.url}`).join('\n');
       const nextSources = library.tracks.map((track) => `${track.id}\n${track.url}`).join('\n');
       tracks = library.tracks;
+      const trackIds = new Set(tracks.map((track) => track.id));
+      shuffleHistory = shuffleHistory.filter((trackId) => trackIds.has(trackId));
       if (previousSources !== nextSources) {
         failedTracks.clear();
         playbackExhausted = false;
@@ -365,6 +400,31 @@
       savedPlaybackState = { trackId: '', currentTime: 0 };
     }
 
+    function setPlaybackMode(mode, { persist = true } = {}) {
+      const nextMode = mode === 'shuffle' ? 'shuffle' : 'sequence';
+      if (nextMode !== playbackMode) shuffleHistory = [];
+      playbackMode = nextMode;
+      if (persist) savePlaybackMode();
+      updatePlayer(player.dataset.musicState || (musicEnabled && !audio.paused ? 'playing' : 'paused'));
+    }
+
+    function randomTrackIndex() {
+      const candidates = tracks
+        .map((track, index) => ({ track, index }))
+        .filter(({ track, index }) => index !== currentIndex && !failedTracks.has(track.id));
+      if (!candidates.length) return -1;
+      return candidates[Math.floor(Math.random() * candidates.length)].index;
+    }
+
+    function previousShuffleIndex() {
+      while (shuffleHistory.length) {
+        const previousId = shuffleHistory.pop();
+        const index = tracks.findIndex((track) => track.id === previousId);
+        if (index >= 0 && index !== currentIndex && !failedTracks.has(previousId)) return index;
+      }
+      return randomTrackIndex();
+    }
+
     function setMusicEnabled(enabled) {
       musicEnabled = Boolean(enabled);
       savePreference();
@@ -381,7 +441,7 @@
       updatePlayer(musicEnabled && !audio.paused ? 'playing' : 'paused');
     }
 
-    function changeTrack(direction, { manual = false } = {}) {
+    function changeTrack(direction, { manual = false, fromFailure = false } = {}) {
       if (!tracks.length) return;
       if (manual) {
         failedTracks.clear();
@@ -394,9 +454,23 @@
         requestPlay();
         return;
       }
+      if (playbackMode === 'shuffle') {
+        const targetIndex = direction < 0 ? previousShuffleIndex() : randomTrackIndex();
+        if (targetIndex < 0) return;
+        const activeTrack = currentTrack();
+        if (direction >= 0 && !fromFailure && activeTrack) {
+          shuffleHistory.push(activeTrack.id);
+          if (shuffleHistory.length > 100) shuffleHistory.shift();
+        }
+        selectTrack(targetIndex, { play: musicEnabled, resetFailures: manual });
+        return;
+      }
       selectTrack(currentIndex + direction, { play: musicEnabled, resetFailures: manual });
     }
 
+    modeButton.addEventListener('click', () => {
+      setPlaybackMode(playbackMode === 'shuffle' ? 'sequence' : 'shuffle');
+    });
     playButton.addEventListener('click', () => {
       setMusicEnabled(!(musicEnabled && !audio.paused));
     });
@@ -422,7 +496,7 @@
       if (!failedTrack) return;
       failedTracks.add(failedTrack.id);
       if (musicEnabled && tracks.length > 1 && failedTracks.size < tracks.length) {
-        changeTrack(1);
+        changeTrack(1, { fromFailure: true });
         return;
       }
       playbackExhausted = true;
@@ -473,6 +547,9 @@
     window.addEventListener('storage', (event) => {
       if (event.key === musicPreferenceKey) {
         setMusicEnabled(event.newValue !== 'off');
+      }
+      if (event.key === musicPlaybackModeKey) {
+        setPlaybackMode(event.newValue === 'shuffle' ? 'shuffle' : 'sequence', { persist: false });
       }
     });
   }
