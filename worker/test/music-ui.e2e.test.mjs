@@ -289,6 +289,11 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
     await t.test('OS player layout and existing desktop features do not regress', async () => {
       music = makeMusic([{ id: 'track-a', title: '第一首', url: 'https://audio.test/one.mp3' }], 14);
       await page.goto(`${origin}/os/`, { waitUntil: 'domcontentloaded' });
+      assert.equal(await page.getByText('BOOT SEQUENCE', { exact: true }).count(), 0);
+      assert.equal(await page.locator('.boot-progress-row #bootProgressValue').count(), 1);
+      assert.equal(await page.locator('.boot-progress-row #bootProgressValue').evaluate((element) => element.previousElementSibling?.classList.contains('boot-progress-track')), true);
+      assert.equal(await page.locator('.boot-progress-pet-sprite').evaluate((element) => getComputedStyle(element).animationName), 'rem-pet-boot-walk');
+      assert.ok((await page.locator('.boot-progress-pet-sprite').boundingBox()).width < 72);
       await waitForTrack(page, 'track-a');
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x < 40);
