@@ -73,7 +73,7 @@ async function apiResponse(request, pathname) {
 }
 
 function pageFixture(title) {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="/site-nav.css"></head><body><div class="title-right"><a href="#" onclick="modeSwitch()" aria-label="切换主题">主题</a></div><main id="content"><h1>${title}</h1></main><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
+  return `<!doctype html><html lang="zh-CN" data-color-mode="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="/site-nav.css"></head><body><div class="title-right"><a href="#" onclick="modeSwitch()" aria-label="切换主题">主题</a></div><main id="content"><h1>${title}</h1></main><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
 }
 
 function contentType(filePath) {
@@ -197,7 +197,8 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
       assert.equal(await page.locator('[data-music-action="mode"]').getAttribute('data-music-mode'), 'sequence');
       assert.equal(await page.locator('.site-music-disc').count(), 0);
-      assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 300);
+      assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 260);
+      assert.equal(await page.locator('.site-music-play').evaluate((element) => getComputedStyle(element).borderColor), 'rgb(9, 105, 218)');
       await page.waitForSelector('.site-music-title.is-scrolling');
       assert.equal(await page.locator('.site-music-title-text').evaluate((element) => getComputedStyle(element).animationName), 'site-music-title-scroll');
 
@@ -280,7 +281,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x < 40);
       assert.ok(playerBox.y > 800);
-      assert.ok(playerBox.width <= 304);
+      assert.ok(playerBox.width <= 272);
       assert.equal(await page.locator('.os-brand-music').count(), 0);
       assert.equal(await page.getByText('轻风雨@universe ~ echo "welcome to my little system"', { exact: true }).count(), 0);
       assert.equal(await page.locator('#desktopPet').count(), 1);
