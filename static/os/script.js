@@ -157,9 +157,19 @@ const petPositionKey = 'lightwind-rem-pet-position-v2';
 const legacyPetPositionKey = 'lightwind-rem-pet-position-v1';
 let restoreDefaultPetPosition = () => {};
 if (desktopPet) {
+  const petSprite = desktopPet.querySelector('.desktop-pet-sprite');
+  const petMotionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const petAnimations = Object.freeze({
+    idle: { row: 0, frames: 8, frameMs: 150 },
+    runningRight: { row: 1, frames: 8, frameMs: 90 },
+    runningLeft: { row: 2, frames: 8, frameMs: 90 },
+    waving: { row: 3, frames: 4, frameMs: 150 },
+    jumping: { row: 4, frames: 8, frameMs: 120 }
+  });
   let petPointerId = null;
   let petStartX = 0;
   let petStartY = 0;
+  let petLastX = 0;
   let petOriginX = 0;
   let petOriginY = 0;
   let petMoved = false;
@@ -172,6 +182,59 @@ if (desktopPet) {
   let petInteracting = false;
   let petUsesCustomPosition = false;
   let petRescueFrame = 0;
+  let petAnimationFrame = 0;
+  let petAnimationName = '';
+  let petSpriteFrame = 0;
+  let petLastFrameAt = 0;
+
+  function getPetAnimationName() {
+    const state = desktopPet.dataset.petState || 'idle';
+    if (state === 'dragging') {
+      return desktopPet.dataset.petDirection === 'left' ? 'runningLeft' : 'runningRight';
+    }
+    if (state === 'interacting') return 'waving';
+    if (state === 'hovered') return 'jumping';
+    return 'idle';
+  }
+
+  function drawPetFrame(animation, frame) {
+    if (!petSprite) return;
+    petSprite.style.backgroundPosition = `${-(frame * 144)}px ${-(animation.row * 156)}px`;
+    desktopPet.dataset.petFrame = String(frame);
+  }
+
+  function animatePet(timestamp) {
+    petAnimationFrame = 0;
+    if (!petSprite || document.hidden) return;
+
+    const nextAnimationName = getPetAnimationName();
+    const nextAnimation = petAnimations[nextAnimationName] || petAnimations.idle;
+    if (nextAnimationName !== petAnimationName) {
+      petAnimationName = nextAnimationName;
+      petSpriteFrame = 0;
+      petLastFrameAt = timestamp;
+      desktopPet.dataset.petAnimation = nextAnimationName;
+      drawPetFrame(nextAnimation, petSpriteFrame);
+    } else {
+      const motionScale = petMotionPreference.matches ? 1.35 : 1;
+      const frameDuration = nextAnimation.frameMs * motionScale;
+      const elapsed = timestamp - petLastFrameAt;
+      if (elapsed >= frameDuration) {
+        const elapsedFrames = Math.max(1, Math.min(3, Math.floor(elapsed / frameDuration)));
+        petSpriteFrame = (petSpriteFrame + elapsedFrames) % nextAnimation.frames;
+        petLastFrameAt = timestamp;
+        drawPetFrame(nextAnimation, petSpriteFrame);
+      }
+    }
+
+    petAnimationFrame = window.requestAnimationFrame(animatePet);
+  }
+
+  function startPetAnimation() {
+    if (!petAnimationFrame && !document.hidden) {
+      petAnimationFrame = window.requestAnimationFrame(animatePet);
+    }
+  }
 
   function getPetBounds() {
     return {
@@ -283,10 +346,22 @@ if (desktopPet) {
     petInteractionTimer = window.setTimeout(() => {
       petInteracting = false;
       syncPetState();
-    }, 2200);
+    }, 3200);
   }
 
   desktopPet.dataset.petState = 'idle';
+  desktopPet.dataset.petDirection = 'right';
+  startPetAnimation();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (petAnimationFrame) window.cancelAnimationFrame(petAnimationFrame);
+      petAnimationFrame = 0;
+      return;
+    }
+    petAnimationName = '';
+    petLastFrameAt = 0;
+    startPetAnimation();
+  });
   desktopPet.addEventListener('pointerenter', (event) => {
     if (event.pointerType === 'touch') return;
     petHovered = true;
@@ -325,6 +400,7 @@ if (desktopPet) {
     desktopPet.dataset.petDragged = 'false';
     petStartX = event.clientX;
     petStartY = event.clientY;
+    petLastX = event.clientX;
     const rect = desktopPet.getBoundingClientRect();
     const desktopRect = desktop.getBoundingClientRect();
     petOriginX = rect.left - desktopRect.left;
@@ -340,6 +416,11 @@ if (desktopPet) {
     if (event.pointerId !== petPointerId) return;
     const dx = event.clientX - petStartX;
     const dy = event.clientY - petStartY;
+    const movementX = event.clientX - petLastX;
+    petLastX = event.clientX;
+    if (Math.abs(movementX) >= 1) {
+      desktopPet.dataset.petDirection = movementX < 0 ? 'left' : 'right';
+    }
     if (!petMoved && Math.hypot(dx, dy) > 6) {
       petMoved = true;
       desktopPet.dataset.petDragged = 'true';
