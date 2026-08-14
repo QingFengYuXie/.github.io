@@ -3,12 +3,16 @@ const bootLog = document.querySelector('#bootLog');
 const bootProgress = document.querySelector('#bootProgress');
 const bootProgressFill = document.querySelector('#bootProgressFill');
 const bootProgressPet = document.querySelector('#bootProgressPet');
+const bootProgressPetSprite = document.querySelector('.boot-progress-pet-sprite');
 const bootProgressValue = document.querySelector('#bootProgressValue');
 const bootProgressStatus = document.querySelector('#bootProgressStatus');
 const desktop = document.querySelector('#desktop');
 const windows = [...document.querySelectorAll('.app-window')];
 let topZ = 60;
 let bootComplete = false;
+let bootPetAnimationFrame = 0;
+let bootPetFrame = 0;
+let bootPetLastFrameAt = 0;
 
 const bootMessages = [
   ['ok', 'Mounted /home/lightwind.'],
@@ -25,6 +29,39 @@ const bootMessages = [
 const bootStartDelay = 180;
 const bootStepDelay = 145;
 const bootCompleteDelay = 280;
+
+function drawBootPetFrame() {
+  if (!bootProgressPetSprite) return;
+  bootProgressPetSprite.style.backgroundPosition = `${-(bootPetFrame * 60)}px -65px`;
+  bootProgressPetSprite.dataset.bootPetFrame = String(bootPetFrame);
+}
+
+function animateBootPet(timestamp) {
+  bootPetAnimationFrame = 0;
+  if (!bootProgressPetSprite || document.hidden || bootScreen?.classList.contains('hidden')) return;
+  const frameDelay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 140 : 90;
+  if (!bootPetLastFrameAt) bootPetLastFrameAt = timestamp;
+  const elapsed = timestamp - bootPetLastFrameAt;
+  if (elapsed >= frameDelay) {
+    const elapsedFrames = Math.max(1, Math.min(2, Math.floor(elapsed / frameDelay)));
+    bootPetFrame = (bootPetFrame + elapsedFrames) % 8;
+    bootPetLastFrameAt = timestamp;
+    drawBootPetFrame();
+  }
+  bootPetAnimationFrame = window.requestAnimationFrame(animateBootPet);
+}
+
+function startBootPetAnimation() {
+  if (!bootPetAnimationFrame && !document.hidden && !bootScreen?.classList.contains('hidden')) {
+    bootPetLastFrameAt = 0;
+    bootPetAnimationFrame = window.requestAnimationFrame(animateBootPet);
+  }
+}
+
+function stopBootPetAnimation() {
+  if (bootPetAnimationFrame) window.cancelAnimationFrame(bootPetAnimationFrame);
+  bootPetAnimationFrame = 0;
+}
 
 function updateBootProgress(index, status) {
   const progress = Math.min(100, Math.round(((index + 1) / bootMessages.length) * 100));
@@ -62,7 +99,15 @@ function runBootSequence() {
 function launch() {
   document.body.classList.add('is-launched');
   bootScreen.classList.add('hidden');
+  stopBootPetAnimation();
 }
+
+drawBootPetFrame();
+startBootPetAnimation();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopBootPetAnimation();
+  else startBootPetAnimation();
+});
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && typeof navigationFolder !== 'undefined' && navigationFolder && !navigationFolder.hidden) {

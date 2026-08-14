@@ -292,8 +292,12 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.equal(await page.getByText('BOOT SEQUENCE', { exact: true }).count(), 0);
       assert.equal(await page.locator('.boot-progress-row #bootProgressValue').count(), 1);
       assert.equal(await page.locator('.boot-progress-row #bootProgressValue').evaluate((element) => element.previousElementSibling?.classList.contains('boot-progress-track')), true);
-      assert.equal(await page.locator('.boot-progress-pet-sprite').evaluate((element) => getComputedStyle(element).animationName), 'rem-pet-boot-walk');
       assert.ok((await page.locator('.boot-progress-pet-sprite').boundingBox()).width < 72);
+      await page.waitForFunction(() => document.querySelector('.boot-progress-pet-sprite')?.dataset.bootPetFrame !== undefined);
+      const firstBootPetFrame = await page.locator('.boot-progress-pet-sprite').getAttribute('data-boot-pet-frame');
+      await page.waitForTimeout(130);
+      const nextBootPetFrame = await page.locator('.boot-progress-pet-sprite').getAttribute('data-boot-pet-frame');
+      assert.notEqual(nextBootPetFrame, firstBootPetFrame);
       await waitForTrack(page, 'track-a');
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x < 40);
