@@ -106,6 +106,8 @@
     let playRequestSerial = 0;
     let playbackMode = 'sequence';
     let shuffleHistory = [];
+    let currentSelectionWasManual = false;
+    let consecutiveFailures = 0;
     let titleMeasureFrame = 0;
     const failedTracks = new Set();
     let savedPlaybackState = { trackId: '', currentTime: 0 };
@@ -211,6 +213,17 @@
       new ResizeObserver(updateTitleOverflow).observe(title);
     } else {
       window.addEventListener('resize', updateTitleOverflow, { passive: true });
+    }
+
+    function isCurrentAudioSource() {
+      const track = currentTrack();
+      if (!track) return false;
+      const expectedSource = new URL(track.url, document.baseURI).href;
+      const assignedSource = audio.src || '';
+      const currentSource = audio.currentSrc || '';
+      if (assignedSource && assignedSource !== expectedSource) return false;
+      if (currentSource && currentSource !== expectedSource && currentSource !== assignedSource) return false;
+      return true;
     }
 
     function safeMusicUrl(value) {
@@ -368,10 +381,12 @@
       if (musicEnabled && playAfterLoad) requestPlay();
     }
 
-    function selectTrack(index, { resumePosition = 0, play = musicEnabled, resetFailures = false } = {}) {
+    function selectTrack(index, { resumePosition = 0, play = musicEnabled, resetFailures = false, manual = false } = {}) {
       if (!tracks.length) {
         playRequestSerial += 1;
         currentIndex = -1;
+        currentSelectionWasManual = false;
+        consecutiveFailures = 0;
         audio.pause();
         audio.removeAttribute('src');
         audio.load();
@@ -381,11 +396,16 @@
       currentIndex = ((index % tracks.length) + tracks.length) % tracks.length;
       const track = currentTrack();
       playRequestSerial += 1;
+      currentSelectionWasManual = Boolean(manual);
+      if (manual) consecutiveFailures = 0;
       if (resetFailures) failedTracks.clear();
       pendingPosition = Math.max(0, Number(resumePosition) || 0);
       positionRestored = false;
       playAfterLoad = Boolean(play);
       audio.loop = tracks.length === 1;
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
       audio.dataset.trackId = track.id;
       audio.src = track.url;
       audio.load();
@@ -458,6 +478,7 @@
       savePreference();
       if (musicEnabled) {
         failedTracks.clear();
+        consecutiveFailures = 0;
         playbackExhausted = false;
         if (!audio.src && tracks.length) selectTrack(Math.max(0, currentIndex), { play: true });
         else requestPlay();
@@ -473,6 +494,7 @@
       if (!tracks.length) return;
       if (manual) {
         failedTracks.clear();
+        consecutiveFailures = 0;
         playbackExhausted = false;
         musicEnabled = true;
         savePreference();
@@ -490,10 +512,10 @@
           shuffleHistory.push(activeTrack.id);
           if (shuffleHistory.length > 100) shuffleHistory.shift();
         }
-        selectTrack(targetIndex, { play: musicEnabled, resetFailures: manual });
+        selectTrack(targetIndex, { play: musicEnabled, resetFailures: manual, manual });
         return;
       }
-      selectTrack(currentIndex + direction, { play: musicEnabled, resetFailures: manual });
+      selectTrack(currentIndex + direction, { play: musicEnabled, resetFailures: manual, manual });
     }
 
     modeButton.addEventListener('click', () => {
@@ -505,32 +527,51 @@
     previousButton.addEventListener('click', () => changeTrack(-1, { manual: true }));
     nextButton.addEventListener('click', () => changeTrack(1, { manual: true }));
 
-    audio.addEventListener('play', () => {
-      failedTracks.delete(currentTrack()?.id);
-      playbackExhausted = false;
-      updatePlayer('playing');
-    });
-    audio.addEventListener('pause', () => {
-      if (!['error', 'empty', 'loading'].includes(player.dataset.musicState)) updatePlayer('paused');
-    });
-    audio.addEventListener('loadedmetadata', restoreMusicPosition);
-    audio.addEventListener('canplay', () => {
-      failedTracks.delete(currentTrack()?.id);
-      restoreMusicPosition();
-    });
-    audio.addEventListener('ended', () => changeTrack(1));
-    audio.addEventListener('error', () => {
-      const failedTrack = currentTrack();
-      if (!failedTrack) return;
-      failedTracks.add(failedTrack.id);
-      if (musicEnabled && tracks.length > 1 && failedTracks.size < tracks.length) {
-        changeTrack(1, { fromFailure: true });
-        return;
-      }
+    function showPlaybackError() {
       playbackExhausted = true;
       playRequestSerial += 1;
       audio.pause();
       updatePlayer('error');
+    }
+
+    audio.addEventListener('play', () => {
+      if (!isCurrentAudioSource()) return;
+      failedTracks.delete(currentTrack()?.id);
+      consecutiveFailures = 0;
+      playbackExhausted = false;
+      updatePlayer('playing');
+    });
+    audio.addEventListener('pause', () => {
+      if (!isCurrentAudioSource()) return;
+      if (!['error', 'empty', 'loading'].includes(player.dataset.musicState)) updatePlayer('paused');
+    });
+    audio.addEventListener('loadedmetadata', () => {
+      if (isCurrentAudioSource()) restoreMusicPosition();
+    });
+    audio.addEventListener('canplay', () => {
+      if (!isCurrentAudioSource()) return;
+      failedTracks.delete(currentTrack()?.id);
+      consecutiveFailures = 0;
+      restoreMusicPosition();
+    });
+    audio.addEventListener('ended', () => {
+      if (isCurrentAudioSource()) changeTrack(1);
+    });
+    audio.addEventListener('error', () => {
+      if (!isCurrentAudioSource()) return;
+      const failedTrack = currentTrack();
+      if (!failedTrack) return;
+      failedTracks.add(failedTrack.id);
+      if (currentSelectionWasManual) {
+        showPlaybackError();
+        return;
+      }
+      consecutiveFailures += 1;
+      if (musicEnabled && tracks.length > 1 && failedTracks.size < tracks.length && consecutiveFailures < 3) {
+        changeTrack(1, { fromFailure: true });
+        return;
+      }
+      showPlaybackError();
     });
 
     const unlockMusic = (event) => {
