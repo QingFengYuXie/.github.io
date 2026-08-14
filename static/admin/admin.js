@@ -1,5 +1,13 @@
 const API_ROOT = '/api/v1';
-const state = { csrfToken: '', desktop: null, pendingFolderDelete: null, dragItem: null };
+const state = {
+  csrfToken: '',
+  desktop: null,
+  music: null,
+  pendingFolderDelete: null,
+  dragItem: null,
+  dragMusicId: null,
+  previewTrackId: null
+};
 
 const loginView = document.querySelector('#loginView');
 const dashboardView = document.querySelector('#dashboardView');
@@ -9,6 +17,16 @@ const desktopList = document.querySelector('#desktopList');
 const emptyState = document.querySelector('#emptyState');
 const previewIcons = document.querySelector('#previewIcons');
 const saveStatus = document.querySelector('#saveStatus');
+const musicList = document.querySelector('#musicList');
+const musicEmptyState = document.querySelector('#musicEmptyState');
+const musicSaveStatus = document.querySelector('#musicSaveStatus');
+const musicDialog = document.querySelector('#musicDialog');
+const musicForm = document.querySelector('#musicForm');
+const musicPreviewAudio = document.querySelector('#musicPreviewAudio');
+const musicPreviewCard = document.querySelector('#musicPreviewCard');
+const musicPreviewTitle = document.querySelector('#musicPreviewTitle');
+const musicPreviewStatus = document.querySelector('#musicPreviewStatus');
+const stopMusicPreviewButton = document.querySelector('#stopMusicPreview');
 const itemDialog = document.querySelector('#itemDialog');
 const itemForm = document.querySelector('#itemForm');
 const deleteFolderDialog = document.querySelector('#deleteFolderDialog');
@@ -66,6 +84,11 @@ function showToast(message) {
 function setSaveStatus(message, kind = '') {
   saveStatus.textContent = message;
   saveStatus.className = `preview-note${kind ? ` is-${kind}` : ''}`;
+}
+
+function setMusicSaveStatus(message, kind = '') {
+  musicSaveStatus.textContent = message;
+  musicSaveStatus.className = `preview-note${kind ? ` is-${kind}` : ''}`;
 }
 
 function faviconFor(url) {
@@ -194,12 +217,145 @@ function render() {
   renderPreview();
 }
 
+function musicTracks() {
+  return state.music?.tracks || [];
+}
+
+function makeMusicManagerItem(track, index) {
+  const article = document.createElement('article');
+  article.className = 'manager-item music-manager-item';
+  article.draggable = true;
+  article.dataset.musicId = track.id;
+
+  const row = document.createElement('div');
+  row.className = 'item-row';
+
+  const order = document.createElement('span');
+  order.className = 'music-index';
+  order.textContent = String(index + 1).padStart(2, '0');
+  order.title = '拖动排序';
+
+  const identity = document.createElement('div');
+  identity.className = 'item-identity';
+  const icon = document.createElement('span');
+  icon.className = 'music-item-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = '♫';
+  const copy = document.createElement('div');
+  copy.className = 'item-copy';
+  const name = document.createElement('strong');
+  name.textContent = track.title;
+  const detail = document.createElement('small');
+  detail.textContent = track.url;
+  copy.append(name, detail);
+  identity.append(icon, copy);
+
+  const actions = document.createElement('div');
+  actions.className = 'item-actions';
+  const isPreviewing = state.previewTrackId === track.id && !musicPreviewAudio.paused;
+  const previewButton = button(isPreviewing ? '暂停' : '试听', 'preview-music');
+  previewButton.setAttribute('aria-pressed', String(isPreviewing));
+  actions.append(
+    button('↑', 'move-music-up', '上移'),
+    button('↓', 'move-music-down', '下移'),
+    previewButton,
+    button('编辑', 'edit-music'),
+    button('删除', 'delete-music')
+  );
+  row.append(order, identity, actions);
+  article.append(row);
+  return article;
+}
+
+function renderMusic() {
+  const tracks = musicTracks();
+  musicList.replaceChildren();
+  tracks.forEach((track, index) => musicList.append(makeMusicManagerItem(track, index)));
+  musicEmptyState.hidden = tracks.length > 0;
+  document.querySelector('#musicCount').textContent = String(tracks.length);
+}
+
+function openMusicDialog(track = null) {
+  document.querySelector('#musicDialogTitle').textContent = track ? '编辑音乐' : '新增音乐';
+  document.querySelector('#musicId').value = track?.id || '';
+  document.querySelector('#musicTitle').value = track?.title || '';
+  document.querySelector('#musicUrl').value = track?.url || '';
+  document.querySelector('#musicMessage').textContent = '';
+  musicDialog.showModal();
+  document.querySelector('#musicTitle').focus();
+}
+
+function updateMusicPreview(viewState, track = null, message = '') {
+  musicPreviewCard.dataset.previewState = viewState;
+  musicPreviewTitle.textContent = track?.title || '点击列表中的“试听”';
+  const labels = {
+    idle: '尚未选择音乐',
+    loading: '正在载入…',
+    playing: '正在试听',
+    paused: '试听已暂停',
+    ended: '试听已结束',
+    error: '这首音乐暂时无法播放'
+  };
+  musicPreviewStatus.textContent = message || labels[viewState] || labels.idle;
+  stopMusicPreviewButton.disabled = !state.previewTrackId;
+}
+
+function stopMusicPreview({ clear = true } = {}) {
+  musicPreviewAudio.pause();
+  try { musicPreviewAudio.currentTime = 0; } catch { /* Metadata may not be ready yet. */ }
+  if (clear) {
+    state.previewTrackId = null;
+    musicPreviewAudio.removeAttribute('src');
+    musicPreviewAudio.load();
+    updateMusicPreview('idle');
+  }
+  renderMusic();
+}
+
+async function toggleMusicPreview(track) {
+  if (state.previewTrackId === track.id && !musicPreviewAudio.paused) {
+    musicPreviewAudio.pause();
+    return;
+  }
+  if (state.previewTrackId !== track.id) {
+    state.previewTrackId = track.id;
+    musicPreviewAudio.src = track.url;
+    musicPreviewAudio.volume = 0.42;
+    musicPreviewAudio.load();
+    updateMusicPreview('loading', track);
+  }
+  try {
+    await musicPreviewAudio.play();
+  } catch {
+    updateMusicPreview('error', track);
+    renderMusic();
+  }
+}
+
 async function loadDesktop() {
   setSaveStatus('正在读取桌面数据…', 'saving');
   const desktop = await api('/desktop');
   state.desktop = desktop;
   render();
   setSaveStatus('所有修改都会立即保存。');
+}
+
+async function loadMusic() {
+  setMusicSaveStatus('正在读取音乐库…', 'saving');
+  const music = await api('/music');
+  state.music = music;
+  renderMusic();
+  setMusicSaveStatus('所有修改都会立即保存。');
+}
+
+async function loadDashboardData() {
+  const [desktopResult, musicResult] = await Promise.allSettled([loadDesktop(), loadMusic()]);
+  if (desktopResult.status === 'rejected') throw desktopResult.reason;
+  if (musicResult.status === 'rejected') {
+    state.music = { version: 1, updatedAt: 0, tracks: [] };
+    renderMusic();
+    setMusicSaveStatus(`音乐库读取失败：${musicResult.reason.message}`, 'error');
+  }
 }
 
 async function saveResult(promise, successMessage) {
@@ -213,6 +369,21 @@ async function saveResult(promise, successMessage) {
     return result;
   } catch (error) {
     setSaveStatus(error.message, 'error');
+    throw error;
+  }
+}
+
+async function saveMusicResult(promise, successMessage) {
+  setMusicSaveStatus('正在保存到云端…', 'saving');
+  try {
+    const result = await promise;
+    if (result.music) state.music = result.music;
+    renderMusic();
+    setMusicSaveStatus('已保存，公开页面刷新后立即生效。');
+    showToast(successMessage);
+    return result;
+  } catch (error) {
+    setMusicSaveStatus(error.message, 'error');
     throw error;
   }
 }
@@ -356,6 +527,102 @@ desktopList.addEventListener('click', async (event) => {
   }
 });
 
+function musicLayoutPayload() {
+  return { ids: musicTracks().map((track) => track.id) };
+}
+
+async function persistMusicLayout() {
+  renderMusic();
+  try {
+    await saveMusicResult(
+      api('/admin/music/layout', { method: 'PUT', body: musicLayoutPayload() }),
+      '音乐顺序已保存'
+    );
+  } catch (error) {
+    showToast(error.message);
+    try { await loadMusic(); } catch { /* Keep the visible order if the network is unavailable. */ }
+  }
+}
+
+musicList.addEventListener('dragstart', (event) => {
+  const item = event.target.closest('[data-music-id]');
+  if (!item) return;
+  state.dragMusicId = item.dataset.musicId;
+  item.classList.add('is-dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', state.dragMusicId);
+});
+
+musicList.addEventListener('dragend', (event) => {
+  event.target.closest('[data-music-id]')?.classList.remove('is-dragging');
+  musicList.classList.remove('drag-over');
+  state.dragMusicId = null;
+});
+
+musicList.addEventListener('dragover', (event) => {
+  if (!state.dragMusicId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  musicList.classList.add('drag-over');
+});
+
+musicList.addEventListener('dragleave', (event) => {
+  if (!musicList.contains(event.relatedTarget)) musicList.classList.remove('drag-over');
+});
+
+musicList.addEventListener('drop', (event) => {
+  if (!state.dragMusicId) return;
+  event.preventDefault();
+  musicList.classList.remove('drag-over');
+  const tracks = musicTracks();
+  const movingIndex = tracks.findIndex((track) => track.id === state.dragMusicId);
+  if (movingIndex < 0) return;
+  const target = event.target.closest('[data-music-id]');
+  let targetIndex = target ? tracks.findIndex((track) => track.id === target.dataset.musicId) : tracks.length;
+  if (targetIndex === movingIndex) return;
+  const [moving] = tracks.splice(movingIndex, 1);
+  if (movingIndex < targetIndex) targetIndex -= 1;
+  tracks.splice(Math.max(0, targetIndex), 0, moving);
+  persistMusicLayout();
+});
+
+musicList.addEventListener('click', async (event) => {
+  const actionButton = event.target.closest('[data-action]');
+  const itemElement = event.target.closest('[data-music-id]');
+  if (!actionButton || !itemElement) return;
+  const tracks = musicTracks();
+  const index = tracks.findIndex((track) => track.id === itemElement.dataset.musicId);
+  if (index < 0) return;
+  const track = tracks[index];
+  const action = actionButton.dataset.action;
+
+  if (action === 'preview-music') {
+    await toggleMusicPreview(track);
+    return;
+  }
+  if (action === 'edit-music') {
+    openMusicDialog(track);
+    return;
+  }
+  if (action === 'delete-music') {
+    if (!window.confirm(`确定删除“${track.title}”吗？`)) return;
+    if (state.previewTrackId === track.id) stopMusicPreview();
+    try {
+      await saveMusicResult(
+        api(`/admin/music/${encodeURIComponent(track.id)}`, { method: 'DELETE' }),
+        `${track.title} 已删除`
+      );
+    } catch (error) { showToast(error.message); }
+    return;
+  }
+  if (action === 'move-music-up' || action === 'move-music-down') {
+    const nextIndex = action === 'move-music-up' ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= tracks.length) return;
+    [tracks[index], tracks[nextIndex]] = [tracks[nextIndex], tracks[index]];
+    await persistMusicLayout();
+  }
+});
+
 itemForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submit = itemForm.querySelector('[type="submit"]');
@@ -385,6 +652,37 @@ itemForm.addEventListener('submit', async (event) => {
   } finally { setBusy(submit, false); }
 });
 
+musicForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const submit = musicForm.querySelector('[type="submit"]');
+  const id = document.querySelector('#musicId').value;
+  const body = {
+    title: document.querySelector('#musicTitle').value,
+    url: document.querySelector('#musicUrl').value
+  };
+  const path = `/admin/music${id ? `/${encodeURIComponent(id)}` : ''}`;
+  setBusy(submit, true);
+  document.querySelector('#musicMessage').textContent = '';
+  try {
+    const result = await saveMusicResult(
+      api(path, { method: id ? 'PATCH' : 'POST', body }),
+      id ? '音乐修改已保存' : '音乐已添加'
+    );
+    if (id && state.previewTrackId === id) {
+      const updated = result.music?.tracks?.find((track) => track.id === id);
+      if (updated) {
+        state.previewTrackId = updated.id;
+        musicPreviewAudio.src = updated.url;
+        musicPreviewAudio.load();
+        updateMusicPreview('paused', updated, '音乐已更新，可重新试听');
+      }
+    }
+    musicDialog.close();
+  } catch (error) {
+    document.querySelector('#musicMessage').textContent = error.message;
+  } finally { setBusy(submit, false); }
+});
+
 async function deletePendingFolder(mode) {
   if (!state.pendingFolderDelete) return;
   const id = state.pendingFolderDelete;
@@ -399,6 +697,46 @@ document.querySelector('#moveFolderLinksButton').addEventListener('click', () =>
 document.querySelector('#deleteFolderLinksButton').addEventListener('click', () => deletePendingFolder('delete'));
 document.querySelector('#addFolderButton').addEventListener('click', () => openItemDialog('folder'));
 document.querySelector('#addLinkButton').addEventListener('click', () => openItemDialog('link'));
+document.querySelector('#addMusicButton').addEventListener('click', () => openMusicDialog());
+stopMusicPreviewButton.addEventListener('click', () => stopMusicPreview());
+
+musicPreviewAudio.addEventListener('play', () => {
+  const track = musicTracks().find((entry) => entry.id === state.previewTrackId);
+  updateMusicPreview('playing', track);
+  renderMusic();
+});
+
+musicPreviewAudio.addEventListener('pause', () => {
+  if (!state.previewTrackId || musicPreviewAudio.ended) return;
+  const track = musicTracks().find((entry) => entry.id === state.previewTrackId);
+  updateMusicPreview('paused', track);
+  renderMusic();
+});
+
+musicPreviewAudio.addEventListener('ended', () => {
+  const track = musicTracks().find((entry) => entry.id === state.previewTrackId);
+  updateMusicPreview('ended', track);
+  renderMusic();
+});
+
+musicPreviewAudio.addEventListener('error', () => {
+  const track = musicTracks().find((entry) => entry.id === state.previewTrackId);
+  updateMusicPreview('error', track);
+  renderMusic();
+});
+
+function selectAdminSection(sectionName) {
+  document.querySelectorAll('[data-admin-section]').forEach((section) => {
+    section.hidden = section.dataset.adminSection !== sectionName;
+  });
+  document.querySelectorAll('[data-admin-tab]').forEach((tab) => {
+    tab.setAttribute('aria-selected', String(tab.dataset.adminTab === sectionName));
+  });
+}
+
+document.querySelectorAll('[data-admin-tab]').forEach((tab) => {
+  tab.addEventListener('click', () => selectAdminSection(tab.dataset.adminTab));
+});
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -415,7 +753,7 @@ loginForm.addEventListener('submit', async (event) => {
     });
     state.csrfToken = result.csrfToken;
     showDashboard();
-    await loadDesktop();
+    await loadDashboardData();
   } catch (error) { loginMessage.textContent = error.message; }
   finally { setBusy(submit, false); }
 });
@@ -424,6 +762,9 @@ document.querySelector('#logoutButton').addEventListener('click', async () => {
   try { await api('/auth/logout', { method: 'POST' }); } catch { /* Clear the local view even if the session expired. */ }
   state.csrfToken = '';
   state.desktop = null;
+  state.music = null;
+  stopMusicPreview();
+  document.querySelector('#musicCount').textContent = '0';
   showLogin('已经安全退出。');
 });
 
@@ -466,7 +807,7 @@ async function boot() {
     if (!session.authenticated) { showLogin('', { clearPassword: false }); return; }
     state.csrfToken = session.csrfToken;
     showDashboard();
-    await loadDesktop();
+    await loadDashboardData();
   } catch (error) {
     showLogin(`后台服务暂时不可用：${error.message}`);
   }
