@@ -65,6 +65,10 @@ function launch() {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && typeof navigationFolder !== 'undefined' && navigationFolder && !navigationFolder.hidden) {
+    closeNavigationFolder();
+    return;
+  }
   if (event.key === 'Escape' && bootScreen.classList.contains('hidden') && (!commandPalette || commandPalette.hidden)) {
     const focusedWindow = document.querySelector('.app-window.focused:not([hidden])');
     if (focusedWindow) closeWindow(focusedWindow);
@@ -287,17 +291,50 @@ if (desktopPet) {
   });
 }
 
+const defaultDesktopNavigation = {
+  version: 1,
+  updatedAt: 0,
+  items: [
+    {
+      id: 'folder-lightwind', type: 'folder', title: '轻风雨斜 OS', icon: '✦', color: '#f4c84a', position: 0,
+      links: [
+        { id: 'link-dynamic', type: 'link', title: '动态', url: '/dynamic/', icon: '◫', color: '#e33a52', openMode: 'same', position: 0 },
+        { id: 'link-about', type: 'link', title: '关于', url: '/about.html', icon: '@', color: '#d8b4bd', openMode: 'same', position: 1 }
+      ]
+    },
+    { id: 'link-github', type: 'link', title: 'GitHub', url: 'https://github.com/QingFengYuXie', icon: '⌘', color: '#ddd5d7', openMode: 'new', position: 1 },
+    { id: 'link-contact', type: 'link', title: '联系我', url: 'mailto:2399975530@qq.com', icon: '@', color: '#e8d9dc', openMode: 'same', position: 2 }
+  ]
+};
+
+let desktopNavigation = defaultDesktopNavigation;
 let desktopIconZ = 30;
-const desktopIcons = [...document.querySelectorAll('.desktop-icon')];
-const iconGrid = document.querySelector('.desktop-icons');
-const iconGridStorageKey = 'lightwind-desktop-grid-v1';
+let desktopIcons = [];
+const iconGrid = document.querySelector('#desktopIcons');
+const navigationLoading = document.querySelector('#navigationLoading');
+const navigationFolder = document.querySelector('#navigationFolder');
+const navigationFolderTitle = document.querySelector('#navigationFolderTitle');
+const navigationFolderGrid = document.querySelector('#navigationFolderGrid');
+const navigationFolderEmpty = document.querySelector('#navigationFolderEmpty');
+const iconGridStorageKey = 'lightwind-desktop-grid-v2';
+const navigationCacheKey = 'lightwind-navigation-cache-v1';
 const iconCellWidth = 112;
 const iconCellHeight = 96;
 
-function gridCapacity() {
+function iconCellMetrics() {
+  const styles = getComputedStyle(iconGrid);
   return {
-    columns: Math.max(1, Math.floor(iconGrid.clientWidth / iconCellWidth)),
-    rows: Math.max(1, Math.floor(iconGrid.clientHeight / iconCellHeight))
+    width: Number.parseFloat(styles.getPropertyValue('--cell-w')) || iconCellWidth,
+    height: Number.parseFloat(styles.getPropertyValue('--cell-h')) || iconCellHeight
+  };
+}
+
+function gridCapacity() {
+  const metrics = iconCellMetrics();
+  const columns = Math.max(1, Math.floor(iconGrid.clientWidth / metrics.width));
+  return {
+    columns,
+    rows: Math.max(1, Math.floor(iconGrid.clientHeight / metrics.height), Math.ceil(Math.max(1, desktopIcons.length) / columns))
   };
 }
 
@@ -336,21 +373,20 @@ function nearestFreeCell(targetX, targetY, movingIcon) {
 }
 
 function saveIconGrid() {
-  const positions = desktopIcons.map((icon, index) => ({ index, ...iconCell(icon) }));
+  const positions = Object.fromEntries(desktopIcons.map((icon) => [icon.dataset.navigationId, iconCell(icon)]));
   localStorage.setItem(iconGridStorageKey, JSON.stringify(positions));
 }
 
 function restoreIconGrid() {
   try {
     const saved = JSON.parse(localStorage.getItem(iconGridStorageKey));
-    if (!Array.isArray(saved)) return;
     const { columns, rows } = gridCapacity();
     const occupied = new Set();
-    desktopIcons.forEach((icon, index) => {
-      const position = saved.find((item) => item.index === index);
-      if (!position) return;
-      const targetX = Math.max(0, Math.min(columns - 1, Number(position.x) || 0));
-      const targetY = Math.max(0, Math.min(rows - 1, Number(position.y) || 0));
+    desktopIcons.forEach((icon) => {
+      const position = saved && !Array.isArray(saved) ? saved[icon.dataset.navigationId] : null;
+      const defaultPosition = iconCell(icon);
+      const targetX = Math.max(0, Math.min(columns - 1, Number(position?.x ?? defaultPosition.x) || 0));
+      const targetY = Math.max(0, Math.min(rows - 1, Number(position?.y ?? defaultPosition.y) || 0));
       let cell = { x: targetX, y: targetY };
       if (occupied.has(`${cell.x}:${cell.y}`)) {
         const alternatives = [];
@@ -370,9 +406,174 @@ function restoreIconGrid() {
   }
 }
 
-restoreIconGrid();
+function safeNavigationUrl(value) {
+  const raw = String(value || '').trim();
+  if (raw.startsWith('/') && !raw.startsWith('//') && !/[\s\\]/.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) return '';
+    if (['http:', 'https:'].includes(parsed.protocol) && (parsed.username || parsed.password)) return '';
+    return parsed.href;
+  } catch {
+    return '';
+  }
+}
 
-desktopIcons.forEach((icon) => {
+function normalizeNavigationLink(value) {
+  if (!value || value.type !== 'link') return null;
+  const id = String(value.id || '');
+  const title = String(value.title || '').trim().slice(0, 60);
+  const url = safeNavigationUrl(value.url);
+  if (!/^[a-zA-Z0-9_-]{1,90}$/.test(id) || !title || !url) return null;
+  return {
+    id, type: 'link', title, url,
+    icon: String(value.icon || '').trim().slice(0, 24),
+    color: /^#[0-9a-f]{6}$/i.test(value.color) ? value.color : '#e8d9dc',
+    openMode: ['auto', 'same', 'new'].includes(value.openMode) ? value.openMode : 'auto',
+    position: Number(value.position) || 0
+  };
+}
+
+function normalizeDesktopNavigation(value) {
+  if (!value || !Array.isArray(value.items) || value.items.length > 100) return null;
+  const items = value.items.map((item) => {
+    if (item?.type === 'link') return normalizeNavigationLink(item);
+    if (item?.type !== 'folder') return null;
+    const id = String(item.id || '');
+    const title = String(item.title || '').trim().slice(0, 40);
+    if (!/^[a-zA-Z0-9_-]{1,90}$/.test(id) || !title || !Array.isArray(item.links) || item.links.length > 100) return null;
+    return {
+      id, type: 'folder', title,
+      icon: String(item.icon || '▰').trim().slice(0, 24) || '▰',
+      color: /^#[0-9a-f]{6}$/i.test(item.color) ? item.color : '#f4c84a',
+      position: Number(item.position) || 0,
+      links: item.links.map(normalizeNavigationLink).filter(Boolean)
+    };
+  }).filter(Boolean);
+  return { version: Number(value.version) || 1, updatedAt: Number(value.updatedAt) || 0, items };
+}
+
+function faviconUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return ['http:', 'https:'].includes(parsed.protocol) ? `${parsed.origin}/favicon.ico` : '';
+  } catch {
+    return '';
+  }
+}
+
+function makeFavicon(link, fallback = '↗') {
+  const wrapper = document.createElement('span');
+  wrapper.className = 'navigation-favicon';
+  wrapper.style.setProperty('--navigation-color', link.color || '#e8d9dc');
+  if (link.icon) {
+    wrapper.textContent = link.icon;
+    return wrapper;
+  }
+  const source = faviconUrl(link.url);
+  if (!source) {
+    wrapper.textContent = fallback;
+    return wrapper;
+  }
+  const image = document.createElement('img');
+  image.src = source;
+  image.alt = '';
+  image.decoding = 'async';
+  image.addEventListener('error', () => { image.remove(); wrapper.textContent = fallback; }, { once: true });
+  wrapper.append(image);
+  return wrapper;
+}
+
+function makeFolderVisual(folder) {
+  const icon = document.createElement('span');
+  icon.className = 'icon folder-icon navigation-folder-icon';
+  icon.style.setProperty('--navigation-color', folder.color);
+  const miniGrid = document.createElement('span');
+  miniGrid.className = 'folder-mini-grid';
+  folder.links.slice(0, 9).forEach((link) => miniGrid.append(makeFavicon(link, link.title.slice(0, 1))));
+  icon.append(miniGrid);
+  return icon;
+}
+
+function makeLinkVisual(link) {
+  const icon = document.createElement('span');
+  icon.className = 'icon navigation-link-icon';
+  icon.style.setProperty('--navigation-color', link.color);
+  icon.append(makeFavicon(link));
+  return icon;
+}
+
+function navigationItemById(id) {
+  return desktopNavigation.items.find((item) => item.id === id);
+}
+
+function resolvedLinkTarget(link) {
+  if (link.openMode === 'same') return '_self';
+  if (link.openMode === 'new') return '_blank';
+  try {
+    const url = new URL(link.url, window.location.origin);
+    return ['http:', 'https:'].includes(url.protocol) && url.origin !== window.location.origin ? '_blank' : '_self';
+  } catch {
+    return '_self';
+  }
+}
+
+function openNavigationLink(link) {
+  const url = safeNavigationUrl(link.url);
+  if (!url) return;
+  const target = resolvedLinkTarget(link);
+  if (target === '_blank') {
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (opened) opened.opener = null;
+  } else {
+    window.location.href = url;
+  }
+}
+
+function closeNavigationFolder() {
+  if (!navigationFolder || navigationFolder.hidden) return;
+  navigationFolder.classList.remove('is-open');
+  window.setTimeout(() => { navigationFolder.hidden = true; }, 160);
+}
+
+function openNavigationFolder(folder) {
+  if (!navigationFolder || !navigationFolderGrid) return;
+  navigationFolderTitle.textContent = folder.title;
+  navigationFolderGrid.replaceChildren();
+  navigationFolderEmpty.hidden = folder.links.length > 0;
+  folder.links.forEach((link) => {
+    const anchor = document.createElement('a');
+    anchor.className = 'navigation-folder-link';
+    anchor.href = safeNavigationUrl(link.url);
+    anchor.target = resolvedLinkTarget(link);
+    if (anchor.target === '_blank') anchor.rel = 'noopener noreferrer';
+    anchor.append(makeFavicon(link));
+    const label = document.createElement('span');
+    label.textContent = link.title;
+    anchor.append(label);
+    anchor.addEventListener('click', () => { if (anchor.target === '_self') closeNavigationFolder(); });
+    navigationFolderGrid.append(anchor);
+  });
+  navigationFolder.hidden = false;
+  requestAnimationFrame(() => navigationFolder.classList.add('is-open'));
+  document.querySelector('#closeNavigationFolder')?.focus();
+}
+
+function activateDesktopIcon(icon) {
+  if (icon.dataset.open) {
+    openWindow(icon.dataset.open);
+    if (icon.dataset.open === 'terminalWindow') window.setTimeout(() => document.querySelector('#terminalInput')?.focus(), 80);
+    return;
+  }
+  const item = navigationItemById(icon.dataset.navigationId);
+  if (!item) return;
+  if (item.type === 'folder') openNavigationFolder(item);
+  else openNavigationLink(item);
+}
+
+function bindDesktopIcon(icon) {
+  if (icon.dataset.dragBound === 'true') return;
+  icon.dataset.dragBound = 'true';
   const dragThreshold = 7;
   let activePointer = null;
   let moved = false;
@@ -398,9 +599,7 @@ desktopIcons.forEach((icon) => {
       desktopIconZ += 1;
       icon.style.zIndex = desktopIconZ;
     }
-    if (moved) {
-      icon.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.05)`;
-    }
+    if (moved) icon.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.05)`;
   });
   icon.addEventListener('pointerup', (event) => {
     if (event.pointerId !== activePointer) return;
@@ -409,13 +608,14 @@ desktopIcons.forEach((icon) => {
     if (icon.hasPointerCapture(event.pointerId)) icon.releasePointerCapture(event.pointerId);
     activePointer = null;
     if (!wasDragged) {
-      openWindow(icon.dataset.open);
+      activateDesktopIcon(icon);
       return;
     }
     const gridRect = iconGrid.getBoundingClientRect();
     const draggedRect = icon.getBoundingClientRect();
-    const targetX = Math.round((draggedRect.left - gridRect.left - 12) / iconCellWidth);
-    const targetY = Math.round((draggedRect.top - gridRect.top - 6) / iconCellHeight);
+    const metrics = iconCellMetrics();
+    const targetX = Math.round((draggedRect.left - gridRect.left - 12) / metrics.width);
+    const targetY = Math.round((draggedRect.top - gridRect.top - 6) / metrics.height);
     const { columns, rows } = gridCapacity();
     const freeCell = nearestFreeCell(
       Math.max(0, Math.min(columns - 1, targetX)),
@@ -437,7 +637,60 @@ desktopIcons.forEach((icon) => {
     iconGrid.classList.remove('is-arranging');
   });
   icon.addEventListener('dragstart', (event) => event.preventDefault());
-});
+}
+
+function renderDesktopNavigation(data) {
+  desktopNavigation = data;
+  iconGrid.querySelectorAll('[data-managed-navigation]').forEach((element) => element.remove());
+  if (navigationLoading) navigationLoading.hidden = true;
+  const estimatedColumns = Math.max(1, Math.floor(iconGrid.clientWidth / iconCellMetrics().width));
+  data.items.forEach((item, itemIndex) => {
+    const button = document.createElement('button');
+    const slot = itemIndex + 1;
+    button.type = 'button';
+    button.className = `desktop-icon navigation-icon navigation-${item.type}`;
+    button.dataset.managedNavigation = '';
+    button.dataset.navigationId = item.id;
+    button.style.setProperty('--x', slot % estimatedColumns);
+    button.style.setProperty('--y', Math.floor(slot / estimatedColumns));
+    button.title = item.type === 'folder' ? `打开文件夹：${item.title}` : `打开网址：${item.title}`;
+    button.append(item.type === 'folder' ? makeFolderVisual(item) : makeLinkVisual(item));
+    const label = document.createElement('span');
+    label.textContent = item.title;
+    button.append(label);
+    iconGrid.append(button);
+  });
+  iconGrid.setAttribute('aria-busy', 'false');
+  desktopIcons = [...iconGrid.querySelectorAll('.desktop-icon')];
+  desktopIcons.forEach(bindDesktopIcon);
+  restoreIconGrid();
+}
+
+async function loadDesktopNavigation() {
+  let initial = defaultDesktopNavigation;
+  try {
+    const cached = normalizeDesktopNavigation(JSON.parse(localStorage.getItem(navigationCacheKey)));
+    if (cached) initial = cached;
+  } catch {
+    localStorage.removeItem(navigationCacheKey);
+  }
+  renderDesktopNavigation(initial);
+  try {
+    const response = await fetch('/api/v1/desktop', { headers: { accept: 'application/json' }, cache: 'no-cache' });
+    if (!response.ok) throw new Error('navigation api unavailable');
+    const data = normalizeDesktopNavigation(await response.json());
+    if (!data) throw new Error('invalid navigation data');
+    localStorage.setItem(navigationCacheKey, JSON.stringify(data));
+    renderDesktopNavigation(data);
+  } catch {
+    iconGrid.classList.add('uses-cached-navigation');
+  }
+}
+
+document.querySelector('#closeNavigationFolder')?.addEventListener('click', closeNavigationFolder);
+navigationFolder?.addEventListener('pointerdown', (event) => { if (event.target === navigationFolder) closeNavigationFolder(); });
+
+loadDesktopNavigation();
 
 const clockElement = document.querySelector('#clock');
 const weekdayFormatter = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' });
@@ -637,7 +890,7 @@ function resetPetPosition() {
 
 function closeContextMenu() { if (contextMenu) contextMenu.hidden = true; }
 desktop.addEventListener('contextmenu', (event) => {
-  if (event.target.closest('.app-window, .desktop-pet, .desktop-context-menu, .command-palette')) return;
+  if (event.target.closest('.app-window, .desktop-pet, .desktop-context-menu, .command-palette, .navigation-folder')) return;
   event.preventDefault();
   const rect = desktop.getBoundingClientRect();
   contextMenu.hidden = false;
@@ -649,7 +902,7 @@ contextMenu?.addEventListener('click', (event) => {
   const action = event.target.dataset.contextAction;
   closeContextMenu();
   if (action === 'arrange') arrangeIcons();
-  if (action === 'reset-icons') { localStorage.removeItem(iconGridStorageKey); desktopIcons.forEach((icon, index) => setIconCell(icon, index % 3, Math.floor(index / 3))); showPetSpeech('图标位置已重置。'); }
+  if (action === 'reset-icons') { localStorage.removeItem(iconGridStorageKey); arrangeIcons(); showPetSpeech('图标位置已重置。'); }
   if (action === 'reset-pet') resetPetPosition();
   if (action === 'terminal') openTerminal();
 });

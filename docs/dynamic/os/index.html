@@ -6,7 +6,7 @@
     <meta name="description" content="轻风雨斜 OS：一个程序员的个人桌面、作品集与博客。" />
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
-    <link rel="stylesheet" href="./styles.css?v=20260813-13" />
+    <link rel="stylesheet" href="./styles.css?v=20260814-14" />
     <link rel="stylesheet" href="../site-nav.css?v=20260813-21" />
     <script src="../site-nav.js?v=20260813-16" defer></script>
   </head>
@@ -37,7 +37,7 @@
       <div class="aurora aurora-a"></div><div class="aurora aurora-b"></div>
       <div class="desktop-topbar">
         <nav class="top-links"><button data-open="aboutWindow">About</button><button data-open="osWindow">Values</button><button data-open="nowWindow">Now</button></nav>
-        <div class="os-brand">轻风雨斜 <i>OS</i><span class="os-brand-music" id="osMusicSlot"></span></div>
+        <div class="os-brand"><a class="os-admin-link" href="/admin/" title="进入桌面管理后台">轻风雨斜 <i>OS</i></a><span class="os-brand-music" id="osMusicSlot"></span></div>
         <div class="desktop-clock-controls">
           <time class="desktop-clock" id="clock">2026/8/12&nbsp;&nbsp;星期三&nbsp;&nbsp;12:16</time>
         </div>
@@ -62,17 +62,9 @@
         <p class="status-card-runtime">UPTIME <span id="siteUptime">—</span></p>
       </aside>
 
-      <section class="desktop-icons" aria-label="桌面文件">
-        <button class="desktop-icon terminal-icon" data-open="terminalWindow" style="--x: 3; --y: 0" title="打开命令工具"><span class="icon app-icon">$_</span><span>终端</span></button>
-        <button class="desktop-icon" data-open="worksWindow" style="--x: 0; --y: 0"><span class="icon folder-icon">▰</span><span>作品集</span></button>
-        <button class="desktop-icon" data-open="osWindow" style="--x: 1; --y: 0"><span class="icon folder-icon">▰</span><span>轻风雨斜 OS</span></button>
-        <button class="desktop-icon" data-open="blogWindow" style="--x: 2; --y: 0"><span class="icon file-icon">.md</span><span>博客文章</span></button>
-        <button class="desktop-icon" data-open="aboutWindow" style="--x: 0; --y: 1"><span class="icon file-icon html">.html</span><span>关于我</span></button>
-        <button class="desktop-icon" data-open="worksWindow" style="--x: 1; --y: 1"><span class="icon file-icon html">.html</span><span>项目清单</span></button>
-        <button class="desktop-icon" data-open="blogWindow" style="--x: 2; --y: 1"><span class="icon file-icon">.md</span><span>写了就发</span></button>
-        <button class="desktop-icon" data-open="contactWindow" style="--x: 0; --y: 2"><span class="icon app-icon">@</span><span>联系我</span></button>
-        <button class="desktop-icon" data-open="nowWindow" style="--x: 1; --y: 2"><span class="icon file-icon html">.html</span><span>现在做什么</span></button>
-        <button class="desktop-icon" data-open="osWindow" style="--x: 2; --y: 2"><span class="icon file-icon">.md</span><span>我的技能</span></button>
+      <section class="desktop-icons" id="desktopIcons" aria-label="桌面网址导航" aria-busy="true">
+        <button class="desktop-icon terminal-icon" data-open="terminalWindow" data-navigation-id="system-terminal" style="--x: 0; --y: 0" title="打开命令工具"><span class="icon app-icon">$_</span><span>终端</span></button>
+        <p class="navigation-loading" id="navigationLoading">正在加载桌面网址…</p>
       </section>
 
       <div class="desktop-tip"><span class="prompt">轻风雨@universe</span> ~ <span class="command">echo</span> "welcome to my little system"</div>
@@ -113,6 +105,14 @@
         <form class="terminal-input-row" id="terminalForm"><label for="terminalInput"><span>lightwind@universe</span>:<b>~</b>$</label><input id="terminalInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="终端命令" /></form>
       </section>
 
+      <section class="navigation-folder" id="navigationFolder" role="dialog" aria-modal="true" aria-labelledby="navigationFolderTitle" hidden>
+        <div class="navigation-folder-panel">
+          <header><div><span class="navigation-folder-kicker">DESKTOP FOLDER</span><h2 id="navigationFolderTitle">文件夹</h2></div><button type="button" id="closeNavigationFolder" aria-label="关闭文件夹">×</button></header>
+          <div class="navigation-folder-grid" id="navigationFolderGrid"></div>
+          <p class="navigation-folder-empty" id="navigationFolderEmpty" hidden>这个文件夹还是空的。</p>
+        </div>
+      </section>
+
       <div class="desktop-context-menu" id="desktopContextMenu" role="menu" hidden>
         <button type="button" data-context-action="arrange" role="menuitem">整理桌面</button>
         <button type="button" data-context-action="reset-icons" role="menuitem">重置图标位置</button>
@@ -131,6 +131,6 @@
     </main>
       </div>
     </div>
-    <script src="./script.js?v=20260813-13" defer></script>
+    <script src="./script.js?v=20260814-14" defer></script>
   </body>
 </html>
