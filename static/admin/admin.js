@@ -44,11 +44,11 @@ async function api(path, options = {}) {
   return payload;
 }
 
-function showLogin(message = '') {
+function showLogin(message = '', { clearPassword = true } = {}) {
   dashboardView.hidden = true;
   loginView.hidden = false;
   loginMessage.textContent = message;
-  document.querySelector('#loginPassword').value = '';
+  if (clearPassword) document.querySelector('#loginPassword').value = '';
 }
 
 function showDashboard() {
@@ -463,7 +463,7 @@ document.querySelectorAll('dialog').forEach((dialog) => {
 async function boot() {
   try {
     const session = await api('/auth/session');
-    if (!session.authenticated) { showLogin(); return; }
+    if (!session.authenticated) { showLogin('', { clearPassword: false }); return; }
     state.csrfToken = session.csrfToken;
     showDashboard();
     await loadDesktop();
