@@ -90,6 +90,7 @@
     const player = document.createElement('section');
     const audio = document.createElement('audio');
     const title = document.createElement('strong');
+    const titleText = document.createElement('span');
     const status = document.createElement('span');
     const modeButton = document.createElement('button');
     const previousButton = document.createElement('button');
@@ -105,6 +106,7 @@
     let playRequestSerial = 0;
     let playbackMode = 'sequence';
     let shuffleHistory = [];
+    let titleMeasureFrame = 0;
     const failedTracks = new Set();
     let savedPlaybackState = { trackId: '', currentTime: 0 };
 
@@ -142,9 +144,11 @@
     player.className = 'site-music-player';
     player.setAttribute('role', 'group');
     player.setAttribute('aria-label', '背景音乐播放器');
-    player.innerHTML = '<span class="site-music-disc" aria-hidden="true"><i></i></span><span class="site-music-copy"><span class="site-music-status">正在加载</span></span><span class="site-music-controls"></span>';
+    player.innerHTML = '<span class="site-music-copy"><span class="site-music-status">正在加载</span></span><span class="site-music-controls"></span>';
     title.className = 'site-music-title';
-    title.textContent = '正在加载音乐…';
+    titleText.className = 'site-music-title-text';
+    titleText.textContent = '正在加载音乐…';
+    title.append(titleText);
     player.querySelector('.site-music-copy').prepend(title);
     status.className = 'site-music-live-status';
     status.setAttribute('role', 'status');
@@ -184,6 +188,30 @@
     audio.setAttribute('aria-hidden', 'true');
 
     document.body.append(player, audio);
+
+    function updateTitleOverflow() {
+      if (titleMeasureFrame) window.cancelAnimationFrame(titleMeasureFrame);
+      titleMeasureFrame = window.requestAnimationFrame(() => {
+        titleMeasureFrame = 0;
+        title.classList.remove('is-scrolling');
+        const overflow = Math.max(0, Math.ceil(titleText.scrollWidth - title.clientWidth));
+        title.style.setProperty('--site-music-title-shift', `${overflow}px`);
+        title.style.setProperty('--site-music-title-duration', `${Math.min(18, Math.max(7, 5 + overflow / 20))}s`);
+        title.classList.toggle('is-scrolling', overflow > 6);
+      });
+    }
+
+    function setPlayerTitle(value) {
+      const nextTitle = String(value || '暂无音乐');
+      if (titleText.textContent !== nextTitle) titleText.textContent = nextTitle;
+      updateTitleOverflow();
+    }
+
+    if ('ResizeObserver' in window) {
+      new ResizeObserver(updateTitleOverflow).observe(title);
+    } else {
+      window.addEventListener('resize', updateTitleOverflow, { passive: true });
+    }
 
     function safeMusicUrl(value) {
       const raw = String(value || '').trim();
@@ -291,7 +319,7 @@
       player.dataset.musicState = state;
       player.dataset.trackId = track?.id || '';
       player.dataset.playbackMode = playbackMode;
-      title.textContent = state === 'error' ? '音乐暂时无法播放' : (track?.title || '暂无音乐');
+      setPlayerTitle(state === 'error' ? '音乐暂时无法播放' : (track?.title || '暂无音乐'));
       player.querySelector('.site-music-status').textContent = `${modeLabel} · ${labels[state] || labels.paused}`;
       status.textContent = state === 'error' ? '音乐暂时无法播放' : '';
       playButton.disabled = !track;
