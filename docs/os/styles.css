@@ -19,12 +19,12 @@ a { color: inherit; text-decoration: none; }
 .linux-boot-logo b { font-size: clamp(28px, 5vw, 72px); letter-spacing: -5px; }
 .linux-boot-logo span { color: #405544; font-size: clamp(13px, 2vw, 28px); }
 .boot-progress { position: absolute; z-index: 2; top: clamp(82px, 14vh, 138px); left: 50%; width: min(460px, calc(100vw - 48px)); color: #89968d; transform: translateX(-50%); }
-.boot-progress-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; color: #657168; font-size: 10px; letter-spacing: 1.2px; }
-.boot-progress-heading b { color: #69d276; font-weight: 400; text-shadow: 0 0 8px rgba(105, 210, 118, .45); }
-.boot-progress-track { position: relative; height: 7px; border: 1px solid #1d2b20; border-radius: 999px; background: #0b120d; box-shadow: inset 0 0 8px rgba(0, 0, 0, .7), 0 0 12px rgba(102, 210, 111, .08); }
+.boot-progress-row { display: flex; align-items: center; gap: 12px; }
+.boot-progress-value { flex: 0 0 36px; color: #69d276; font-size: 10px; font-weight: 400; text-align: left; text-shadow: 0 0 8px rgba(105, 210, 118, .45); }
+.boot-progress-track { position: relative; flex: 1 1 auto; min-width: 0; height: 7px; border: 1px solid #1d2b20; border-radius: 999px; background: #0b120d; box-shadow: inset 0 0 8px rgba(0, 0, 0, .7), 0 0 12px rgba(102, 210, 111, .08); }
 .boot-progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #438e4d, #76d57d); box-shadow: 0 0 10px rgba(105, 210, 118, .48); transition: width .18s linear; }
-.boot-progress-pet { position: absolute; bottom: 100%; left: 0; width: 72px; height: 78px; pointer-events: none; transform: translateX(-50%); transition: left .18s linear; }
-.boot-progress-pet-sprite { display: block; width: 72px; height: 78px; background-image: url('./assets/rem-pet/spritesheet-optimized.webp'); background-repeat: no-repeat; background-size: 576px 702px; background-position: 0 -78px; image-rendering: auto; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); animation: rem-pet-boot-walk .68s steps(8) infinite; }
+.boot-progress-pet { position: absolute; bottom: 100%; left: 0; width: 60px; height: 65px; pointer-events: none; transform: translateX(-50%); transition: left .18s linear; }
+.boot-progress-pet-sprite { display: block; width: 60px; height: 65px; background-image: url('./assets/rem-pet/spritesheet-optimized.webp'); background-repeat: no-repeat; background-size: 480px 585px; background-position: 0 -65px; image-rendering: auto; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); animation: rem-pet-boot-walk .72s steps(8) infinite; will-change: background-position; }
 .boot-progress-status { margin: 9px 0 0; color: #657168; font-size: 10px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .linux-boot-log { position: absolute; left: clamp(18px, 4vw, 65px); right: clamp(18px, 4vw, 65px); bottom: clamp(220px, 31vh, 300px); max-height: 48vh; overflow: hidden; }
 .linux-boot-log p { margin: 2px 0; animation: linux-line .16s steps(2) both; }
@@ -328,8 +328,8 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 .desktop-pet-name { margin-top: -4px; padding: 3px 7px; color: rgba(255, 230, 234, .72); border: 1px solid rgba(255, 109, 127, .22); border-radius: 999px; background: rgba(14, 7, 9, .66); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); font: 700 9px/1 Monaco, Consolas, monospace; letter-spacing: 1.4px; opacity: 0; transform: translateY(-4px); transition: opacity .2s ease, transform .2s ease; }
 .desktop-pet:not([data-pet-state="idle"]) .desktop-pet-name, .desktop-pet:focus-visible .desktop-pet-name { opacity: 1; transform: translateY(0); }
 @keyframes rem-pet-boot-walk {
-  from { background-position: 0 -78px; }
-  to { background-position: -576px -78px; }
+  from { background-position: 0 -65px; }
+  to { background-position: -480px -65px; }
 }
 @media (max-width: 800px) { .desktop-pet { display: none; } }
 
@@ -475,7 +475,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 @media (prefers-reduced-motion: reduce) {
   .desktop-status-card, .status-card-toggle { transition-duration: .01ms; }
   .boot-progress-pet, .boot-progress-fill { transition: none; }
-  .boot-progress-pet-sprite { animation: none; }
+  .boot-progress-pet-sprite { animation-duration: 1.1s; }
   .desktop::after { box-shadow: none; }
 }
 
