@@ -15,6 +15,7 @@ import {
   cleanText,
   normalizeFolderInput,
   normalizeLinkInput,
+  normalizeMusicInput,
   readJson
 } from './validation.js';
 
@@ -137,6 +138,27 @@ function mapLink(row) {
   };
 }
 
+function mapTrack(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    url: row.url,
+    position: Number(row.position)
+  };
+}
+
+async function getMusicData(env) {
+  const [meta, trackResult] = await Promise.all([
+    env.DB.prepare('SELECT version, updated_at AS updatedAt FROM music_meta WHERE id = 1').first(),
+    env.DB.prepare('SELECT id, title, url, position FROM music_tracks ORDER BY position, id').all()
+  ]);
+  return {
+    version: Number(meta?.version || 1),
+    updatedAt: Number(meta?.updatedAt || unixTime()),
+    tracks: (trackResult.results || []).map(mapTrack)
+  };
+}
+
 async function getDesktopData(env) {
   const [meta, folderResult, linkResult] = await Promise.all([
     env.DB.prepare('SELECT version, updated_at AS updatedAt FROM desktop_meta WHERE id = 1').first(),
@@ -187,6 +209,19 @@ async function publicDesktop(request, env) {
     return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
   }
   return json(desktop, 200, { etag, 'cache-control': 'no-cache' });
+}
+
+async function publicMusic(request, env) {
+  assertMethod(request, ['GET', 'HEAD']);
+  const music = await getMusicData(env);
+  const etag = `"lightwind-music-v${music.version}"`;
+  if (request.headers.get('if-none-match') === etag) {
+    return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
+  }
+  if (request.method === 'HEAD') {
+    return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
+  }
+  return json(music, 200, { etag, 'cache-control': 'no-cache' });
 }
 
 async function login(request, env) {
@@ -278,12 +313,27 @@ async function nextFolderPosition(env, folderId) {
   return Number(row?.position || 0);
 }
 
+async function nextMusicPosition(env) {
+  const row = await env.DB.prepare(
+    'SELECT COALESCE(MAX(position), -1) + 1 AS position FROM music_tracks'
+  ).first();
+  return Number(row?.position || 0);
+}
+
 function touchDesktop(env, now = unixTime()) {
   return env.DB.prepare('UPDATE desktop_meta SET version = version + 1, updated_at = ? WHERE id = 1').bind(now);
 }
 
+function touchMusic(env, now = unixTime()) {
+  return env.DB.prepare('UPDATE music_meta SET version = version + 1, updated_at = ? WHERE id = 1').bind(now);
+}
+
 async function adminMutationResponse(env) {
   return json({ ok: true, desktop: await getDesktopData(env) }, 200, { 'cache-control': 'no-store' });
+}
+
+async function adminMusicMutationResponse(env) {
+  return json({ ok: true, music: await getMusicData(env) }, 200, { 'cache-control': 'no-store' });
 }
 
 async function createFolder(request, env) {
@@ -397,8 +447,71 @@ async function deleteLink(request, env, id) {
   return adminMutationResponse(env);
 }
 
+async function createMusic(request, env) {
+  await requireAdmin(request, env, { csrf: true });
+  const input = normalizeMusicInput(await readJson(request));
+  const now = unixTime();
+  const id = `track-${crypto.randomUUID()}`;
+  await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO music_tracks (id, title, url, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(id, input.title, input.url, await nextMusicPosition(env), now, now),
+    touchMusic(env, now)
+  ]);
+  return adminMusicMutationResponse(env);
+}
+
+async function updateMusic(request, env, id) {
+  await requireAdmin(request, env, { csrf: true });
+  const current = await env.DB.prepare(
+    'SELECT id, title, url, position FROM music_tracks WHERE id = ?'
+  ).bind(id).first();
+  if (!current) throw new HttpError(404, '音乐不存在。', 'NOT_FOUND');
+  const input = normalizeMusicInput(await readJson(request), current);
+  const now = unixTime();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE music_tracks SET title = ?, url = ?, updated_at = ? WHERE id = ?')
+      .bind(input.title, input.url, now, id),
+    touchMusic(env, now)
+  ]);
+  return adminMusicMutationResponse(env);
+}
+
+async function deleteMusic(request, env, id) {
+  await requireAdmin(request, env, { csrf: true });
+  const current = await env.DB.prepare('SELECT id FROM music_tracks WHERE id = ?').bind(id).first();
+  if (!current) throw new HttpError(404, '音乐不存在。', 'NOT_FOUND');
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM music_tracks WHERE id = ?').bind(id),
+    touchMusic(env)
+  ]);
+  return adminMusicMutationResponse(env);
+}
+
 function sameSet(left, right) {
   return left.size === right.size && [...left].every((value) => right.has(value));
+}
+
+async function updateMusicLayout(request, env) {
+  await requireAdmin(request, env, { csrf: true });
+  const body = await readJson(request, 32768);
+  if (!Array.isArray(body.ids) || body.ids.length > 300) {
+    throw new HttpError(400, '音乐排序数据无效。', 'INVALID_MUSIC_LAYOUT');
+  }
+  const trackResult = await env.DB.prepare('SELECT id FROM music_tracks').all();
+  const allTracks = new Set((trackResult.results || []).map((track) => track.id));
+  const orderedIds = body.ids.map((value) => String(value || ''));
+  const suppliedTracks = new Set(orderedIds);
+  if (orderedIds.length !== suppliedTracks.size || !sameSet(suppliedTracks, allTracks)) {
+    throw new HttpError(400, '音乐排序必须包含全部且不重复的音乐。', 'INVALID_MUSIC_LAYOUT');
+  }
+  const now = unixTime();
+  const statements = orderedIds.map((id, position) => (
+    env.DB.prepare('UPDATE music_tracks SET position = ?, updated_at = ? WHERE id = ?').bind(position, now, id)
+  ));
+  statements.push(touchMusic(env, now));
+  await env.DB.batch(statements);
+  return adminMusicMutationResponse(env);
 }
 
 async function updateLayout(request, env) {
@@ -460,6 +573,7 @@ async function routeRequest(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: JSON_HEADERS });
   if (path === '/api/v1/health') return json({ ok: true, service: 'lightwind-navigation-api' });
   if (path === '/api/v1/desktop') return publicDesktop(request, env);
+  if (path === '/api/v1/music') return publicMusic(request, env);
   if (path === '/api/v1/auth/login') return login(request, env);
   if (path === '/api/v1/auth/session') return sessionStatus(request, env);
   if (path === '/api/v1/auth/logout') return logout(request, env);
@@ -467,6 +581,10 @@ async function routeRequest(request, env) {
   if (path === '/api/v1/admin/layout') {
     assertMethod(request, ['PUT']);
     return updateLayout(request, env);
+  }
+  if (path === '/api/v1/admin/music/layout') {
+    assertMethod(request, ['PUT']);
+    return updateMusicLayout(request, env);
   }
   const folderMatch = path.match(/^\/api\/v1\/admin\/folders(?:\/([^/]+))?$/);
   if (folderMatch) {
@@ -488,6 +606,17 @@ async function routeRequest(request, env) {
     }
     if (request.method === 'PATCH') return updateLink(request, env, id);
     if (request.method === 'DELETE') return deleteLink(request, env, id);
+    throw new HttpError(405, '请求方法不受支持。', 'METHOD_NOT_ALLOWED');
+  }
+  const musicMatch = path.match(/^\/api\/v1\/admin\/music(?:\/([^/]+))?$/);
+  if (musicMatch) {
+    const id = musicMatch[1] ? decodeURIComponent(musicMatch[1]) : null;
+    if (!id) {
+      assertMethod(request, ['POST']);
+      return createMusic(request, env);
+    }
+    if (request.method === 'PATCH') return updateMusic(request, env, id);
+    if (request.method === 'DELETE') return deleteMusic(request, env, id);
     throw new HttpError(405, '请求方法不受支持。', 'METHOD_NOT_ALLOWED');
   }
   throw new HttpError(404, '接口不存在。', 'NOT_FOUND');

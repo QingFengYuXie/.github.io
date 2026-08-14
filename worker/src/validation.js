@@ -64,6 +64,16 @@ export function normalizeUrl(value) {
   return parsed.href;
 }
 
+export function normalizeMusicUrl(value) {
+  const normalized = normalizeUrl(value);
+  if (normalized.startsWith('/')) return normalized;
+  const parsed = new URL(normalized);
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new HttpError(400, '音乐地址只允许站内路径、http 或 https。', 'INVALID_MUSIC_URL');
+  }
+  return parsed.href;
+}
+
 export function normalizeFolderInput(body, current = {}) {
   return {
     name: body.name === undefined && current.name !== undefined ? current.name : cleanText(body.name, '文件夹名称', { max: 40 }),
@@ -82,5 +92,16 @@ export function normalizeLinkInput(body, current = {}) {
     folderId: body.folderId === undefined && current.folderId !== undefined
       ? current.folderId
       : (body.folderId ? cleanText(body.folderId, '文件夹', { max: 80 }) : null)
+  };
+}
+
+export function normalizeMusicInput(body, current = {}) {
+  return {
+    title: body.title === undefined && current.title !== undefined
+      ? current.title
+      : cleanText(body.title, '音乐名称', { max: 60 }),
+    url: body.url === undefined && current.url !== undefined
+      ? current.url
+      : normalizeMusicUrl(body.url)
   };
 }

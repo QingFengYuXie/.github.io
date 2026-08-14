@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HttpError, normalizeColor, normalizeOpenMode, normalizeUrl } from '../src/validation.js';
+import { HttpError, normalizeColor, normalizeMusicInput, normalizeMusicUrl, normalizeOpenMode, normalizeUrl } from '../src/validation.js';
 import { normalizeFolderInput, normalizeLinkInput } from '../src/validation.js';
 
 test('accepts internal, https and mail links', () => {
@@ -25,4 +25,17 @@ test('normalizes supported visual settings', () => {
 test('requires names and URLs when creating records', () => {
   assert.throws(() => normalizeFolderInput({}), HttpError);
   assert.throws(() => normalizeLinkInput({ color: '#e8d9dc' }), HttpError);
+  assert.throws(() => normalizeMusicInput({}), HttpError);
+});
+
+test('accepts safe music URLs and rejects non-media protocols', () => {
+  assert.equal(normalizeMusicUrl('/music/demo.mp3'), '/music/demo.mp3');
+  assert.equal(normalizeMusicUrl('https://example.com/demo.m4a'), 'https://example.com/demo.m4a');
+  assert.throws(() => normalizeMusicUrl('mailto:test@example.com'), HttpError);
+  assert.throws(() => normalizeMusicUrl('javascript:alert(1)'), HttpError);
+  assert.throws(() => normalizeMusicUrl('//evil.example.com/demo.mp3'), HttpError);
+  assert.deepEqual(normalizeMusicInput({ title: ' Demo ', url: '/demo.mp3' }), {
+    title: 'Demo',
+    url: '/demo.mp3'
+  });
 });
