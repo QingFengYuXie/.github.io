@@ -6,7 +6,7 @@
     <meta name="description" content="轻风雨斜 OS：一个程序员的个人桌面、作品集与博客。" />
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
-    <link rel="stylesheet" href="./styles.css?v=20260814-16" />
+    <link rel="stylesheet" href="./styles.css?v=20260814-17" />
     <link rel="stylesheet" href="../site-nav.css?v=20260813-21" />
     <script data-cfasync="false" src="../site-nav.js?v=20260813-16" defer></script>
   </head>
@@ -56,7 +56,10 @@
       </button>
       <div class="pet-speech" id="petSpeech" role="status" aria-live="polite" hidden></div>
 
-      <aside class="desktop-status-card" aria-label="系统状态">
+      <aside class="desktop-status-card" id="desktopStatusCard" aria-label="系统状态">
+        <button class="status-card-toggle" id="statusCardToggle" type="button" aria-controls="desktopStatusCard" aria-expanded="true" aria-label="收起系统状态" title="收起系统状态">
+          <span aria-hidden="true">›</span>
+        </button>
         <div class="status-card-heading"><span><i></i> LIVE STATUS</span><button type="button" id="openPaletteButton" title="打开命令面板（Ctrl + K）">⌘K</button></div>
         <p class="status-card-now">正在把小想法做成网页。</p>
         <dl class="status-card-metrics">
@@ -136,6 +139,6 @@
     </main>
       </div>
     </div>
-    <script data-cfasync="false" src="./script.js?v=20260814-17" defer></script>
+    <script data-cfasync="false" src="./script.js?v=20260814-18" defer></script>
   </body>
 </html>

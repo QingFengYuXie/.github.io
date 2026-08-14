@@ -153,8 +153,10 @@ function makeDraggable(element, handle, bounds) {
 windows.forEach((windowElement) => makeDraggable(windowElement, windowElement.querySelector('.window-header'), desktop));
 
 const desktopPet = document.querySelector('#desktopPet');
+const petPositionKey = 'lightwind-rem-pet-position-v2';
+const legacyPetPositionKey = 'lightwind-rem-pet-position-v1';
+let restoreDefaultPetPosition = () => {};
 if (desktopPet) {
-  const petPositionKey = 'lightwind-rem-pet-position-v1';
   let petPointerId = null;
   let petStartX = 0;
   let petStartY = 0;
@@ -168,6 +170,40 @@ if (desktopPet) {
   let petBounds = null;
   let petHovered = false;
   let petInteracting = false;
+  let petUsesCustomPosition = false;
+  let petRescueFrame = 0;
+
+  function getPetBounds() {
+    return {
+      maxX: Math.max(8, desktop.clientWidth - desktopPet.offsetWidth - 8),
+      maxY: Math.max(54, desktop.clientHeight - desktopPet.offsetHeight - 78)
+    };
+  }
+
+  function clampPetPosition(x, y, bounds = getPetBounds()) {
+    return {
+      x: Math.max(8, Math.min(bounds.maxX, Number.isFinite(x) ? x : bounds.maxX)),
+      y: Math.max(54, Math.min(bounds.maxY, Number.isFinite(y) ? y : bounds.maxY))
+    };
+  }
+
+  function savePetPosition(x, y) {
+    try {
+      localStorage.setItem(petPositionKey, JSON.stringify({ x, y }));
+      localStorage.removeItem(legacyPetPositionKey);
+    } catch {
+      // Some privacy modes block storage. The pet still works for this visit.
+    }
+  }
+
+  function clearStoredPetPosition() {
+    try {
+      localStorage.removeItem(petPositionKey);
+      localStorage.removeItem(legacyPetPositionKey);
+    } catch {
+      // Storage can be unavailable in strict private browsing modes.
+    }
+  }
 
   function syncPetState() {
     let state = 'idle';
@@ -179,10 +215,14 @@ if (desktopPet) {
 
   function applyPetPosition() {
     petDragFrame = 0;
-    desktopPet.style.left = `${petPendingX}px`;
-    desktopPet.style.top = `${petPendingY}px`;
+    const next = clampPetPosition(petPendingX, petPendingY, petBounds || getPetBounds());
+    petPendingX = next.x;
+    petPendingY = next.y;
+    desktopPet.style.left = `${next.x}px`;
+    desktopPet.style.top = `${next.y}px`;
     desktopPet.style.right = 'auto';
     desktopPet.style.bottom = 'auto';
+    petUsesCustomPosition = true;
   }
 
   function queuePetPosition(x, y) {
@@ -197,33 +237,89 @@ if (desktopPet) {
     applyPetPosition();
   }
 
+  function placePet(x, y, persist = false) {
+    if (petDragFrame) window.cancelAnimationFrame(petDragFrame);
+    petDragFrame = 0;
+    const next = clampPetPosition(x, y);
+    petPendingX = next.x;
+    petPendingY = next.y;
+    desktopPet.style.left = `${next.x}px`;
+    desktopPet.style.top = `${next.y}px`;
+    desktopPet.style.right = 'auto';
+    desktopPet.style.bottom = 'auto';
+    petUsesCustomPosition = true;
+    if (persist) savePetPosition(next.x, next.y);
+  }
+
+  function rescuePetIntoViewport() {
+    petRescueFrame = 0;
+    if (!petUsesCustomPosition || desktopPet.offsetParent === null) return;
+    const desktopRect = desktop.getBoundingClientRect();
+    const petRect = desktopPet.getBoundingClientRect();
+    const x = Number.parseFloat(desktopPet.style.left);
+    const y = Number.parseFloat(desktopPet.style.top);
+    placePet(
+      Number.isFinite(x) ? x : petRect.left - desktopRect.left,
+      Number.isFinite(y) ? y : petRect.top - desktopRect.top,
+      true
+    );
+  }
+
+  function schedulePetRescue() {
+    if (!petRescueFrame) petRescueFrame = window.requestAnimationFrame(rescuePetIntoViewport);
+  }
+
+  function pointerIsInsidePet(event) {
+    if (!Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return false;
+    const rect = desktopPet.getBoundingClientRect();
+    return event.clientX >= rect.left && event.clientX <= rect.right
+      && event.clientY >= rect.top && event.clientY <= rect.bottom;
+  }
+
+  function beginPetInteraction() {
+    window.clearTimeout(petInteractionTimer);
+    petInteracting = true;
+    syncPetState();
+    petInteractionTimer = window.setTimeout(() => {
+      petInteracting = false;
+      syncPetState();
+    }, 2200);
+  }
+
   desktopPet.dataset.petState = 'idle';
-  desktopPet.addEventListener('pointerenter', () => {
+  desktopPet.addEventListener('pointerenter', (event) => {
+    if (event.pointerType === 'touch') return;
     petHovered = true;
     syncPetState();
   });
-  desktopPet.addEventListener('pointerleave', () => {
+  desktopPet.addEventListener('pointerleave', (event) => {
+    if (event.pointerType === 'touch') return;
     petHovered = false;
     syncPetState();
   });
 
   try {
-    const saved = JSON.parse(localStorage.getItem(petPositionKey));
+    const rawPosition = localStorage.getItem(petPositionKey) || localStorage.getItem(legacyPetPositionKey);
+    const saved = rawPosition ? JSON.parse(rawPosition) : null;
     if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-      desktopPet.style.left = `${saved.x}px`;
-      desktopPet.style.top = `${saved.y}px`;
-      desktopPet.style.right = 'auto';
-      desktopPet.style.bottom = 'auto';
+      window.requestAnimationFrame(() => placePet(saved.x, saved.y, true));
+    } else if (rawPosition) {
+      clearStoredPetPosition();
     }
   } catch {
-    localStorage.removeItem(petPositionKey);
+    clearStoredPetPosition();
   }
 
+  window.addEventListener('resize', schedulePetRescue, { passive: true });
+  window.addEventListener('pageshow', schedulePetRescue);
+  window.visualViewport?.addEventListener('resize', schedulePetRescue, { passive: true });
+
   desktopPet.addEventListener('pointerdown', (event) => {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (event.isPrimary === false || event.button !== 0) return;
     event.preventDefault();
     window.clearTimeout(petInteractionTimer);
     petInteracting = false;
+    petHovered = event.pointerType !== 'touch';
     petPointerId = event.pointerId;
     petMoved = false;
     desktopPet.dataset.petDragged = 'false';
@@ -235,11 +331,8 @@ if (desktopPet) {
     petOriginY = rect.top - desktopRect.top;
     petPendingX = petOriginX;
     petPendingY = petOriginY;
-    petBounds = {
-      maxX: Math.max(8, desktop.clientWidth - desktopPet.offsetWidth - 8),
-      maxY: Math.max(54, desktop.clientHeight - desktopPet.offsetHeight - 78)
-    };
-    desktopPet.setPointerCapture(event.pointerId);
+    petBounds = getPetBounds();
+    try { desktopPet.setPointerCapture(event.pointerId); } catch { /* Older webviews may not support capture. */ }
     syncPetState();
   });
 
@@ -261,34 +354,47 @@ if (desktopPet) {
   desktopPet.addEventListener('pointerup', (event) => {
     if (event.pointerId !== petPointerId) return;
     flushPetPosition();
-    if (desktopPet.hasPointerCapture(event.pointerId)) desktopPet.releasePointerCapture(event.pointerId);
+    try {
+      if (desktopPet.hasPointerCapture(event.pointerId)) desktopPet.releasePointerCapture(event.pointerId);
+    } catch { /* Pointer capture can already be gone after a browser gesture. */ }
+    const wasDragged = petMoved;
     petPointerId = null;
     petBounds = null;
-    petHovered = desktopPet.matches(':hover');
-    if (petMoved) {
-      syncPetState();
-      localStorage.setItem(petPositionKey, JSON.stringify({
-        x: parseFloat(desktopPet.style.left),
-        y: parseFloat(desktopPet.style.top)
-      }));
-      return;
-    }
-    petInteracting = true;
-    syncPetState();
-    petInteractionTimer = window.setTimeout(() => {
+    petMoved = false;
+    petHovered = event.pointerType !== 'touch' && pointerIsInsidePet(event);
+    if (wasDragged) {
       petInteracting = false;
       syncPetState();
-    }, 2200);
+      savePetPosition(Number.parseFloat(desktopPet.style.left), Number.parseFloat(desktopPet.style.top));
+      return;
+    }
+    beginPetInteraction();
   });
 
-  desktopPet.addEventListener('pointercancel', () => {
+  desktopPet.addEventListener('pointercancel', (event) => {
     flushPetPosition();
     petPointerId = null;
     petBounds = null;
     petMoved = false;
-    petHovered = desktopPet.matches(':hover');
+    petInteracting = false;
+    petHovered = event.pointerType !== 'touch' && pointerIsInsidePet(event);
+    desktopPet.dataset.petDragged = 'false';
     syncPetState();
   });
+
+  restoreDefaultPetPosition = () => {
+    petUsesCustomPosition = false;
+    petHovered = false;
+    petInteracting = false;
+    if (petDragFrame) window.cancelAnimationFrame(petDragFrame);
+    petDragFrame = 0;
+    clearStoredPetPosition();
+    desktopPet.style.left = '';
+    desktopPet.style.top = '';
+    desktopPet.style.right = '';
+    desktopPet.style.bottom = '';
+    syncPetState();
+  };
 }
 
 const defaultDesktopNavigation = {
@@ -739,10 +845,37 @@ const commandPaletteResults = document.querySelector('#commandPaletteResults');
 const latestPost = document.querySelector('#latestPost');
 const siteUptime = document.querySelector('#siteUptime');
 const petSpeech = document.querySelector('#petSpeech');
+const desktopStatusCard = document.querySelector('#desktopStatusCard');
+const statusCardToggle = document.querySelector('#statusCardToggle');
+const statusCardStateKey = 'lightwind-status-card-collapsed-v1';
 let paletteItems = [];
 let paletteActiveIndex = 0;
 let cachedPosts = [];
 let petSpeechTimer = 0;
+
+function setStatusCardCollapsed(collapsed, persist = true) {
+  if (!desktopStatusCard || !statusCardToggle) return;
+  desktopStatusCard.classList.toggle('is-collapsed', collapsed);
+  statusCardToggle.setAttribute('aria-expanded', String(!collapsed));
+  statusCardToggle.setAttribute('aria-label', collapsed ? '展开系统状态' : '收起系统状态');
+  statusCardToggle.title = collapsed ? '展开系统状态' : '收起系统状态';
+  if (latestPost) latestPost.tabIndex = collapsed ? -1 : 0;
+  if (!persist) return;
+  try {
+    localStorage.setItem(statusCardStateKey, collapsed ? '1' : '0');
+  } catch {
+    // The toggle remains usable when storage is blocked.
+  }
+}
+
+if (desktopStatusCard && statusCardToggle) {
+  let initiallyCollapsed = false;
+  try { initiallyCollapsed = localStorage.getItem(statusCardStateKey) === '1'; } catch { /* Use expanded default. */ }
+  setStatusCardCollapsed(initiallyCollapsed, false);
+  statusCardToggle.addEventListener('click', () => {
+    setStatusCardCollapsed(!desktopStatusCard.classList.contains('is-collapsed'));
+  });
+}
 
 function safeText(value) {
   return String(value).replace(/[&<>'"]/g, (character) => ({
@@ -896,11 +1029,7 @@ function arrangeIcons() {
 
 function resetPetPosition() {
   if (!desktopPet) return;
-  localStorage.removeItem('lightwind-rem-pet-position-v1');
-  desktopPet.style.left = '';
-  desktopPet.style.top = '';
-  desktopPet.style.right = '';
-  desktopPet.style.bottom = '';
+  restoreDefaultPetPosition();
   showPetSpeech('蕾姆回到默认位置。');
 }
 
