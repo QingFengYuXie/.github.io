@@ -4,10 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; media-src 'self' https:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'" />
     <title>轻风雨斜 OS · 管理后台</title>
-    <link rel="stylesheet" href="./admin.css?v=20260814-4" />
-    <script data-cfasync="false" src="./admin.js?v=20260814-4" defer></script>
+    <link rel="stylesheet" href="./admin.css?v=20260814-5" />
+    <script data-cfasync="false" src="./admin.js?v=20260814-5" defer></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -20,7 +20,7 @@
         <div class="login-mark" aria-hidden="true">$_</div>
         <p class="eyebrow"><i></i> LIGHTWIND ADMIN</p>
         <h1 id="loginTitle">管理我的桌面</h1>
-        <p class="login-description">登录后可以管理桌面上的网址、文件夹和默认排列。</p>
+        <p class="login-description">登录后可以管理桌面网址、文件夹和网站音乐库。</p>
         <form id="loginForm" class="admin-form" method="post" action="/api/v1/auth/login">
           <label>
             <span>账号</span>
@@ -51,10 +51,16 @@
         <section class="summary-grid" aria-label="桌面统计">
           <article><span>文件夹</span><strong id="folderCount">0</strong><small>FOLDERS</small></article>
           <article><span>网址</span><strong id="linkCount">0</strong><small>LINKS</small></article>
+          <article><span>音乐</span><strong id="musicCount">0</strong><small>TRACKS</small></article>
           <article><span>数据版本</span><strong id="versionCount">1</strong><small>VERSION</small></article>
         </section>
 
-        <div class="workspace-grid">
+        <nav class="admin-section-tabs" aria-label="后台管理区域">
+          <button type="button" data-admin-tab="desktop" aria-selected="true">桌面管理</button>
+          <button type="button" data-admin-tab="music" aria-selected="false">音乐库</button>
+        </nav>
+
+        <div class="workspace-grid" id="desktopManagerView" data-admin-section="desktop">
           <section class="manager-panel">
             <div class="panel-heading">
               <div><p class="eyebrow"><i></i> DESKTOP ITEMS</p><h2>桌面内容</h2></div>
@@ -85,6 +91,34 @@
             <p class="preview-note" id="saveStatus">所有修改都会立即保存。</p>
           </aside>
         </div>
+
+        <div class="workspace-grid music-workspace" id="musicManagerView" data-admin-section="music" hidden>
+          <section class="manager-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow"><i></i> MUSIC LIBRARY</p><h2>音乐库</h2></div>
+              <div class="toolbar"><button class="primary-button" id="addMusicButton" type="button">＋ 音乐</button></div>
+            </div>
+            <p class="manager-help">播放器会按这里的顺序循环播放；拖动排序，手机上可使用 ↑ ↓ 调整。</p>
+            <div class="manager-list music-list" id="musicList" aria-live="polite"></div>
+            <div class="empty-state" id="musicEmptyState" hidden>
+              <b>音乐库还是空的</b>
+              <span>添加第一首音乐后，三个页面的播放器会自动启用。</span>
+            </div>
+          </section>
+
+          <aside class="preview-panel music-preview-panel">
+            <div class="panel-heading compact-heading">
+              <div><p class="eyebrow"><i></i> AUDIO PREVIEW</p><h2>音乐试听</h2></div>
+              <button class="ghost-button" id="stopMusicPreview" type="button" disabled>停止</button>
+            </div>
+            <div class="music-preview-card" id="musicPreviewCard" data-preview-state="idle">
+              <span class="music-preview-disc" aria-hidden="true">♫</span>
+              <div><small id="musicPreviewStatus">尚未选择音乐</small><strong id="musicPreviewTitle">点击列表中的“试听”</strong></div>
+            </div>
+            <audio id="musicPreviewAudio" preload="metadata"></audio>
+            <p class="preview-note" id="musicSaveStatus">所有修改都会立即保存。</p>
+          </aside>
+        </div>
       </section>
     </main>
 
@@ -108,6 +142,25 @@
         <div class="dialog-actions">
           <button class="ghost-button" type="button" data-close-dialog="itemDialog">取消</button>
           <button class="primary-button" type="submit">保存修改</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="editor-dialog small-dialog" id="musicDialog">
+      <form method="dialog" class="dialog-card" id="musicForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow"><i></i> EDIT MUSIC</p><h2 id="musicDialogTitle">新增音乐</h2></div>
+          <button class="icon-button" type="button" data-close-dialog="musicDialog" aria-label="关闭">×</button>
+        </div>
+        <input id="musicId" type="hidden" />
+        <div class="form-grid single-column">
+          <label><span>音乐名称</span><input id="musicTitle" maxlength="60" placeholder="例如：默认音乐" required /></label>
+          <label><span>音乐 URL</span><input id="musicUrl" type="text" maxlength="2048" placeholder="https://example.com/music.mp3" required /></label>
+        </div>
+        <p class="form-message" id="musicMessage" role="status"></p>
+        <div class="dialog-actions">
+          <button class="ghost-button" type="button" data-close-dialog="musicDialog">取消</button>
+          <button class="primary-button" type="submit">保存音乐</button>
         </div>
       </form>
     </dialog>
