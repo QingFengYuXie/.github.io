@@ -6,8 +6,8 @@
     <meta name="robots" content="noindex,nofollow" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'" />
     <title>轻风雨斜 OS · 管理后台</title>
-    <link rel="stylesheet" href="./admin.css?v=20260814-2" />
-    <script src="./admin.js?v=20260814-2" defer></script>
+    <link rel="stylesheet" href="./admin.css?v=20260814-3" />
+    <script data-cfasync="false" src="./admin.js?v=20260814-3" defer></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -21,7 +21,7 @@
         <p class="eyebrow"><i></i> LIGHTWIND ADMIN</p>
         <h1 id="loginTitle">管理我的桌面</h1>
         <p class="login-description">登录后可以管理桌面上的网址、文件夹和默认排列。</p>
-        <form id="loginForm" class="admin-form">
+        <form id="loginForm" class="admin-form" method="post" action="/api/v1/auth/login">
           <label>
             <span>账号</span>
             <input id="loginUsername" name="username" autocomplete="username" maxlength="64" value="qingfengyu" required />
