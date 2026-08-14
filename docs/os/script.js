@@ -648,7 +648,7 @@ function renderDesktopNavigation(data) {
     const button = document.createElement('button');
     const slot = itemIndex + 1;
     button.type = 'button';
-    button.className = `desktop-icon navigation-icon navigation-${item.type}`;
+    button.className = `desktop-icon navigation-icon navigation-icon-${item.type}`;
     button.dataset.managedNavigation = '';
     button.dataset.navigationId = item.id;
     button.style.setProperty('--x', slot % estimatedColumns);
