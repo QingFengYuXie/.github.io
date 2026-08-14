@@ -197,7 +197,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
       assert.equal(await page.locator('[data-music-action="mode"]').getAttribute('data-music-mode'), 'sequence');
       assert.equal(await page.locator('.site-music-disc').count(), 0);
-      assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 260);
+      assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 240);
       assert.equal(await page.locator('.site-music-play').evaluate((element) => getComputedStyle(element).borderColor), 'rgb(9, 105, 218)');
       await page.waitForSelector('.site-music-title.is-scrolling');
       assert.equal(await page.locator('.site-music-title-text').evaluate((element) => getComputedStyle(element).animationName), 'site-music-title-scroll');
@@ -260,6 +260,18 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('[data-music-action="previous"]').isDisabled(), true);
       assert.equal(await page.locator('[data-music-action="next"]').isDisabled(), true);
 
+      music = makeMusic([
+        { id: 'working', title: 'working', url: 'https://audio.test/working.mp3' },
+        { id: 'manual-broken', title: 'manual broken', url: 'https://audio.test/manual-broken.mp3' },
+        { id: 'should-not-jump', title: 'should not jump', url: 'https://audio.test/should-not-jump.mp3' }
+      ], 115);
+      await page.reload();
+      await waitForTrack(page, 'working');
+      await page.locator('[data-music-action="next"]').click();
+      await waitForTrack(page, 'manual-broken');
+      await page.waitForSelector('.site-music-player[data-music-state="error"]');
+      assert.equal(await page.locator('.site-music-player').getAttribute('data-track-id'), 'manual-broken');
+
       music = makeMusic([], 12);
       await page.reload();
       await page.waitForSelector('.site-music-player[data-music-state="empty"]');
@@ -281,7 +293,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x < 40);
       assert.ok(playerBox.y > 800);
-      assert.ok(playerBox.width <= 272);
+      assert.ok(playerBox.width <= 256);
       assert.equal(await page.locator('.os-brand-music').count(), 0);
       assert.equal(await page.getByText('轻风雨@universe ~ echo "welcome to my little system"', { exact: true }).count(), 0);
       assert.equal(await page.locator('#desktopPet').count(), 1);
