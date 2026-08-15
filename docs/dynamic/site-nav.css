@@ -219,7 +219,6 @@ html[data-color-mode="light"] body:not(.os-page) .site-music-player[data-music-s
 .site-music-player .site-music-control { width: 22px; height: 22px; }
 .site-music-player .site-music-control svg { width: 14px; height: 14px; }
 .site-music-player .site-music-play { width: 28px; height: 28px; }
-.site-music-player[data-music-state="playing"] .site-music-play-icon,
 .site-music-player[data-music-state="playing"] .site-music-play > span {
   animation: site-music-play-rotate 1.15s linear infinite;
   transform-origin: center;
@@ -273,12 +272,12 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 .os-page .site-music-player {
   z-index: 24;
   top: 4px;
-  right: clamp(130px, 9.5vw, 150px);
+  right: clamp(136px, 9.8vw, 156px);
   bottom: auto;
   left: auto;
-  width: 96px;
+  width: 110px;
   min-height: 36px;
-  padding: 3px 2px;
+  padding: 3px 4px;
   gap: 0;
   color: #b9a4a8;
   border-color: rgba(255, 109, 104, .25);
@@ -361,12 +360,12 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 
   .os-page .site-music-player {
     top: max(4px, env(safe-area-inset-top));
-    right: max(128px, calc(env(safe-area-inset-right) + 116px));
+    right: max(134px, calc(env(safe-area-inset-right) + 122px));
     bottom: auto;
     left: auto;
-    width: 96px;
+    width: 110px;
     min-height: 36px;
-    padding: 3px 2px;
+    padding: 3px 4px;
   }
 
   body:not(.os-page) .site-music-player {
