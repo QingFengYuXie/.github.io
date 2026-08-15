@@ -6,8 +6,8 @@
     <meta name="robots" content="noindex,nofollow" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; media-src 'self' https:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'" />
     <title>轻风雨斜 OS · 管理后台</title>
-    <link rel="stylesheet" href="./admin.css?v=20260814-5" />
-    <script data-cfasync="false" src="./admin.js?v=20260814-5" defer></script>
+    <link rel="stylesheet" href="./admin.css?v=20260815-1" />
+    <script data-cfasync="false" src="./admin.js?v=20260815-1" defer></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -47,6 +47,14 @@
             <button class="ghost-button" id="logoutButton" type="button">退出</button>
           </div>
         </header>
+
+        <section class="dashboard-alert" id="dashboardAlert" role="alert" aria-live="assertive" hidden>
+          <div>
+            <strong>后台数据读取失败</strong>
+            <p id="dashboardAlertMessage"></p>
+          </div>
+          <button class="secondary-button" id="retryDashboardButton" type="button">重新读取</button>
+        </section>
 
         <section class="summary-grid" aria-label="桌面统计">
           <article><span>文件夹</span><strong id="folderCount">0</strong><small>FOLDERS</small></article>

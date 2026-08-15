@@ -13,6 +13,9 @@ const loginView = document.querySelector('#loginView');
 const dashboardView = document.querySelector('#dashboardView');
 const loginForm = document.querySelector('#loginForm');
 const loginMessage = document.querySelector('#loginMessage');
+const dashboardAlert = document.querySelector('#dashboardAlert');
+const dashboardAlertMessage = document.querySelector('#dashboardAlertMessage');
+const retryDashboardButton = document.querySelector('#retryDashboardButton');
 const desktopList = document.querySelector('#desktopList');
 const emptyState = document.querySelector('#emptyState');
 const previewIcons = document.querySelector('#previewIcons');
@@ -57,7 +60,10 @@ async function api(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401 && path !== '/auth/login') showLogin('登录已过期，请重新登录。');
-    throw new Error(payload.message || `请求失败（${response.status}）`);
+    const error = new Error(payload.message || `请求失败（${response.status}）`);
+    error.status = response.status;
+    error.code = payload.code || '';
+    throw error;
   }
   return payload;
 }
@@ -66,12 +72,23 @@ function showLogin(message = '', { clearPassword = true } = {}) {
   dashboardView.hidden = true;
   loginView.hidden = false;
   loginMessage.textContent = message;
+  hideDashboardAlert();
   if (clearPassword) document.querySelector('#loginPassword').value = '';
 }
 
 function showDashboard() {
   loginView.hidden = true;
   dashboardView.hidden = false;
+}
+
+function hideDashboardAlert() {
+  dashboardAlert.hidden = true;
+  dashboardAlertMessage.textContent = '';
+}
+
+function showDashboardAlert(error) {
+  dashboardAlertMessage.textContent = error?.message || '请稍后重试。';
+  dashboardAlert.hidden = false;
 }
 
 function showToast(message) {
@@ -334,10 +351,15 @@ async function toggleMusicPreview(track) {
 
 async function loadDesktop() {
   setSaveStatus('正在读取桌面数据…', 'saving');
-  const desktop = await api('/desktop');
-  state.desktop = desktop;
-  render();
-  setSaveStatus('所有修改都会立即保存。');
+  try {
+    const desktop = await api('/desktop');
+    state.desktop = desktop;
+    render();
+    setSaveStatus('所有修改都会立即保存。');
+  } catch (error) {
+    setSaveStatus(`桌面数据读取失败：${error.message}`, 'error');
+    throw error;
+  }
 }
 
 async function loadMusic() {
@@ -355,6 +377,20 @@ async function loadDashboardData() {
     state.music = { version: 1, updatedAt: 0, tracks: [] };
     renderMusic();
     setMusicSaveStatus(`音乐库读取失败：${musicResult.reason.message}`, 'error');
+  }
+}
+
+async function refreshDashboardData() {
+  hideDashboardAlert();
+  setBusy(retryDashboardButton, true);
+  try {
+    await loadDashboardData();
+    return true;
+  } catch (error) {
+    showDashboardAlert(error);
+    return false;
+  } finally {
+    setBusy(retryDashboardButton, false);
   }
 }
 
@@ -422,6 +458,7 @@ function findItem(id) {
 
 function layoutPayload() {
   return {
+    version: Number(state.desktop?.version || 0),
     topLevel: state.desktop.items.map((item) => ({ id: item.id, type: item.type })),
     folders: Object.fromEntries(allFolders().map((folder) => [folder.id, folder.links.map((link) => link.id)]))
   };
@@ -444,14 +481,77 @@ function directDropIndex(list, eventTarget) {
   return [...list.children].indexOf(target);
 }
 
-async function persistLayout() {
-  render();
-  try {
-    await saveResult(api('/admin/layout', { method: 'PUT', body: layoutPayload() }), '桌面排序已保存');
-  } catch (error) {
-    showToast(error.message);
-    try { await loadDesktop(); } catch { /* Keep the visible layout if the network is unavailable. */ }
+function createLatestSaveQueue({ payload, save, apply, renderView, setStatus, successMessage, reload }) {
+  let running = false;
+  let pending = false;
+  let waiters = [];
+
+  async function drain() {
+    if (running) return;
+    running = true;
+    let failed = false;
+    try {
+      while (pending) {
+        pending = false;
+        const currentPayload = payload();
+        setStatus('正在保存到云端…', 'saving');
+        try {
+          const result = await save(currentPayload);
+          apply(result, pending);
+          if (!pending) {
+            renderView();
+            setStatus('已保存，公开页面刷新后立即生效。');
+            showToast(successMessage);
+          }
+        } catch (error) {
+          failed = true;
+          pending = false;
+          setStatus(error.message, 'error');
+          showToast(error.message);
+          try { await reload(); } catch { /* Keep the visible layout if the network is unavailable. */ }
+          break;
+        }
+      }
+    } finally {
+      running = false;
+      const settled = waiters;
+      waiters = [];
+      settled.forEach(({ resolve, reject }) => (failed ? reject(new Error('保存失败。')) : resolve()));
+      if (pending) drain();
+    }
   }
+
+  return function enqueue() {
+    renderView();
+    pending = true;
+    const completion = new Promise((resolve, reject) => waiters.push({ resolve, reject }));
+    drain();
+    return completion;
+  };
+}
+
+function applyDesktopLayoutResult(result, preserveLocalOrder) {
+  if (!result.desktop) throw new Error('服务器没有返回桌面数据。');
+  if (!preserveLocalOrder) {
+    if (!state.desktop || result.desktop.version >= state.desktop.version) state.desktop = result.desktop;
+    return;
+  }
+  state.desktop.version = Math.max(state.desktop.version, result.desktop.version);
+  state.desktop.updatedAt = Math.max(state.desktop.updatedAt, result.desktop.updatedAt);
+}
+
+const enqueueDesktopLayoutSave = createLatestSaveQueue({
+  payload: layoutPayload,
+  save: (body) => api('/admin/layout', { method: 'PUT', body }),
+  apply: applyDesktopLayoutResult,
+  renderView: render,
+  setStatus: setSaveStatus,
+  successMessage: '桌面排序已保存',
+  reload: loadDesktop
+});
+
+function persistLayout() {
+  return enqueueDesktopLayoutSave().catch(() => {});
 }
 
 desktopList.addEventListener('dragstart', (event) => {
@@ -528,20 +628,34 @@ desktopList.addEventListener('click', async (event) => {
 });
 
 function musicLayoutPayload() {
-  return { ids: musicTracks().map((track) => track.id) };
+  return {
+    version: Number(state.music?.version || 0),
+    ids: musicTracks().map((track) => track.id)
+  };
 }
 
-async function persistMusicLayout() {
-  renderMusic();
-  try {
-    await saveMusicResult(
-      api('/admin/music/layout', { method: 'PUT', body: musicLayoutPayload() }),
-      '音乐顺序已保存'
-    );
-  } catch (error) {
-    showToast(error.message);
-    try { await loadMusic(); } catch { /* Keep the visible order if the network is unavailable. */ }
+function applyMusicLayoutResult(result, preserveLocalOrder) {
+  if (!result.music) throw new Error('服务器没有返回音乐数据。');
+  if (!preserveLocalOrder) {
+    if (!state.music || result.music.version >= state.music.version) state.music = result.music;
+    return;
   }
+  state.music.version = Math.max(state.music.version, result.music.version);
+  state.music.updatedAt = Math.max(state.music.updatedAt, result.music.updatedAt);
+}
+
+const enqueueMusicLayoutSave = createLatestSaveQueue({
+  payload: musicLayoutPayload,
+  save: (body) => api('/admin/music/layout', { method: 'PUT', body }),
+  apply: applyMusicLayoutResult,
+  renderView: renderMusic,
+  setStatus: setMusicSaveStatus,
+  successMessage: '音乐顺序已保存',
+  reload: loadMusic
+});
+
+function persistMusicLayout() {
+  return enqueueMusicLayoutSave().catch(() => {});
 }
 
 musicList.addEventListener('dragstart', (event) => {
@@ -753,7 +867,7 @@ loginForm.addEventListener('submit', async (event) => {
     });
     state.csrfToken = result.csrfToken;
     showDashboard();
-    await loadDashboardData();
+    await refreshDashboardData();
   } catch (error) { loginMessage.textContent = error.message; }
   finally { setBusy(submit, false); }
 });
@@ -807,10 +921,11 @@ async function boot() {
     if (!session.authenticated) { showLogin('', { clearPassword: false }); return; }
     state.csrfToken = session.csrfToken;
     showDashboard();
-    await loadDashboardData();
+    await refreshDashboardData();
   } catch (error) {
     showLogin(`后台服务暂时不可用：${error.message}`);
   }
 }
 
+retryDashboardButton.addEventListener('click', refreshDashboardData);
 boot();
