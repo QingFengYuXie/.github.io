@@ -219,7 +219,7 @@ html[data-color-mode="light"] body:not(.os-page) .site-music-player[data-music-s
 .site-music-player .site-music-control { width: 22px; height: 22px; }
 .site-music-player .site-music-control svg { width: 14px; height: 14px; }
 .site-music-player .site-music-play { width: 28px; height: 28px; }
-.site-music-player[data-music-state="playing"] .site-music-play > span {
+.site-music-player[data-music-state="playing"] .site-music-play-icon {
   animation: site-music-play-rotate 1.15s linear infinite;
   transform-origin: center;
 }
@@ -271,10 +271,10 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 
 .os-page .site-music-player {
   z-index: 24;
-  top: auto;
-  right: auto;
-  bottom: 18px;
-  left: 24px;
+  top: 4px;
+  right: clamp(116px, 8.7vw, 132px);
+  bottom: auto;
+  left: auto;
   width: 110px;
   min-height: 44px;
   padding: 5px 4px;
@@ -355,10 +355,10 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   }
 
   .os-page .site-music-player {
-    top: auto;
-    right: auto;
-    bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px));
-    left: 12px;
+    top: max(4px, env(safe-area-inset-top));
+    right: max(116px, calc(env(safe-area-inset-right) + 104px));
+    bottom: auto;
+    left: auto;
     width: 110px;
     min-height: 44px;
     padding: 5px 4px;
