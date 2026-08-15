@@ -181,7 +181,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
   page.on('dialog', (dialog) => dialog.accept());
 
   try {
-    await t.test('player stays top-right and restores track and progress across pages', async () => {
+    await t.test('compact player stays beside theme and restores track and progress across pages', async () => {
       music = makeMusic([
         { id: 'track-a', title: '第一首', url: 'https://audio.test/one.mp3' },
         { id: 'track-b', title: '第二首', url: 'https://audio.test/two.mp3' }
@@ -191,20 +191,24 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       await waitForTrack(page, 'track-a');
       await page.waitForSelector('.site-music-player[data-music-state="playing"]');
       assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).position), 'fixed');
-      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).right), '20px');
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).left), '72px');
       assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').evaluate((element) => getComputedStyle(element).left), '20px');
       assert.equal(await page.locator('.site-music-controls [data-music-action]').count(), 4);
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
       assert.equal(await page.locator('[data-music-action="mode"]').getAttribute('data-music-mode'), 'sequence');
       assert.equal(await page.locator('.site-music-disc').count(), 0);
-      assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 240);
+      assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 120);
+      assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
       assert.equal(await page.locator('.site-music-play').evaluate((element) => getComputedStyle(element).borderColor), 'rgb(9, 105, 218)');
-      await page.waitForSelector('.site-music-title.is-scrolling');
-      assert.equal(await page.locator('.site-music-title-text').evaluate((element) => getComputedStyle(element).animationName), 'site-music-title-scroll');
+      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
+      await page.locator('[data-music-action="play"]').click();
+      await page.waitForSelector('.site-music-player[data-music-state="paused"]');
+      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'none');
+      await page.locator('[data-music-action="play"]').click();
+      await page.waitForSelector('.site-music-player[data-music-state="playing"]');
 
       await page.locator('[data-music-action="next"]').click();
       await waitForTrack(page, 'track-b');
-      await page.waitForFunction(() => !document.querySelector('.site-music-title')?.classList.contains('is-scrolling'));
       await page.locator('[data-music-action="next"]').click();
       await waitForTrack(page, 'track-a');
       await page.locator('[data-music-action="previous"]').click();
@@ -217,7 +221,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       for (const route of ['/search.html', '/dynamic/post/test.html']) {
         await page.goto(`${origin}${route}`);
         await waitForTrack(page, 'track-b');
-        assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).right), '20px');
+        assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).left), '72px');
       }
 
       await page.locator('[data-music-action="mode"]').click();
@@ -302,7 +306,9 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x < 40);
       assert.ok(playerBox.y > 800);
-      assert.ok(playerBox.width <= 256);
+      assert.ok(playerBox.width <= 120);
+      assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
+      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
       assert.equal(await page.locator('.os-brand-music').count(), 0);
       assert.equal(await page.getByText('轻风雨@universe ~ echo "welcome to my little system"', { exact: true }).count(), 0);
       assert.equal(await page.locator('#desktopPet').count(), 1);
