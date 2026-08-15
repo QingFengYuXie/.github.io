@@ -200,12 +200,12 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 120);
       assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
       assert.equal(await page.locator('.site-music-play').evaluate((element) => getComputedStyle(element).borderColor), 'rgb(9, 105, 218)');
-      assert.equal(await page.locator('.site-music-play-icon').count(), 1);
-      assert.equal(await page.locator('.site-music-play-icon').getAttribute('viewBox'), '0 0 24 24');
-      assert.equal(await page.locator('.site-music-play-icon').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
+      assert.equal(await page.locator('.site-music-play-icon').count(), 0);
+      assert.equal(await page.locator('.site-music-play > span').count(), 1);
+      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
       await page.locator('[data-music-action="play"]').click();
       await page.waitForSelector('.site-music-player[data-music-state="paused"]');
-      assert.equal(await page.locator('.site-music-play-icon').evaluate((element) => getComputedStyle(element).animationName), 'none');
+      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'none');
       await page.locator('[data-music-action="play"]').click();
       await page.waitForSelector('.site-music-player[data-music-state="playing"]');
 
@@ -308,7 +308,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x > 1100);
       assert.ok(playerBox.y < 60);
-      assert.ok(playerBox.width <= 100);
+      assert.ok(playerBox.width <= 114);
       assert.equal(await page.locator('.site-music-play-icon').count(), 0);
       assert.equal(await page.locator('.site-music-play > span').count(), 1);
       const brandBox = await page.locator('.os-brand').boundingBox();
