@@ -97,6 +97,7 @@
     const playButton = document.createElement('button');
     const nextButton = document.createElement('button');
     const playMusicIcon = '<svg class="site-music-play-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18V5l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>';
+    const playLegacyIcon = (isPlaying) => `<span aria-hidden="true">${isPlaying ? 'Ⅱ' : '▶'}</span>`;
     let musicEnabled = true;
     let tracks = [];
     let currentIndex = -1;
@@ -174,7 +175,7 @@
     playButton.dataset.musicAction = 'play';
     playButton.setAttribute('aria-label', '播放音乐');
     playButton.title = '播放';
-    playButton.innerHTML = playMusicIcon;
+    playButton.innerHTML = document.body.classList.contains('os-page') ? playLegacyIcon(false) : playMusicIcon;
 
     nextButton.type = 'button';
     nextButton.className = 'site-music-control';
@@ -198,7 +199,7 @@
       if (!brand) return;
       const brandBox = brand.getBoundingClientRect();
       const playerBox = player.getBoundingClientRect();
-      const gap = 8;
+      const gap = 14;
       player.style.left = `${Math.max(8, brandBox.left - playerBox.width - gap)}px`;
       player.style.right = 'auto';
       player.style.top = `${Math.max(4, brandBox.top + (brandBox.height - playerBox.height) / 2)}px`;
@@ -371,7 +372,7 @@
         : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7h12m-3-3 3 3-3 3m5 7H7m3 3-3-3 3-3"/></svg>';
       playButton.setAttribute('aria-label', isPlaying ? '暂停音乐' : '播放音乐');
       playButton.title = isPlaying ? '暂停' : '播放';
-      playButton.innerHTML = playMusicIcon;
+      playButton.innerHTML = document.body.classList.contains('os-page') ? playLegacyIcon(isPlaying) : playMusicIcon;
     }
 
     function requestPlay() {

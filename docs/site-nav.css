@@ -219,7 +219,8 @@ html[data-color-mode="light"] body:not(.os-page) .site-music-player[data-music-s
 .site-music-player .site-music-control { width: 22px; height: 22px; }
 .site-music-player .site-music-control svg { width: 14px; height: 14px; }
 .site-music-player .site-music-play { width: 28px; height: 28px; }
-.site-music-player[data-music-state="playing"] .site-music-play-icon {
+.site-music-player[data-music-state="playing"] .site-music-play-icon,
+.site-music-player[data-music-state="playing"] .site-music-play > span {
   animation: site-music-play-rotate 1.15s linear infinite;
   transform-origin: center;
 }
@@ -272,12 +273,12 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 .os-page .site-music-player {
   z-index: 24;
   top: 4px;
-  right: clamp(116px, 8.7vw, 132px);
+  right: clamp(130px, 9.5vw, 150px);
   bottom: auto;
   left: auto;
-  width: 110px;
-  min-height: 44px;
-  padding: 5px 4px;
+  width: 96px;
+  min-height: 36px;
+  padding: 3px 2px;
   gap: 0;
   color: #b9a4a8;
   border-color: rgba(255, 109, 104, .25);
@@ -289,6 +290,10 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 .os-page .site-music-title { color: #f0e5e7; }
 .os-page .site-music-status { color: #b78e95; }
 .os-page .site-music-control { color: #b9a4a8; }
+.os-page .site-music-control span { font-size: 9px; }
+.os-page .site-music-player .site-music-control { width: 18px; height: 18px; }
+.os-page .site-music-player .site-music-control svg { width: 12px; height: 12px; }
+.os-page .site-music-player .site-music-play { width: 23px; height: 23px; }
 .os-page .site-music-control:hover:not(:disabled) { color: #fff; background: rgba(255, 109, 104, .1); }
 .os-page .site-music-mode[data-music-mode="shuffle"] { color: #ff6b7e; background: rgba(255, 82, 101, .1); }
 .os-page .site-music-play { color: #fff; border-color: rgba(255, 82, 101, .65); background: linear-gradient(145deg, #ed4b5f, #b81736); }
@@ -356,12 +361,12 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 
   .os-page .site-music-player {
     top: max(4px, env(safe-area-inset-top));
-    right: max(116px, calc(env(safe-area-inset-right) + 104px));
+    right: max(128px, calc(env(safe-area-inset-right) + 116px));
     bottom: auto;
     left: auto;
-    width: 110px;
-    min-height: 44px;
-    padding: 5px 4px;
+    width: 96px;
+    min-height: 36px;
+    padding: 3px 2px;
   }
 
   body:not(.os-page) .site-music-player {
