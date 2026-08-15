@@ -15,10 +15,11 @@ async function responseJson(response) {
 
 test('music API supports public reads and authenticated CRUD with ordering', async () => {
   const credential = await hashPassword('test-admin-password', 100000);
-  const [indexSource, securitySource, validationSource] = await Promise.all([
+  const [indexSource, securitySource, validationSource, faviconSource] = await Promise.all([
     readFile(`${workerRoot}/src/index.js`, 'utf8'),
     readFile(`${workerRoot}/src/security.js`, 'utf8'),
-    readFile(`${workerRoot}/src/validation.js`, 'utf8')
+    readFile(`${workerRoot}/src/validation.js`, 'utf8'),
+    readFile(`${workerRoot}/src/favicon.js`, 'utf8')
   ]);
   const miniflare = new Miniflare({
     workers: [{
@@ -32,7 +33,8 @@ test('music API supports public reads and authenticated CRUD with ordering', asy
           modules: {
             'index.js': { type: 'esm', contents: indexSource },
             'security.js': { type: 'esm', contents: securitySource },
-            'validation.js': { type: 'esm', contents: validationSource }
+            'validation.js': { type: 'esm', contents: validationSource },
+            'favicon.js': { type: 'esm', contents: faviconSource }
           }
         },
         env: {

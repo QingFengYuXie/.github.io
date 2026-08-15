@@ -31,6 +31,7 @@ function contentType(filePath) {
   if (filePath.endsWith('.html')) return 'text/html; charset=utf-8';
   if (filePath.endsWith('.js')) return 'text/javascript; charset=utf-8';
   if (filePath.endsWith('.css')) return 'text/css; charset=utf-8';
+  if (filePath.endsWith('.svg')) return 'image/svg+xml; charset=utf-8';
   if (filePath.endsWith('.webp')) return 'image/webp';
   if (filePath.endsWith('.jpg')) return 'image/jpeg';
   return 'application/octet-stream';
@@ -54,6 +55,17 @@ async function startServer(state) {
           : json(state.desktop);
       } else if (pathname === '/api/v1/music') {
         result = json({ version: 1, updatedAt: 1, tracks: [] });
+      } else if (/^\/api\/v1\/favicons\/[a-zA-Z0-9_-]+$/.test(pathname)) {
+        state.activeFaviconRequests += 1;
+        state.maxActiveFaviconRequests = Math.max(state.maxActiveFaviconRequests, state.activeFaviconRequests);
+        state.faviconRequests.push(pathname);
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        state.activeFaviconRequests -= 1;
+        result = {
+          status: 200,
+          body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#f4c84a"/></svg>',
+          type: 'image/svg+xml; charset=utf-8'
+        };
       } else if (pathname === '/api/v1/admin/layout' && request.method === 'PUT') {
         const body = await readBody(request);
         state.activeLayoutRequests += 1;
@@ -108,7 +120,10 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
     ]),
     activeLayoutRequests: 0,
     maxActiveLayoutRequests: 0,
-    layoutRequests: []
+    layoutRequests: [],
+    activeFaviconRequests: 0,
+    maxActiveFaviconRequests: 0,
+    faviconRequests: []
   };
   const { chromium } = await import('playwright-core');
   const { server, origin } = await startServer(state);
@@ -132,6 +147,46 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.match(await page.locator('[data-navigation-id="link-a"]').textContent(), /实时导航/);
       assert.equal(await page.locator('#desktopIcons').evaluate((element) => element.classList.contains('uses-cached-navigation')), false);
       assert.deepEqual(errors, []);
+      await context.close();
+    });
+
+    await t.test('favicons start after load and stay same-origin with bounded concurrency', async () => {
+      state.desktop = makeDesktop([
+        { id: 'link-a', type: 'link', title: '第一项', url: 'https://a.example', icon: 'A', color: '#e8d9dc', openMode: 'new' },
+        { id: 'link-b', type: 'link', title: '第二项', url: 'https://b.example', icon: 'B', color: '#e8d9dc', openMode: 'new' },
+        { id: 'link-c', type: 'link', title: '第三项', url: 'https://c.example', icon: 'C', color: '#e8d9dc', openMode: 'new' },
+        { id: 'link-d', type: 'link', title: '第四项', url: 'https://d.example', icon: 'D', color: '#e8d9dc', openMode: 'new' },
+        { id: 'link-e', type: 'link', title: '第五项', url: 'https://e.example', icon: 'E', color: '#e8d9dc', openMode: 'new' }
+      ]);
+      state.activeFaviconRequests = 0;
+      state.maxActiveFaviconRequests = 0;
+      state.faviconRequests = [];
+      const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const page = await context.newPage();
+      const externalImages = [];
+      page.on('request', (request) => {
+        const url = new URL(request.url());
+        if (request.resourceType() === 'image' && url.origin !== origin) externalImages.push(request.url());
+      });
+
+      await page.goto(`${origin}/os/`, { waitUntil: 'load' });
+      assert.equal(await page.evaluate(() => document.readyState), 'complete');
+      await page.waitForFunction(() => document.querySelectorAll('.navigation-favicon img').length >= 5);
+      const timing = await page.evaluate(() => {
+        const navigationRequests = performance.getEntriesByType('resource')
+          .filter((entry) => entry.name.includes('/api/v1/favicons/'));
+        return {
+          loadEventEnd: performance.getEntriesByType('navigation')[0].loadEventEnd,
+          requestStarts: navigationRequests.map((entry) => entry.startTime)
+        };
+      });
+
+      assert.ok(timing.loadEventEnd > 0);
+      assert.ok(timing.requestStarts.length >= 5);
+      assert.ok(timing.requestStarts.every((startTime) => startTime >= timing.loadEventEnd));
+      assert.ok(state.maxActiveFaviconRequests <= 3);
+      assert.ok(state.faviconRequests.length >= 5);
+      assert.deepEqual(externalImages, []);
       await context.close();
     });
 

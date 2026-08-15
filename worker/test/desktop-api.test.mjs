@@ -27,10 +27,11 @@ function layoutFor(desktop, topLevel = desktop.items) {
 
 test('desktop layout rejects stale versions without overwriting the latest order', async () => {
   const credential = await hashPassword('test-admin-password', 100000);
-  const [indexSource, securitySource, validationSource] = await Promise.all([
+  const [indexSource, securitySource, validationSource, faviconSource] = await Promise.all([
     readFile(`${workerRoot}/src/index.js`, 'utf8'),
     readFile(`${workerRoot}/src/security.js`, 'utf8'),
-    readFile(`${workerRoot}/src/validation.js`, 'utf8')
+    readFile(`${workerRoot}/src/validation.js`, 'utf8'),
+    readFile(`${workerRoot}/src/favicon.js`, 'utf8')
   ]);
   const miniflare = new Miniflare({
     workers: [{
@@ -44,7 +45,8 @@ test('desktop layout rejects stale versions without overwriting the latest order
           modules: {
             'index.js': { type: 'esm', contents: indexSource },
             'security.js': { type: 'esm', contents: securitySource },
-            'validation.js': { type: 'esm', contents: validationSource }
+            'validation.js': { type: 'esm', contents: validationSource },
+            'favicon.js': { type: 'esm', contents: faviconSource }
           }
         },
         env: {
@@ -66,6 +68,17 @@ test('desktop layout rejects stale versions without overwriting the latest order
 
     const initial = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/desktop`));
     assert.equal(initial.response.status, 200);
+
+    const fallbackFavicon = await miniflare.dispatchFetch(`${origin}/api/v1/favicons/link-contact`);
+    assert.equal(fallbackFavicon.status, 200);
+    assert.match(fallbackFavicon.headers.get('content-type'), /^image\/svg\+xml/);
+    assert.equal(fallbackFavicon.headers.get('x-favicon-fallback'), '1');
+
+    const rejectedFaviconMethod = await responseJson(await miniflare.dispatchFetch(
+      `${origin}/api/v1/favicons/link-contact`,
+      { method: 'POST' }
+    ));
+    assert.equal(rejectedFaviconMethod.response.status, 405);
 
     const login = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/auth/login`, {
       method: 'POST',

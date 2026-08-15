@@ -18,6 +18,7 @@ import {
   normalizeMusicInput,
   readJson
 } from './validation.js';
+import { publicFavicon } from './favicon.js';
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -632,6 +633,8 @@ async function routeRequest(request, env) {
   const path = url.pathname.replace(/\/+$/, '') || '/';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: JSON_HEADERS });
   if (path === '/api/v1/health') return json({ ok: true, service: 'lightwind-navigation-api' });
+  const faviconMatch = path.match(/^\/api\/v1\/favicons\/([^/]+)$/);
+  if (faviconMatch) return publicFavicon(request, env, faviconMatch[1]);
   if (path === '/api/v1/desktop') return publicDesktop(request, env);
   if (path === '/api/v1/music') return publicMusic(request, env);
   if (path === '/api/v1/auth/login') return login(request, env);
