@@ -686,50 +686,85 @@ function normalizeDesktopNavigation(value) {
   return { version: Number(value.version) || 1, updatedAt: Number(value.updatedAt) || 0, items };
 }
 
-function faviconUrls(url) {
-  try {
-    const parsed = new URL(url, window.location.origin);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return [];
-    return [
-      `${parsed.origin}/favicon.ico`,
-      `${parsed.origin}/favicon.svg`,
-      `${parsed.origin}/favicon.png`,
-      `${parsed.origin}/apple-touch-icon.png`,
-      `${parsed.origin}/apple-touch-icon-precomposed.png`,
-      `https://favicon.im/${parsed.hostname}?larger=true`
-    ];
-  } catch {
-    return [];
+function createFaviconLoader() {
+  const maxConcurrent = 3;
+  const requestTimeoutMs = 8000;
+  const pending = [];
+  let pageLoaded = document.readyState === 'complete';
+  let active = 0;
+  let scheduled = false;
+
+  const scheduleIdle = window.requestIdleCallback
+    ? (callback) => window.requestIdleCallback(callback, { timeout: 1000 })
+    : (callback) => window.setTimeout(() => callback({ didTimeout: true, timeRemaining: () => 0 }), 0);
+
+  function schedule() {
+    if (!pageLoaded || scheduled || active >= maxConcurrent || !pending.length) return;
+    scheduled = true;
+    scheduleIdle(drain);
   }
+
+  function finish(task, image, loaded) {
+    window.clearTimeout(task.timeout);
+    active -= 1;
+    if (loaded && task.wrapper.isConnected) task.wrapper.replaceChildren(image);
+    schedule();
+  }
+
+  function load(task) {
+    active += 1;
+    const image = document.createElement('img');
+    let settled = false;
+    const settle = (loaded) => {
+      if (settled) return;
+      settled = true;
+      finish(task, image, loaded);
+    };
+    image.alt = '';
+    image.decoding = 'async';
+    image.addEventListener('load', () => settle(true), { once: true });
+    image.addEventListener('error', () => settle(false), { once: true });
+    task.timeout = window.setTimeout(() => {
+      image.removeAttribute('src');
+      settle(false);
+    }, requestTimeoutMs);
+    image.src = `/api/v1/favicons/${encodeURIComponent(task.linkId)}`;
+  }
+
+  function drain(deadline) {
+    scheduled = false;
+    let started = 0;
+    while (active < maxConcurrent && pending.length
+      && (deadline.didTimeout || deadline.timeRemaining() > 4 || started === 0)) {
+      const task = pending.shift();
+      if (!task.wrapper.isConnected) continue;
+      load(task);
+      started += 1;
+    }
+    schedule();
+  }
+
+  window.addEventListener('load', () => {
+    pageLoaded = true;
+    schedule();
+  }, { once: true });
+
+  return {
+    enqueue(linkId, wrapper) {
+      pending.push({ linkId, wrapper, timeout: 0 });
+      schedule();
+    }
+  };
 }
+
+const faviconLoader = createFaviconLoader();
 
 function makeFavicon(link, fallback = '↗') {
   const wrapper = document.createElement('span');
   wrapper.className = 'navigation-favicon';
   wrapper.style.setProperty('--navigation-color', link.color || '#e8d9dc');
-  const sources = faviconUrls(link.url);
-  const fallbackIcon = link.icon || fallback;
-  if (!sources.length) {
-    wrapper.textContent = fallbackIcon;
-    return wrapper;
-  }
-  const image = document.createElement('img');
-  image.alt = '';
-  image.decoding = 'async';
-  image.referrerPolicy = 'no-referrer';
-  let sourceIndex = 0;
-  const loadNextSource = () => {
-    if (sourceIndex >= sources.length) {
-      image.remove();
-      wrapper.textContent = fallbackIcon;
-      return;
-    }
-    image.src = sources[sourceIndex];
-    sourceIndex += 1;
-  };
-  image.addEventListener('error', loadNextSource);
-  wrapper.append(image);
-  loadNextSource();
+  wrapper.textContent = link.icon || fallback;
+  faviconLoader.enqueue(link.id, wrapper);
   return wrapper;
 }
 
