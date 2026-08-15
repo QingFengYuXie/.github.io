@@ -924,7 +924,7 @@ async function loadDesktopNavigation() {
     const cached = normalizeDesktopNavigation(JSON.parse(localStorage.getItem(navigationCacheKey)));
     if (cached) initial = cached;
   } catch {
-    localStorage.removeItem(navigationCacheKey);
+    try { localStorage.removeItem(navigationCacheKey); } catch { /* Storage may be blocked. */ }
   }
   renderDesktopNavigation(initial);
   try {
@@ -932,8 +932,13 @@ async function loadDesktopNavigation() {
     if (!response.ok) throw new Error('navigation api unavailable');
     const data = normalizeDesktopNavigation(await response.json());
     if (!data) throw new Error('invalid navigation data');
-    localStorage.setItem(navigationCacheKey, JSON.stringify(data));
     renderDesktopNavigation(data);
+    iconGrid.classList.remove('uses-cached-navigation');
+    try {
+      localStorage.setItem(navigationCacheKey, JSON.stringify(data));
+    } catch {
+      // Rendering live navigation must not depend on optional browser storage.
+    }
   } catch {
     iconGrid.classList.add('uses-cached-navigation');
   }

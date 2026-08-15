@@ -100,12 +100,22 @@ test('music API supports public reads and authenticated CRUD with ordering', asy
     assert.equal(result.response.status, 200);
     assert.equal(result.payload.music.tracks.find((track) => track.id === created.id).url, '/music/edited.m4a');
 
+    const musicVersionBeforeLayout = result.payload.music.version;
     result = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/admin/music/layout`, {
       method: 'PUT',
       headers: authHeaders,
-      body: JSON.stringify({ ids: [created.id, 'track-default'] })
+      body: JSON.stringify({ version: musicVersionBeforeLayout, ids: [created.id, 'track-default'] })
     }));
+    assert.equal(result.response.status, 200);
     assert.deepEqual(result.payload.music.tracks.map((track) => track.id), [created.id, 'track-default']);
+
+    const staleLayout = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/admin/music/layout`, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({ version: musicVersionBeforeLayout, ids: ['track-default', created.id] })
+    }));
+    assert.equal(staleLayout.response.status, 409);
+    assert.equal(staleLayout.payload.code, 'MUSIC_VERSION_CONFLICT');
 
     result = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/admin/music`, {
       method: 'POST',

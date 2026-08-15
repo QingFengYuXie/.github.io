@@ -320,12 +320,20 @@ async function nextMusicPosition(env) {
   return Number(row?.position || 0);
 }
 
-function touchDesktop(env, now = unixTime()) {
-  return env.DB.prepare('UPDATE desktop_meta SET version = version + 1, updated_at = ? WHERE id = 1').bind(now);
+function touchDesktop(env, now = unixTime(), expectedVersion = null) {
+  const statement = expectedVersion === null
+    ? env.DB.prepare('UPDATE desktop_meta SET version = version + 1, updated_at = ? WHERE id = 1').bind(now)
+    : env.DB.prepare('UPDATE desktop_meta SET version = version + 1, updated_at = ? WHERE id = 1 AND version = ?')
+      .bind(now, expectedVersion);
+  return statement;
 }
 
-function touchMusic(env, now = unixTime()) {
-  return env.DB.prepare('UPDATE music_meta SET version = version + 1, updated_at = ? WHERE id = 1').bind(now);
+function touchMusic(env, now = unixTime(), expectedVersion = null) {
+  const statement = expectedVersion === null
+    ? env.DB.prepare('UPDATE music_meta SET version = version + 1, updated_at = ? WHERE id = 1').bind(now)
+    : env.DB.prepare('UPDATE music_meta SET version = version + 1, updated_at = ? WHERE id = 1 AND version = ?')
+      .bind(now, expectedVersion);
+  return statement;
 }
 
 async function adminMutationResponse(env) {
@@ -492,9 +500,41 @@ function sameSet(left, right) {
   return left.size === right.size && [...left].every((value) => right.has(value));
 }
 
+function expectedLayoutVersion(value, label) {
+  const version = Number(value);
+  if (!Number.isSafeInteger(version) || version < 1) {
+    throw new HttpError(400, `${label}版本无效，请刷新后台后重试。`, 'INVALID_LAYOUT_VERSION');
+  }
+  return version;
+}
+
+async function requireCurrentDesktopVersion(env, value) {
+  const expected = expectedLayoutVersion(value, '桌面数据');
+  const current = await env.DB.prepare('SELECT version FROM desktop_meta WHERE id = 1').first();
+  if (Number(current?.version || 0) !== expected) {
+    throw new HttpError(409, '桌面数据已在其他页面更新，请重新读取后再排序。', 'DESKTOP_VERSION_CONFLICT');
+  }
+  return expected;
+}
+
+async function requireCurrentMusicVersion(env, value) {
+  const expected = expectedLayoutVersion(value, '音乐库');
+  const current = await env.DB.prepare('SELECT version FROM music_meta WHERE id = 1').first();
+  if (Number(current?.version || 0) !== expected) {
+    throw new HttpError(409, '音乐库已在其他页面更新，请重新读取后再排序。', 'MUSIC_VERSION_CONFLICT');
+  }
+  return expected;
+}
+
+function assertVersionWasUpdated(results, message, code) {
+  const changes = Number(results.at(-1)?.meta?.changes || 0);
+  if (changes !== 1) throw new HttpError(409, message, code);
+}
+
 async function updateMusicLayout(request, env) {
   await requireAdmin(request, env, { csrf: true });
   const body = await readJson(request, 32768);
+  const expectedVersion = await requireCurrentMusicVersion(env, body.version);
   if (!Array.isArray(body.ids) || body.ids.length > 300) {
     throw new HttpError(400, '音乐排序数据无效。', 'INVALID_MUSIC_LAYOUT');
   }
@@ -507,16 +547,25 @@ async function updateMusicLayout(request, env) {
   }
   const now = unixTime();
   const statements = orderedIds.map((id, position) => (
-    env.DB.prepare('UPDATE music_tracks SET position = ?, updated_at = ? WHERE id = ?').bind(position, now, id)
+    env.DB.prepare(
+      `UPDATE music_tracks SET position = ?, updated_at = ?
+        WHERE id = ? AND EXISTS (SELECT 1 FROM music_meta WHERE id = 1 AND version = ?)`
+    ).bind(position, now, id, expectedVersion)
   ));
-  statements.push(touchMusic(env, now));
-  await env.DB.batch(statements);
+  statements.push(touchMusic(env, now, expectedVersion));
+  const results = await env.DB.batch(statements);
+  assertVersionWasUpdated(
+    results,
+    '音乐库已在其他页面更新，请重新读取后再排序。',
+    'MUSIC_VERSION_CONFLICT'
+  );
   return adminMusicMutationResponse(env);
 }
 
 async function updateLayout(request, env) {
   await requireAdmin(request, env, { csrf: true });
   const body = await readJson(request, 65536);
+  const expectedVersion = await requireCurrentDesktopVersion(env, body.version);
   if (!Array.isArray(body.topLevel) || !body.folders || typeof body.folders !== 'object') {
     throw new HttpError(400, '桌面排序数据无效。', 'INVALID_LAYOUT');
   }
@@ -534,14 +583,18 @@ async function updateLayout(request, env) {
     const id = String(item?.id || '');
     if (item?.type === 'folder' && allFolders.has(id) && !seenFolders.has(id)) {
       seenFolders.add(id);
-      statements.push(env.DB.prepare('UPDATE folders SET position = ?, updated_at = ? WHERE id = ?')
-        .bind(position, unixTime(), id));
+      statements.push(env.DB.prepare(
+        `UPDATE folders SET position = ?, updated_at = ?
+          WHERE id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
+      ).bind(position, unixTime(), id, expectedVersion));
       return;
     }
     if (item?.type === 'link' && allLinks.has(id) && !seenLinks.has(id)) {
       seenLinks.add(id);
-      statements.push(env.DB.prepare('UPDATE links SET folder_id = NULL, position = ?, updated_at = ? WHERE id = ?')
-        .bind(position, unixTime(), id));
+      statements.push(env.DB.prepare(
+        `UPDATE links SET folder_id = NULL, position = ?, updated_at = ?
+          WHERE id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
+      ).bind(position, unixTime(), id, expectedVersion));
       return;
     }
     throw new HttpError(400, '桌面排序包含重复或不存在的项目。', 'INVALID_LAYOUT');
@@ -555,15 +608,22 @@ async function updateLayout(request, env) {
         throw new HttpError(400, '文件夹排序包含重复或不存在的网址。', 'INVALID_LAYOUT');
       }
       seenLinks.add(linkId);
-      statements.push(env.DB.prepare('UPDATE links SET folder_id = ?, position = ?, updated_at = ? WHERE id = ?')
-        .bind(folderId, position, unixTime(), linkId));
+      statements.push(env.DB.prepare(
+        `UPDATE links SET folder_id = ?, position = ?, updated_at = ?
+          WHERE id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
+      ).bind(folderId, position, unixTime(), linkId, expectedVersion));
     });
   }
   if (!sameSet(seenFolders, allFolders) || !sameSet(seenLinks, allLinks)) {
     throw new HttpError(400, '排序数据没有包含全部项目。', 'INVALID_LAYOUT');
   }
-  statements.push(touchDesktop(env));
-  await env.DB.batch(statements);
+  statements.push(touchDesktop(env, unixTime(), expectedVersion));
+  const results = await env.DB.batch(statements);
+  assertVersionWasUpdated(
+    results,
+    '桌面数据已在其他页面更新，请重新读取后再排序。',
+    'DESKTOP_VERSION_CONFLICT'
+  );
   return adminMutationResponse(env);
 }
 
