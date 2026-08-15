@@ -133,6 +133,11 @@
   82%, 100% { transform: translateX(calc(-1 * var(--site-music-title-shift, 0px))); }
 }
 
+@keyframes site-music-play-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .site-music-controls {
   display: flex;
   flex: 0 0 auto;
@@ -208,6 +213,28 @@ html[data-color-mode="light"] body:not(.os-page) .site-music-player[data-music-s
   white-space: nowrap;
 }
 
+/* Compact controls are shared by the blog pages and the OS desktop. */
+.site-music-player .site-music-copy { display: none; }
+.site-music-player .site-music-controls { width: 100%; justify-content: center; gap: 0; }
+.site-music-player .site-music-control { width: 22px; height: 22px; }
+.site-music-player .site-music-control svg { width: 14px; height: 14px; }
+.site-music-player .site-music-play { width: 28px; height: 28px; }
+.site-music-player[data-music-state="playing"] .site-music-play > span {
+  animation: site-music-play-rotate 1.15s linear infinite;
+  transform-origin: center;
+}
+
+body:not(.os-page) .site-music-player {
+  top: max(20px, env(safe-area-inset-top));
+  right: auto;
+  left: max(72px, calc(env(safe-area-inset-left) + 52px));
+  width: 110px;
+  min-height: 44px;
+  padding: 5px 4px;
+  gap: 0;
+  border-radius: 16px;
+}
+
 body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   position: fixed !important;
   z-index: 10000 !important;
@@ -248,9 +275,10 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   right: auto;
   bottom: 18px;
   left: 24px;
-  width: 252px;
-  min-height: 54px;
-  padding: 7px 8px 7px 12px;
+  width: 110px;
+  min-height: 44px;
+  padding: 5px 4px;
+  gap: 0;
   color: #b9a4a8;
   border-color: rgba(255, 109, 104, .25);
   background: linear-gradient(110deg, rgba(210, 30, 54, .12), transparent 42%), rgba(12, 7, 9, .9);
@@ -331,7 +359,19 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
     right: auto;
     bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px));
     left: 12px;
-    width: min(252px, calc(100vw - 24px));
+    width: 110px;
+    min-height: 44px;
+    padding: 5px 4px;
+  }
+
+  body:not(.os-page) .site-music-player {
+    top: max(12px, env(safe-area-inset-top));
+    right: auto;
+    left: max(62px, calc(env(safe-area-inset-left) + 42px));
+    width: 110px;
+    min-height: 44px;
+    padding: 5px 4px;
+    border-radius: 15px;
   }
 }
 
