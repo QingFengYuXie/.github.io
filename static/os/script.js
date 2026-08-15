@@ -8,6 +8,7 @@ const bootProgressValue = document.querySelector('#bootProgressValue');
 const bootProgressStatus = document.querySelector('#bootProgressStatus');
 const desktop = document.querySelector('#desktop');
 const windows = [...document.querySelectorAll('.app-window')];
+const mobileLayoutMedia = window.matchMedia('(max-width: 800px)');
 let topZ = 60;
 let bootComplete = false;
 let bootPetAnimationFrame = 0;
@@ -172,7 +173,7 @@ function makeDraggable(element, handle, bounds) {
   let originX = 0;
   let originY = 0;
   handle.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('button')) return;
+    if (mobileLayoutMedia.matches || event.target.closest('button')) return;
     dragging = true;
     handle.setPointerCapture(event.pointerId);
     const rect = element.getBoundingClientRect();
@@ -828,7 +829,7 @@ function bindDesktopIcon(icon) {
   let startX = 0;
   let startY = 0;
   icon.addEventListener('pointerdown', (event) => {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (mobileLayoutMedia.matches || !event.isPrimary || event.button !== 0) return;
     event.preventDefault();
     activePointer = event.pointerId;
     moved = false;
@@ -883,6 +884,9 @@ function bindDesktopIcon(icon) {
     icon.style.transform = '';
     icon.classList.remove('is-dragging');
     iconGrid.classList.remove('is-arranging');
+  });
+  icon.addEventListener('click', () => {
+    if (mobileLayoutMedia.matches) activateDesktopIcon(icon);
   });
   icon.addEventListener('dragstart', (event) => event.preventDefault());
 }
@@ -949,7 +953,9 @@ function updateClock() {
   const now = new Date();
   const weekday = weekdayFormatter.format(now);
   const time = timeFormatter.format(now);
-  clockElement.textContent = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}  ${weekday}  ${time}`;
+  const fullTime = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}  ${weekday}  ${time}`;
+  clockElement.textContent = mobileLayoutMedia.matches ? time : fullTime;
+  clockElement.title = fullTime;
 }
 let clockTimer = 0;
 function scheduleClockUpdate() {
@@ -958,6 +964,7 @@ function scheduleClockUpdate() {
   clockTimer = window.setTimeout(scheduleClockUpdate, document.hidden ? 120000 : 30000);
 }
 scheduleClockUpdate();
+mobileLayoutMedia.addEventListener?.('change', updateClock);
 document.addEventListener('visibilitychange', scheduleClockUpdate);
 
 const terminalWindow = document.querySelector('#terminalWindow');

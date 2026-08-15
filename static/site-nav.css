@@ -383,3 +383,133 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   .site-music-title.is-scrolling .site-music-title-text { animation: none; }
   .site-music-player { transition: none; }
 }
+
+/* Phone shell controls. All desktop geometry above 800px remains unchanged. */
+@media (max-width: 800px) {
+  body.os-page:not(.is-launched) .site-global-nav,
+  body.os-page:not(.is-launched) .site-music-player {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  body.os-page .site-visit-stats { display: none !important; }
+
+  body.os-page .site-global-nav {
+    z-index: 9998;
+    top: auto;
+    right: auto;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 50%;
+    display: flex;
+    justify-content: center;
+    width: min(370px, calc(100vw - 24px));
+    min-height: 68px;
+    gap: 3px;
+    padding: 7px 8px;
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 24px;
+    background: rgba(20, 12, 15, .86);
+    box-shadow: 0 14px 38px rgba(0, 0, 0, .48), inset 0 1px rgba(255, 255, 255, .055);
+    backdrop-filter: blur(20px) saturate(1.18);
+    -webkit-backdrop-filter: blur(20px) saturate(1.18);
+    transform: translateX(-50%);
+    transition: opacity .2s ease, visibility .2s ease;
+  }
+
+  body.os-page .site-global-nav::after {
+    content: '';
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    width: 104px;
+    height: 4px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, .76);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  body.os-page .site-global-nav a {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: 52px;
+    gap: 3px;
+    padding: 4px 3px 3px;
+    color: rgba(226, 209, 213, .7);
+    border-radius: 16px;
+    font: 600 9px/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    letter-spacing: .1px;
+    transform: none;
+  }
+
+  body.os-page .site-global-nav a::before {
+    display: grid;
+    place-items: center;
+    width: 27px;
+    height: 27px;
+    color: rgba(240, 224, 228, .82);
+    font: 600 19px/1 -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif;
+  }
+
+  body.os-page .site-global-nav a:nth-child(1)::before { content: '◫'; }
+  body.os-page .site-global-nav a:nth-child(2)::before { content: '⌂'; }
+  body.os-page .site-global-nav a:nth-child(3)::before { content: '@'; }
+  body.os-page .site-global-nav a:hover { color: #fff; background: rgba(255, 255, 255, .055); transform: none; }
+  body.os-page .site-global-nav a[aria-current="page"] {
+    color: #fff;
+    background: linear-gradient(145deg, rgba(183, 29, 49, .82), rgba(112, 18, 33, .9));
+    box-shadow: inset 0 1px rgba(255, 255, 255, .1), 0 6px 17px rgba(95, 7, 22, .32);
+  }
+  body.os-page .site-global-nav a[aria-current="page"]::before { color: #fff; }
+
+  body.os-page .site-music-player {
+    z-index: 9999;
+    top: auto !important;
+    right: max(14px, env(safe-area-inset-right)) !important;
+    bottom: calc(max(8px, env(safe-area-inset-bottom)) + 78px) !important;
+    left: auto !important;
+    width: 112px;
+    min-height: 38px;
+    padding: 4px;
+    border-color: rgba(255, 105, 123, .25);
+    border-radius: 15px;
+    background: rgba(18, 10, 13, .88);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .38), inset 0 1px rgba(255, 255, 255, .045);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  body.os-page .site-music-player .site-music-controls { gap: 1px; }
+  body.os-page .site-music-player .site-music-control { width: 21px; height: 21px; }
+  body.os-page .site-music-player .site-music-play { width: 27px; height: 27px; }
+
+  body.os-page .desktop-clock-controls {
+    z-index: 26;
+    top: env(safe-area-inset-top);
+    right: auto;
+    bottom: auto;
+    left: max(14px, env(safe-area-inset-left));
+    height: 48px;
+    pointer-events: none;
+  }
+  body.os-page .desktop-clock {
+    position: static;
+    max-width: min(210px, 55vw);
+    margin: 0 !important;
+    padding: 0;
+    overflow: hidden;
+    color: rgba(241, 229, 232, .88);
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    font: 600 10px/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
