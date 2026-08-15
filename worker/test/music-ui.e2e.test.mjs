@@ -308,9 +308,13 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x > 1100);
       assert.ok(playerBox.y < 60);
-      assert.ok(playerBox.width <= 120);
+      assert.ok(playerBox.width <= 100);
+      assert.equal(await page.locator('.site-music-play-icon').count(), 0);
+      assert.equal(await page.locator('.site-music-play > span').count(), 1);
+      const brandBox = await page.locator('.os-brand').boundingBox();
+      assert.ok(playerBox.x + playerBox.width < brandBox.x);
       assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
-      assert.equal(await page.locator('.site-music-play-icon').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
+      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
       assert.equal(await page.locator('.os-brand-music').count(), 0);
       assert.equal(await page.getByText('轻风雨@universe ~ echo "welcome to my little system"', { exact: true }).count(), 0);
       assert.equal(await page.locator('#desktopPet').count(), 1);
