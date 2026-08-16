@@ -154,6 +154,50 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await context.close();
     });
 
+    await t.test('mobile home removes status and intro without changing the desktop header', async () => {
+      state.desktop = makeDesktop([
+        { id: 'link-mobile-home', type: 'link', title: '移动首页', url: 'https://mobile-home.example', icon: 'M', color: '#e8d9dc', openMode: 'new' }
+      ]);
+      state.faviconFallbackIds.clear();
+
+      const mobileContext = await browser.newContext({ viewport: { width: 390, height: 667 } });
+      const mobilePage = await mobileContext.newPage();
+      await mobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
+      await mobilePage.waitForSelector('[data-navigation-id="link-mobile-home"]');
+      const mobileLayout = await mobilePage.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom, height: box.height };
+        };
+        return {
+          headingCount: document.querySelectorAll('.mobile-home-heading').length,
+          topbar: rect('.desktop-topbar'),
+          clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display,
+          search: rect('.desktop-web-search'),
+          icons: rect('.desktop-icons')
+        };
+      });
+
+      assert.equal(mobileLayout.headingCount, 0);
+      assert.equal(mobileLayout.topbar.height, 0);
+      assert.equal(mobileLayout.clockControlsDisplay, 'none');
+      assert.ok(mobileLayout.search.top >= 0);
+      assert.ok(mobileLayout.search.bottom + 8 <= mobileLayout.icons.top);
+      assert.ok(mobileLayout.icons.top < 100);
+      await mobileContext.close();
+
+      const desktopContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const desktopPage = await desktopContext.newPage();
+      await desktopPage.goto(`${origin}/os/`, { waitUntil: 'load' });
+      const desktopLayout = await desktopPage.evaluate(() => ({
+        topbarHeight: document.querySelector('.desktop-topbar').getBoundingClientRect().height,
+        clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display
+      }));
+      assert.ok(desktopLayout.topbarHeight >= 48);
+      assert.notEqual(desktopLayout.clockControlsDisplay, 'none');
+      await desktopContext.close();
+    });
+
     await t.test('mobile navigation folders stay in the upper safe viewport', async () => {
       state.desktop = makeDesktop([{
         id: 'folder-mobile',
