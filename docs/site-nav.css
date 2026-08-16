@@ -464,16 +464,13 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
     height: 42px;
     min-height: 42px;
     padding: 4px;
-    border-color: rgba(255, 105, 123, .25);
-    border-radius: 15px;
-    background: rgba(18, 10, 13, .88);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, .38), inset 0 1px rgba(255, 255, 255, .045);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    border-color: var(--os-mobile-control-border, rgba(255, 255, 255, .09));
+    border-radius: var(--os-mobile-control-radius, 14px);
+    background: var(--os-mobile-control-background, rgba(255, 255, 255, .075));
+    box-shadow: var(--os-mobile-control-shadow, inset 0 1px rgba(255, 255, 255, .055));
+    backdrop-filter: var(--os-mobile-control-filter, blur(16px));
+    -webkit-backdrop-filter: var(--os-mobile-control-filter, blur(16px));
   }
-  body.os-page .site-music-player .site-music-controls { gap: 1px; }
-  body.os-page .site-music-player .site-music-control { width: 21px; height: 21px; }
-  body.os-page .site-music-player .site-music-play { width: 27px; height: 27px; }
 
   body.os-page .desktop-clock-controls {
     z-index: 26;
