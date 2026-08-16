@@ -696,6 +696,14 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   }
   .top-links, .os-brand, .desktop-clock-controls { display: none !important; }
 
+  body.os-page {
+    --os-mobile-control-border: rgba(255, 255, 255, .09);
+    --os-mobile-control-radius: 14px;
+    --os-mobile-control-background: rgba(255, 255, 255, .075);
+    --os-mobile-control-shadow: inset 0 1px rgba(255, 255, 255, .055);
+    --os-mobile-control-filter: blur(16px);
+  }
+
   .desktop-web-search,
   .desktop-web-search:focus-within {
     position: fixed;
@@ -708,12 +716,12 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
     height: 42px;
     transform: none;
     pointer-events: auto;
-    border-color: rgba(255, 255, 255, .09);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, .075);
-    box-shadow: inset 0 1px rgba(255, 255, 255, .055);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    border-color: var(--os-mobile-control-border);
+    border-radius: var(--os-mobile-control-radius);
+    background: var(--os-mobile-control-background);
+    box-shadow: var(--os-mobile-control-shadow);
+    backdrop-filter: var(--os-mobile-control-filter);
+    -webkit-backdrop-filter: var(--os-mobile-control-filter);
   }
   .desktop-web-search input { font-size: 12px; }
   .desktop-web-search button { width: 34px; height: 34px; }
@@ -725,7 +733,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
     z-index: 6;
     top: calc(env(safe-area-inset-top) + 68px);
     right: max(12px, env(safe-area-inset-right));
-    bottom: calc(env(safe-area-inset-bottom) + 138px);
+    bottom: calc(max(18px, env(safe-area-inset-bottom)) + 56px);
     left: max(12px, env(safe-area-inset-left));
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -899,6 +907,5 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 }
 
 @media (max-width: 340px) {
-  .desktop-icons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .navigation-folder-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

@@ -199,18 +199,25 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
     });
 
     await t.test('mobile home removes status and intro without changing the desktop header', async () => {
-      state.desktop = makeDesktop([
-        { id: 'link-mobile-home', type: 'link', title: '移动首页', url: 'https://mobile-home.example', icon: 'M', color: '#e8d9dc', openMode: 'new' }
-      ]);
+      state.desktop = makeDesktop(Array.from({ length: 12 }, (_, index) => ({
+        id: `link-mobile-home-${index + 1}`,
+        type: 'link',
+        title: `移动首页 ${index + 1}`,
+        url: `https://mobile-home-${index + 1}.example`,
+        icon: String(index + 1),
+        color: '#e8d9dc',
+        openMode: 'new'
+      })));
       state.faviconFallbackIds.clear();
 
       const mobileContext = await browser.newContext({ viewport: { width: 390, height: 667 } });
       const mobilePage = await mobileContext.newPage();
       await mobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
-      await mobilePage.waitForSelector('[data-navigation-id="link-mobile-home"]');
+      await mobilePage.waitForSelector('[data-navigation-id="link-mobile-home-12"]');
       await mobilePage.waitForSelector('.site-global-nav');
       await mobilePage.waitForFunction(() => document.body.classList.contains('is-launched'));
       await mobilePage.waitForTimeout(700);
+      await mobilePage.locator('[data-navigation-id="link-mobile-home-12"]').scrollIntoViewIfNeeded();
       const mobileLayout = await mobilePage.evaluate(() => {
         const rect = (selector) => {
           const box = document.querySelector(selector).getBoundingClientRect();
@@ -219,13 +226,48 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
         const navigation = document.querySelector('.site-global-nav');
         const navigationLink = navigation.querySelector('a');
         const navigationLinkStyle = getComputedStyle(navigationLink);
+        const surface = (selector) => {
+          const style = getComputedStyle(document.querySelector(selector));
+          return {
+            opacity: style.opacity,
+            borderColor: style.borderColor,
+            borderRadius: style.borderRadius,
+            backgroundColor: style.backgroundColor,
+            backgroundImage: style.backgroundImage,
+            boxShadow: style.boxShadow,
+            backdropFilter: style.backdropFilter,
+            webkitBackdropFilter: style.webkitBackdropFilter
+          };
+        };
+        const icons = document.querySelector('.desktop-icons');
+        const iconsStyle = getComputedStyle(icons);
+        const lastIcon = document.querySelector('[data-navigation-id="link-mobile-home-12"]');
+        const lastIconBox = lastIcon.getBoundingClientRect();
+        const lastIconHit = document.elementFromPoint(
+          lastIconBox.left + lastIconBox.width / 2,
+          lastIconBox.top + lastIconBox.height / 2
+        )?.closest('.desktop-icon');
+        const musicControls = [...document.querySelectorAll('.site-music-controls [data-music-action]')].map((control) => ({
+          action: control.dataset.musicAction,
+          iconTag: control.firstElementChild?.tagName || '',
+          iconText: control.textContent.trim(),
+          width: control.getBoundingClientRect().width,
+          height: control.getBoundingClientRect().height
+        }));
         return {
           headingCount: document.querySelectorAll('.mobile-home-heading').length,
           topbar: rect('.desktop-topbar'),
           clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display,
           search: rect('.desktop-web-search'),
           music: rect('.site-music-player'),
+          searchSurface: surface('.desktop-web-search'),
+          musicSurface: surface('.site-music-player'),
+          musicControls,
           icons: rect('.desktop-icons'),
+          iconsOverflowY: iconsStyle.overflowY,
+          iconColumns: iconsStyle.gridTemplateColumns.split(' ').length,
+          lastIcon: rect('[data-navigation-id="link-mobile-home-12"]'),
+          lastIconHitId: lastIconHit?.dataset.navigationId || '',
           navigation: rect('.site-global-nav'),
           navigationAfterContent: getComputedStyle(navigation, '::after').content,
           navigationLabels: [...navigation.querySelectorAll('a')].map((link) => link.textContent.trim()),
@@ -253,6 +295,14 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.ok(mobileLayout.music.right <= 390);
       assert.ok(mobileLayout.search.bottom + 8 <= mobileLayout.icons.top);
       assert.ok(mobileLayout.icons.top < 100);
+      assert.ok(mobileLayout.icons.bottom <= mobileLayout.navigation.top - 7);
+      assert.ok(mobileLayout.icons.bottom >= mobileLayout.navigation.top - 10);
+      assert.equal(mobileLayout.iconsOverflowY, 'auto');
+      assert.equal(mobileLayout.iconColumns, 4);
+      assert.ok(mobileLayout.lastIcon.top >= mobileLayout.icons.top);
+      assert.ok(mobileLayout.lastIcon.bottom <= mobileLayout.icons.bottom);
+      assert.equal(mobileLayout.lastIconHitId, 'link-mobile-home-12');
+      assert.deepEqual(mobileLayout.musicSurface, mobileLayout.searchSurface);
       assert.deepEqual(mobileLayout.navigationLabels, ['动态', '我的 OS', '关于']);
       assert.equal(mobileLayout.navigationAfterContent, 'none');
       assert.equal(mobileLayout.navigationLink.beforeContent, 'none');
@@ -264,16 +314,29 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       const compactMobilePage = await compactMobileContext.newPage();
       await compactMobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
       await compactMobilePage.waitForSelector('.site-global-nav');
+      await compactMobilePage.waitForSelector('[data-navigation-id="link-mobile-home-12"]');
       await compactMobilePage.waitForFunction(() => document.body.classList.contains('is-launched'));
       await compactMobilePage.waitForTimeout(700);
+      await compactMobilePage.locator('[data-navigation-id="link-mobile-home-12"]').scrollIntoViewIfNeeded();
       const compactMobileLayout = await compactMobilePage.evaluate(() => {
         const rect = (selector) => {
           const box = document.querySelector(selector).getBoundingClientRect();
           return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
         };
+        const icons = document.querySelector('.desktop-icons');
+        const lastIcon = document.querySelector('[data-navigation-id="link-mobile-home-12"]');
+        const lastIconBox = lastIcon.getBoundingClientRect();
+        const lastIconHit = document.elementFromPoint(
+          lastIconBox.left + lastIconBox.width / 2,
+          lastIconBox.top + lastIconBox.height / 2
+        )?.closest('.desktop-icon');
         return {
           search: rect('.desktop-web-search'),
           music: rect('.site-music-player'),
+          icons: rect('.desktop-icons'),
+          iconColumns: getComputedStyle(icons).gridTemplateColumns.split(' ').length,
+          lastIcon: rect('[data-navigation-id="link-mobile-home-12"]'),
+          lastIconHitId: lastIconHit?.dataset.navigationId || '',
           navigation: rect('.site-global-nav')
         };
       });
@@ -283,6 +346,12 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.ok(compactMobileLayout.search.left >= 0);
       assert.ok(compactMobileLayout.search.right + 7 <= compactMobileLayout.music.left);
       assert.ok(compactMobileLayout.music.right <= 320);
+      assert.ok(compactMobileLayout.icons.bottom <= compactMobileLayout.navigation.top - 7);
+      assert.ok(compactMobileLayout.icons.bottom >= compactMobileLayout.navigation.top - 10);
+      assert.equal(compactMobileLayout.iconColumns, 4);
+      assert.ok(compactMobileLayout.lastIcon.top >= compactMobileLayout.icons.top);
+      assert.ok(compactMobileLayout.lastIcon.bottom <= compactMobileLayout.icons.bottom);
+      assert.equal(compactMobileLayout.lastIconHitId, 'link-mobile-home-12');
       assert.ok(compactMobileLayout.navigation.left >= 0);
       assert.ok(compactMobileLayout.navigation.right <= 320);
       await compactMobileContext.close();
@@ -300,11 +369,19 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
         };
         const navigationLink = document.querySelector('.site-global-nav a');
         const navigationLinkStyle = getComputedStyle(navigationLink);
+        const musicControls = [...document.querySelectorAll('.site-music-controls [data-music-action]')].map((control) => ({
+          action: control.dataset.musicAction,
+          iconTag: control.firstElementChild?.tagName || '',
+          iconText: control.textContent.trim(),
+          width: control.getBoundingClientRect().width,
+          height: control.getBoundingClientRect().height
+        }));
         return {
           topbarHeight: document.querySelector('.desktop-topbar').getBoundingClientRect().height,
           clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display,
           search: rect('.desktop-web-search'),
           music: rect('.site-music-player'),
+          musicControls,
           navigation: rect('.site-global-nav'),
           navigationLink: {
             ...rect('.site-global-nav a'),
@@ -321,6 +398,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.equal(desktopLayout.search.height, 34);
       assert.equal(desktopLayout.music.width, 110);
       assert.equal(desktopLayout.music.height, 36);
+      assert.deepEqual(mobileLayout.musicControls, desktopLayout.musicControls);
       assert.ok(Math.abs(mobileLayout.navigation.width - desktopLayout.navigation.width) <= 1);
       assert.ok(Math.abs(mobileLayout.navigation.height - desktopLayout.navigation.height) <= 1);
       assert.ok(Math.abs(mobileLayout.navigationLink.width - desktopLayout.navigationLink.width) <= 1);
