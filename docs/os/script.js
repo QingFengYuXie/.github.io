@@ -245,7 +245,9 @@ if (desktopPet) {
 
   function drawPetFrame(animation, frame) {
     if (!petSprite) return;
-    petSprite.style.backgroundPosition = `${-(frame * 144)}px ${-(animation.row * 156)}px`;
+    const frameWidth = petSprite.offsetWidth || 144;
+    const frameHeight = petSprite.offsetHeight || 156;
+    petSprite.style.backgroundPosition = `${-(frame * frameWidth)}px ${-(animation.row * frameHeight)}px`;
     desktopPet.dataset.petFrame = String(frame);
   }
 
@@ -283,9 +285,16 @@ if (desktopPet) {
   }
 
   function getPetBounds() {
+    const desktopRect = desktop.getBoundingClientRect();
+    const navigationRect = mobileLayoutMedia.matches
+      ? document.querySelector('.site-global-nav')?.getBoundingClientRect()
+      : null;
+    const lowerEdge = navigationRect?.height
+      ? navigationRect.top - desktopRect.top - 10
+      : desktop.clientHeight - 78;
     return {
       maxX: Math.max(8, desktop.clientWidth - desktopPet.offsetWidth - 8),
-      maxY: Math.max(54, desktop.clientHeight - desktopPet.offsetHeight - 78)
+      maxY: Math.max(54, lowerEdge - desktopPet.offsetHeight)
     };
   }
 
@@ -1073,8 +1082,15 @@ function showPetSpeech(message, duration = 3000) {
   const desktopRect = desktop.getBoundingClientRect();
   petSpeech.textContent = message;
   petSpeech.hidden = false;
-  petSpeech.style.left = `${Math.max(12, petRect.left - desktopRect.left - 35)}px`;
-  petSpeech.style.top = `${Math.max(56, petRect.top - desktopRect.top - 54)}px`;
+  if (mobileLayoutMedia.matches) {
+    const maxLeft = Math.max(12, desktopRect.width - petSpeech.offsetWidth - 12);
+    const maxTop = Math.max(56, desktopRect.height - petSpeech.offsetHeight - 12);
+    petSpeech.style.left = `${Math.max(12, Math.min(maxLeft, petRect.left - desktopRect.left - 35))}px`;
+    petSpeech.style.top = `${Math.max(56, Math.min(maxTop, petRect.top - desktopRect.top - petSpeech.offsetHeight - 8))}px`;
+  } else {
+    petSpeech.style.left = `${Math.max(12, petRect.left - desktopRect.left - 35)}px`;
+    petSpeech.style.top = `${Math.max(56, petRect.top - desktopRect.top - 54)}px`;
+  }
   window.clearTimeout(petSpeechTimer);
   petSpeechTimer = window.setTimeout(() => { petSpeech.hidden = true; }, duration);
 }
