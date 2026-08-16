@@ -4,6 +4,7 @@ import { createFaviconHandler } from '../src/favicon.js';
 import { HttpError } from '../src/validation.js';
 
 const PNG = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+const ICO = new Uint8Array([0, 0, 1, 0, 1, 0, 16, 16, 0, 0, 1, 0]);
 
 function makeEnv(link) {
   return {
@@ -37,10 +38,10 @@ function makeCache() {
   };
 }
 
-function iconResponse() {
-  return new Response(PNG, {
+function iconResponse(body = PNG, contentType = 'image/png') {
+  return new Response(body, {
     status: 200,
-    headers: { 'content-type': 'image/png', 'content-length': String(PNG.byteLength) }
+    headers: { 'content-type': contentType, 'content-length': String(body.byteLength) }
   });
 }
 
@@ -65,6 +66,7 @@ test('favicon handler fetches fixed paths and caches a validated image', async (
   assert.equal(response.headers.get('content-type'), 'image/png');
   assert.equal(response.headers.get('x-favicon-cache'), 'miss');
   assert.equal(response.headers.get('x-favicon-fallback'), '0');
+  assert.equal(response.headers.get('x-favicon-source'), 'site');
   assert.equal(requested.length, 1);
   assert.equal(requested[0].url, 'https://www.example.org/favicon.ico');
   assert.equal(requested[0].init.redirect, 'manual');
@@ -76,6 +78,63 @@ test('favicon handler fetches fixed paths and caches a validated image', async (
   );
   assert.equal(response.headers.get('x-favicon-cache'), 'hit');
   assert.equal(requested.length, 1);
+});
+
+test('favicon handler uses a fixed provider after the site root icon fails', async () => {
+  const link = {
+    id: 'link-provider',
+    url: 'https://blocked.example.org/private/path?token=secret',
+    updatedAt: 10
+  };
+  const requested = [];
+  const handler = createFaviconHandler({
+    cache: makeCache(),
+    async fetch(url) {
+      const parsed = new URL(url);
+      requested.push(parsed);
+      if (parsed.hostname === 'www.google.com') return iconResponse();
+      return new Response(null, { status: 404 });
+    }
+  });
+
+  const response = await handler(
+    new Request('https://qfyx.top/api/v1/favicons/link-provider'),
+    makeEnv(link),
+    link.id
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-favicon-fallback'), '0');
+  assert.equal(response.headers.get('x-favicon-source'), 'provider');
+  assert.equal(requested.length, 2);
+  assert.equal(requested[0].href, 'https://blocked.example.org/favicon.ico');
+  assert.equal(requested[1].origin, 'https://www.google.com');
+  assert.equal(requested[1].searchParams.get('domain_url'), 'https://blocked.example.org');
+  assert.equal(requested[1].searchParams.get('sz'), '128');
+  assert.doesNotMatch(requested[1].href, /private|token|secret/);
+});
+
+test('favicon handler trusts image signatures instead of incorrect content types', async () => {
+  const link = { id: 'link-mislabeled', url: 'https://mislabeled.example.org', updatedAt: 10 };
+  let fetches = 0;
+  const handler = createFaviconHandler({
+    cache: makeCache(),
+    async fetch() {
+      fetches += 1;
+      return iconResponse(ICO, 'text/plain; charset=utf-8');
+    }
+  });
+
+  const response = await handler(
+    new Request('https://qfyx.top/api/v1/favicons/link-mislabeled'),
+    makeEnv(link),
+    link.id
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'image/x-icon');
+  assert.equal(response.headers.get('x-favicon-source'), 'site');
+  assert.equal(fetches, 1);
 });
 
 test('favicon cache key changes when the saved URL revision changes', async () => {
@@ -125,9 +184,10 @@ test('favicon handler never fetches private, local, or unsupported targets', asy
       makeEnv({ id, url, updatedAt: 1 }),
       id
     );
-    assert.equal(response.status, 200);
-    assert.match(response.headers.get('content-type'), /^image\/svg\+xml/);
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get('content-type'), null);
     assert.equal(response.headers.get('x-favicon-fallback'), '1');
+    assert.equal(response.headers.get('x-favicon-source'), 'none');
     assert.equal(fetches, 0);
   }
 });
@@ -151,9 +211,13 @@ test('favicon handler rejects redirects to private targets', async () => {
     id
   );
 
+  assert.equal(response.status, 204);
   assert.equal(response.headers.get('x-favicon-fallback'), '1');
-  assert.equal(requested.length, 4);
-  assert.ok(requested.every((url) => url.startsWith('https://public.example.org/')));
+  assert.equal(requested.length, 5);
+  assert.ok(requested.every((url) => !url.includes('127.0.0.1')));
+  assert.ok(requested[0].startsWith('https://public.example.org/'));
+  assert.ok(requested[1].startsWith('https://www.google.com/s2/favicons?'));
+  assert.ok(requested.slice(2).every((url) => url.startsWith('https://public.example.org/')));
 });
 
 test('favicon handler rejects non-images and oversized bodies', async () => {
@@ -179,8 +243,9 @@ test('favicon handler rejects non-images and oversized bodies', async () => {
     id
   );
 
+  assert.equal(response.status, 204);
   assert.equal(response.headers.get('x-favicon-fallback'), '1');
-  assert.equal(requestNumber, 4);
+  assert.equal(requestNumber, 5);
 });
 
 test('favicon handler accepts only GET requests and existing link IDs', async () => {

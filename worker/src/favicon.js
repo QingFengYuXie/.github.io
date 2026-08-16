@@ -2,22 +2,18 @@ import { HttpError } from './validation.js';
 
 const SUCCESS_EDGE_TTL = 30 * 24 * 60 * 60;
 const FAILURE_EDGE_TTL = 10 * 60;
-const FETCH_BUDGET_MS = 3600;
-const REQUEST_TIMEOUT_MS = 1400;
+const FETCH_BUDGET_MS = 5200;
+const REQUEST_TIMEOUT_MS = 2400;
 const MAX_REDIRECTS = 2;
 const MAX_ICON_BYTES = 128 * 1024;
-const ICON_PATHS = [
-  '/favicon.ico',
+const FAVICON_CACHE_VERSION = 2;
+const PRIMARY_ICON_PATH = '/favicon.ico';
+const SECONDARY_ICON_PATHS = [
   '/favicon.png',
   '/favicon-32x32.png',
   '/apple-touch-icon.png'
 ];
-
-const PLACEHOLDER_SVG = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1f2430"/>
-  <path d="M18 19h28v6H18zm0 10h20v6H18zm0 10h28v6H18z" fill="#f4c84a"/>
-</svg>`.trim();
+const FAVICON_PROVIDER_URL = 'https://www.google.com/s2/favicons';
 
 const RESPONSE_SECURITY_HEADERS = {
   'content-security-policy': "default-src 'none'; sandbox",
@@ -104,32 +100,24 @@ function urlFingerprint(value) {
 function cacheKey(link) {
   const id = encodeURIComponent(link.id);
   const revision = `${Number(link.updatedAt) || 0}-${urlFingerprint(link.url)}`;
-  return new Request(`https://qfyx.top/__edge-cache/favicons/${id}/${revision}`);
+  return new Request(`https://qfyx.top/__edge-cache/favicons/v${FAVICON_CACHE_VERSION}/${id}/${revision}`);
 }
 
-function imageKind(contentType, bytes) {
-  const type = contentType.split(';', 1)[0].trim().toLowerCase();
-  if (type === 'image/png'
-    && bytes.length >= 8
+function imageKind(bytes) {
+  if (bytes.length >= 8
     && [137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value)) {
     return 'image/png';
   }
-  if ((type === 'image/x-icon' || type === 'image/vnd.microsoft.icon')
-    && bytes.length >= 4
+  if (bytes.length >= 4
     && bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1 && bytes[3] === 0) {
     return 'image/x-icon';
   }
-  if (type === 'image/jpeg' && bytes.length >= 3
-    && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
     return 'image/jpeg';
   }
   const signature = new TextDecoder().decode(bytes.slice(0, 12));
-  if (type === 'image/gif' && (signature.startsWith('GIF87a') || signature.startsWith('GIF89a'))) {
-    return 'image/gif';
-  }
-  if (type === 'image/webp' && signature.startsWith('RIFF') && signature.slice(8, 12) === 'WEBP') {
-    return 'image/webp';
-  }
+  if (signature.startsWith('GIF87a') || signature.startsWith('GIF89a')) return 'image/gif';
+  if (signature.startsWith('RIFF') && signature.slice(8, 12) === 'WEBP') return 'image/webp';
   return null;
 }
 
@@ -192,7 +180,7 @@ async function fetchCandidate(url, fetcher, timeoutMs) {
     if (!response || response.status !== 200) return null;
     const body = await readLimitedBody(response);
     if (!body?.byteLength) return null;
-    const contentType = imageKind(response.headers.get('content-type') || '', body);
+    const contentType = imageKind(body);
     return contentType ? { body, contentType } : null;
   } catch {
     return null;
@@ -201,28 +189,50 @@ async function fetchCandidate(url, fetcher, timeoutMs) {
   }
 }
 
+function remainingBudget(deadline) {
+  return Math.max(0, deadline - Date.now());
+}
+
+async function fetchWithinBudget(url, fetcher, deadline) {
+  const remaining = remainingBudget(deadline);
+  if (!remaining) return null;
+  return fetchCandidate(url, fetcher, Math.min(REQUEST_TIMEOUT_MS, remaining));
+}
+
+function providerUrl(origin) {
+  const url = new URL(FAVICON_PROVIDER_URL);
+  url.searchParams.set('domain_url', origin);
+  url.searchParams.set('sz', '128');
+  return url;
+}
+
 async function fetchFavicon(origin, fetcher) {
   const deadline = Date.now() + FETCH_BUDGET_MS;
-  for (const path of ICON_PATHS) {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) break;
-    const icon = await fetchCandidate(new URL(path, origin), fetcher, Math.min(REQUEST_TIMEOUT_MS, remaining));
-    if (icon) return icon;
+  const primary = await fetchWithinBudget(new URL(PRIMARY_ICON_PATH, origin), fetcher, deadline);
+  if (primary) return { ...primary, source: 'site' };
+
+  const provided = await fetchWithinBudget(providerUrl(origin), fetcher, deadline);
+  if (provided) return { ...provided, source: 'provider' };
+
+  for (const path of SECONDARY_ICON_PATHS) {
+    const icon = await fetchWithinBudget(new URL(path, origin), fetcher, deadline);
+    if (icon) return { ...icon, source: 'site' };
+    if (!remainingBudget(deadline)) break;
   }
   return null;
 }
 
 function storedImage(icon) {
   const fallback = !icon;
-  return new Response(fallback ? PLACEHOLDER_SVG : icon.body, {
-    status: 200,
-    headers: {
-      ...RESPONSE_SECURITY_HEADERS,
-      'cache-control': `public, max-age=${fallback ? FAILURE_EDGE_TTL : SUCCESS_EDGE_TTL}, immutable`,
-      'content-type': fallback ? 'image/svg+xml; charset=utf-8' : icon.contentType,
-      'x-favicon-fallback': fallback ? '1' : '0'
-    }
-  });
+  const headers = {
+    ...RESPONSE_SECURITY_HEADERS,
+    'cache-control': `public, max-age=${fallback ? FAILURE_EDGE_TTL : SUCCESS_EDGE_TTL}, immutable`,
+    'x-favicon-fallback': fallback ? '1' : '0',
+    'x-favicon-source': icon?.source || 'none'
+  };
+  if (fallback) return new Response(null, { status: 204, headers });
+  headers['content-type'] = icon.contentType;
+  return new Response(icon.body, { status: 200, headers });
 }
 
 function clientResponse(response, cacheStatus) {

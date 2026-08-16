@@ -70,9 +70,10 @@ test('desktop layout rejects stale versions without overwriting the latest order
     assert.equal(initial.response.status, 200);
 
     const fallbackFavicon = await miniflare.dispatchFetch(`${origin}/api/v1/favicons/link-contact`);
-    assert.equal(fallbackFavicon.status, 200);
-    assert.match(fallbackFavicon.headers.get('content-type'), /^image\/svg\+xml/);
+    assert.equal(fallbackFavicon.status, 204);
+    assert.equal(fallbackFavicon.headers.get('content-type'), null);
     assert.equal(fallbackFavicon.headers.get('x-favicon-fallback'), '1');
+    assert.equal(fallbackFavicon.headers.get('x-favicon-source'), 'none');
 
     const rejectedFaviconMethod = await responseJson(await miniflare.dispatchFetch(
       `${origin}/api/v1/favicons/link-contact`,

@@ -56,16 +56,19 @@ async function startServer(state) {
       } else if (pathname === '/api/v1/music') {
         result = json({ version: 1, updatedAt: 1, tracks: [] });
       } else if (/^\/api\/v1\/favicons\/[a-zA-Z0-9_-]+$/.test(pathname)) {
+        const linkId = pathname.split('/').at(-1);
         state.activeFaviconRequests += 1;
         state.maxActiveFaviconRequests = Math.max(state.maxActiveFaviconRequests, state.activeFaviconRequests);
         state.faviconRequests.push(pathname);
         await new Promise((resolve) => setTimeout(resolve, 120));
         state.activeFaviconRequests -= 1;
-        result = {
-          status: 200,
-          body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#f4c84a"/></svg>',
-          type: 'image/svg+xml; charset=utf-8'
-        };
+        result = state.faviconFallbackIds.has(linkId)
+          ? { status: 204, body: '', type: 'image/png' }
+          : {
+              status: 200,
+              body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#f4c84a"/></svg>',
+              type: 'image/svg+xml; charset=utf-8'
+            };
       } else if (pathname === '/api/v1/admin/layout' && request.method === 'PUT') {
         const body = await readBody(request);
         state.activeLayoutRequests += 1;
@@ -123,7 +126,8 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
     layoutRequests: [],
     activeFaviconRequests: 0,
     maxActiveFaviconRequests: 0,
-    faviconRequests: []
+    faviconRequests: [],
+    faviconFallbackIds: new Set()
   };
   const { chromium } = await import('playwright-core');
   const { server, origin } = await startServer(state);
@@ -156,11 +160,12 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
         { id: 'link-b', type: 'link', title: '第二项', url: 'https://b.example', icon: 'B', color: '#e8d9dc', openMode: 'new' },
         { id: 'link-c', type: 'link', title: '第三项', url: 'https://c.example', icon: 'C', color: '#e8d9dc', openMode: 'new' },
         { id: 'link-d', type: 'link', title: '第四项', url: 'https://d.example', icon: 'D', color: '#e8d9dc', openMode: 'new' },
-        { id: 'link-e', type: 'link', title: '第五项', url: 'https://e.example', icon: 'E', color: '#e8d9dc', openMode: 'new' }
+        { id: 'link-e', type: 'link', title: 'Gemini', url: 'https://e.example', icon: '', color: '#e8d9dc', openMode: 'new' }
       ]);
       state.activeFaviconRequests = 0;
       state.maxActiveFaviconRequests = 0;
       state.faviconRequests = [];
+      state.faviconFallbackIds = new Set(['link-e']);
       const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
       const page = await context.newPage();
       const externalImages = [];
@@ -171,7 +176,13 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
 
       await page.goto(`${origin}/os/`, { waitUntil: 'load' });
       assert.equal(await page.evaluate(() => document.readyState), 'complete');
-      await page.waitForFunction(() => document.querySelectorAll('.navigation-favicon img').length >= 5);
+      await page.waitForFunction(() => document.querySelectorAll('.navigation-favicon img').length >= 4);
+      await page.waitForFunction(() => performance.getEntriesByType('resource')
+        .filter((entry) => entry.name.includes('/api/v1/favicons/')).length >= 5);
+      const failedFavicon = page.locator('[data-navigation-id="link-e"] .navigation-favicon');
+      assert.equal(await failedFavicon.textContent(), 'Ge');
+      assert.equal(await failedFavicon.locator('img').count(), 0);
+      assert.equal(await failedFavicon.evaluate((element) => element.classList.contains('is-text-fallback')), true);
       const timing = await page.evaluate(() => {
         const navigationRequests = performance.getEntriesByType('resource')
           .filter((entry) => entry.name.includes('/api/v1/favicons/'));
@@ -187,6 +198,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.ok(state.maxActiveFaviconRequests <= 3);
       assert.ok(state.faviconRequests.length >= 5);
       assert.deepEqual(externalImages, []);
+      state.faviconFallbackIds.clear();
       await context.close();
     });
 
