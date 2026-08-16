@@ -208,17 +208,34 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       const mobilePage = await mobileContext.newPage();
       await mobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
       await mobilePage.waitForSelector('[data-navigation-id="link-mobile-home"]');
+      await mobilePage.waitForSelector('.site-global-nav');
+      await mobilePage.waitForFunction(() => document.body.classList.contains('is-launched'));
+      await mobilePage.waitForTimeout(700);
       const mobileLayout = await mobilePage.evaluate(() => {
         const rect = (selector) => {
           const box = document.querySelector(selector).getBoundingClientRect();
-          return { top: box.top, bottom: box.bottom, height: box.height };
+          return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
         };
+        const navigation = document.querySelector('.site-global-nav');
+        const navigationLink = navigation.querySelector('a');
+        const navigationLinkStyle = getComputedStyle(navigationLink);
         return {
           headingCount: document.querySelectorAll('.mobile-home-heading').length,
           topbar: rect('.desktop-topbar'),
           clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display,
           search: rect('.desktop-web-search'),
-          icons: rect('.desktop-icons')
+          music: rect('.site-music-player'),
+          icons: rect('.desktop-icons'),
+          navigation: rect('.site-global-nav'),
+          navigationAfterContent: getComputedStyle(navigation, '::after').content,
+          navigationLabels: [...navigation.querySelectorAll('a')].map((link) => link.textContent.trim()),
+          navigationLink: {
+            ...rect('.site-global-nav a'),
+            display: navigationLinkStyle.display,
+            fontSize: navigationLinkStyle.fontSize,
+            borderRadius: navigationLinkStyle.borderRadius,
+            beforeContent: getComputedStyle(navigationLink, '::before').content
+          }
         };
       });
 
@@ -226,19 +243,92 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.equal(mobileLayout.topbar.height, 0);
       assert.equal(mobileLayout.clockControlsDisplay, 'none');
       assert.ok(mobileLayout.search.top >= 0);
+      assert.equal(mobileLayout.search.top, mobileLayout.music.top);
+      assert.equal(mobileLayout.search.height, mobileLayout.music.height);
+      assert.equal(mobileLayout.search.height, 42);
+      assert.ok(mobileLayout.search.width < 390 - 100);
+      assert.ok(mobileLayout.search.width > 180);
+      assert.ok(mobileLayout.search.right + 7 <= mobileLayout.music.left);
+      assert.ok(mobileLayout.music.left - mobileLayout.search.right <= 10);
+      assert.ok(mobileLayout.music.right <= 390);
       assert.ok(mobileLayout.search.bottom + 8 <= mobileLayout.icons.top);
       assert.ok(mobileLayout.icons.top < 100);
+      assert.deepEqual(mobileLayout.navigationLabels, ['动态', '我的 OS', '关于']);
+      assert.equal(mobileLayout.navigationAfterContent, 'none');
+      assert.equal(mobileLayout.navigationLink.beforeContent, 'none');
+      assert.equal(mobileLayout.navigationLink.display, 'block');
+      assert.equal(mobileLayout.navigationLink.fontSize, '13px');
       await mobileContext.close();
+
+      const compactMobileContext = await browser.newContext({ viewport: { width: 320, height: 568 } });
+      const compactMobilePage = await compactMobileContext.newPage();
+      await compactMobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
+      await compactMobilePage.waitForSelector('.site-global-nav');
+      await compactMobilePage.waitForFunction(() => document.body.classList.contains('is-launched'));
+      await compactMobilePage.waitForTimeout(700);
+      const compactMobileLayout = await compactMobilePage.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
+        };
+        return {
+          search: rect('.desktop-web-search'),
+          music: rect('.site-music-player'),
+          navigation: rect('.site-global-nav')
+        };
+      });
+      assert.equal(compactMobileLayout.search.top, compactMobileLayout.music.top);
+      assert.equal(compactMobileLayout.search.height, compactMobileLayout.music.height);
+      assert.equal(compactMobileLayout.search.height, 42);
+      assert.ok(compactMobileLayout.search.left >= 0);
+      assert.ok(compactMobileLayout.search.right + 7 <= compactMobileLayout.music.left);
+      assert.ok(compactMobileLayout.music.right <= 320);
+      assert.ok(compactMobileLayout.navigation.left >= 0);
+      assert.ok(compactMobileLayout.navigation.right <= 320);
+      await compactMobileContext.close();
 
       const desktopContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
       const desktopPage = await desktopContext.newPage();
       await desktopPage.goto(`${origin}/os/`, { waitUntil: 'load' });
-      const desktopLayout = await desktopPage.evaluate(() => ({
-        topbarHeight: document.querySelector('.desktop-topbar').getBoundingClientRect().height,
-        clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display
-      }));
+      await desktopPage.waitForSelector('.site-global-nav');
+      await desktopPage.waitForFunction(() => document.body.classList.contains('is-launched'));
+      await desktopPage.waitForTimeout(700);
+      const desktopLayout = await desktopPage.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
+        };
+        const navigationLink = document.querySelector('.site-global-nav a');
+        const navigationLinkStyle = getComputedStyle(navigationLink);
+        return {
+          topbarHeight: document.querySelector('.desktop-topbar').getBoundingClientRect().height,
+          clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display,
+          search: rect('.desktop-web-search'),
+          music: rect('.site-music-player'),
+          navigation: rect('.site-global-nav'),
+          navigationLink: {
+            ...rect('.site-global-nav a'),
+            display: navigationLinkStyle.display,
+            fontSize: navigationLinkStyle.fontSize,
+            borderRadius: navigationLinkStyle.borderRadius,
+            beforeContent: getComputedStyle(navigationLink, '::before').content
+          }
+        };
+      });
       assert.ok(desktopLayout.topbarHeight >= 48);
       assert.notEqual(desktopLayout.clockControlsDisplay, 'none');
+      assert.equal(desktopLayout.search.width, 340);
+      assert.equal(desktopLayout.search.height, 34);
+      assert.equal(desktopLayout.music.width, 110);
+      assert.equal(desktopLayout.music.height, 36);
+      assert.ok(Math.abs(mobileLayout.navigation.width - desktopLayout.navigation.width) <= 1);
+      assert.ok(Math.abs(mobileLayout.navigation.height - desktopLayout.navigation.height) <= 1);
+      assert.ok(Math.abs(mobileLayout.navigationLink.width - desktopLayout.navigationLink.width) <= 1);
+      assert.ok(Math.abs(mobileLayout.navigationLink.height - desktopLayout.navigationLink.height) <= 1);
+      assert.equal(mobileLayout.navigationLink.display, desktopLayout.navigationLink.display);
+      assert.equal(mobileLayout.navigationLink.fontSize, desktopLayout.navigationLink.fontSize);
+      assert.equal(mobileLayout.navigationLink.borderRadius, desktopLayout.navigationLink.borderRadius);
+      assert.equal(mobileLayout.navigationLink.beforeContent, desktopLayout.navigationLink.beforeContent);
       await desktopContext.close();
     });
 
