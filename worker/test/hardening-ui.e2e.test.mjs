@@ -242,6 +242,74 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await desktopContext.close();
     });
 
+    await t.test('mobile Rem pet stays visible, interactive and above navigation', async () => {
+      const mobileContext = await browser.newContext({ viewport: { width: 390, height: 667 }, hasTouch: true });
+      const mobilePage = await mobileContext.newPage();
+      await mobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
+      await mobilePage.waitForSelector('.site-global-nav');
+      await mobilePage.waitForFunction(() => document.body.classList.contains('is-launched'));
+      await mobilePage.waitForTimeout(700);
+      await mobilePage.waitForFunction(() => document.querySelector('#desktopPet')?.dataset.petFrame !== undefined);
+
+      const mobilePet = await mobilePage.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
+        };
+        const pet = document.querySelector('#desktopPet');
+        const sprite = document.querySelector('.desktop-pet-sprite');
+        return {
+          pet: rect('#desktopPet'),
+          sprite: rect('.desktop-pet-sprite'),
+          navigation: rect('.site-global-nav'),
+          display: getComputedStyle(pet).display,
+          backgroundImage: getComputedStyle(sprite).backgroundImage,
+          backgroundSize: getComputedStyle(sprite).backgroundSize
+        };
+      });
+
+      assert.equal(mobilePet.display, 'grid');
+      assert.ok(mobilePet.pet.width >= 95 && mobilePet.pet.width <= 97);
+      assert.ok(mobilePet.pet.height >= 121 && mobilePet.pet.height <= 123);
+      assert.equal(mobilePet.sprite.width, 96);
+      assert.equal(mobilePet.sprite.height, 104);
+      assert.match(mobilePet.backgroundImage, /spritesheet-optimized\.webp/);
+      assert.equal(mobilePet.backgroundSize, '768px 936px');
+      assert.ok(mobilePet.pet.bottom <= mobilePet.navigation.top - 8);
+
+      await mobilePage.locator('#desktopPet').tap();
+      await mobilePage.waitForSelector('#petSpeech:not([hidden])');
+      const speech = await mobilePage.locator('#petSpeech').boundingBox();
+      assert.ok(speech);
+      assert.ok(speech.x >= 0 && speech.x + speech.width <= 390);
+      assert.ok(speech.y >= 0 && speech.y + speech.height <= 667);
+
+      const petBeforeDrag = await mobilePage.locator('#desktopPet').boundingBox();
+      await mobilePage.mouse.move(petBeforeDrag.x + petBeforeDrag.width / 2, petBeforeDrag.y + petBeforeDrag.height / 2);
+      await mobilePage.mouse.down();
+      await mobilePage.mouse.move(389, 666, { steps: 6 });
+      await mobilePage.mouse.up();
+      await mobilePage.waitForTimeout(100);
+      const petAfterDrag = await mobilePage.locator('#desktopPet').boundingBox();
+      const navigationAfterDrag = await mobilePage.locator('.site-global-nav').boundingBox();
+      assert.ok(petAfterDrag.x + petAfterDrag.width <= 390 - 8);
+      assert.ok(petAfterDrag.y + petAfterDrag.height <= navigationAfterDrag.y - 9);
+      await mobileContext.close();
+
+      const desktopContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const desktopPage = await desktopContext.newPage();
+      await desktopPage.goto(`${origin}/os/`, { waitUntil: 'domcontentloaded' });
+      await desktopPage.waitForFunction(() => document.body.classList.contains('is-launched'));
+      await desktopPage.waitForTimeout(700);
+      const desktopPet = await desktopPage.locator('#desktopPet').boundingBox();
+      const desktopSprite = await desktopPage.locator('.desktop-pet-sprite').boundingBox();
+      assert.equal(desktopPet.width, 144);
+      assert.equal(desktopPet.height, 182);
+      assert.equal(desktopSprite.width, 144);
+      assert.equal(desktopSprite.height, 156);
+      await desktopContext.close();
+    });
+
     await t.test('mobile navigation folders stay in the upper safe viewport', async () => {
       state.desktop = makeDesktop([{
         id: 'folder-mobile',
@@ -264,6 +332,8 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       const context = await browser.newContext({ viewport: { width: 390, height: 667 } });
       const page = await context.newPage();
       await page.goto(`${origin}/os/`, { waitUntil: 'load' });
+      await page.waitForFunction(() => document.body.classList.contains('is-launched'));
+      await page.waitForTimeout(700);
       await page.locator('[data-navigation-id="folder-mobile"]').click();
       await page.waitForSelector('#navigationFolder.is-open');
       await page.waitForTimeout(250);

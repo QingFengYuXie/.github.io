@@ -327,7 +327,6 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 .desktop-pet[data-pet-state="dragging"] .desktop-pet-sprite { filter: brightness(1.06); transform: translateY(-1px); }
 .desktop-pet-name { margin-top: -4px; padding: 3px 7px; color: rgba(255, 230, 234, .72); border: 1px solid rgba(255, 109, 127, .22); border-radius: 999px; background: rgba(14, 7, 9, .66); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); font: 700 9px/1 Monaco, Consolas, monospace; letter-spacing: 1.4px; opacity: 0; transform: translateY(-4px); transition: opacity .2s ease, transform .2s ease; }
 .desktop-pet:not([data-pet-state="idle"]) .desktop-pet-name, .desktop-pet:focus-visible .desktop-pet-name { opacity: 1; transform: translateY(0); }
-@media (max-width: 800px) { .desktop-pet { display: none; } }
 
 /* Interactive desktop additions */
 .pet-speech { position: absolute; z-index: 35; max-width: 220px; padding: 9px 12px; color: #f7e9eb; border: 1px solid rgba(255, 117, 134, .35); border-radius: 12px 12px 12px 2px; background: rgba(24, 12, 15, .92); box-shadow: 0 12px 28px rgba(0, 0, 0, .42); font-size: 11px; line-height: 1.5; pointer-events: none; }
@@ -658,8 +657,28 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
     opacity: .08;
     transform: translateX(-50%);
   }
-  .stars, .aurora, .desktop-art, .desktop-pet, .pet-speech,
+  .stars, .aurora, .desktop-art,
   .desktop-status-card, .desktop-context-menu, .desktop-tip { display: none !important; }
+
+  .desktop-pet {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(env(safe-area-inset-bottom) + 138px);
+    display: grid;
+    width: 96px;
+    height: 122px;
+    filter: drop-shadow(0 10px 12px rgba(0, 0, 0, .46));
+  }
+  .desktop-pet-sprite {
+    width: 96px;
+    height: 104px;
+    background-size: 768px 936px;
+  }
+  .desktop-pet-name { margin-top: -2px; padding: 2px 6px; font-size: 8px; }
+  .pet-speech {
+    max-width: min(190px, calc(100vw - 24px));
+    padding: 8px 10px;
+    font-size: 10px;
+  }
 
   .desktop-topbar {
     position: fixed;
