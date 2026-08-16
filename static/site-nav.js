@@ -20,6 +20,29 @@
     return window.location.pathname.replace(/\/+$/, '') || '/';
   }
 
+  function getChromePageType(path = getCurrentPath()) {
+    if (path === '/dynamic' || path === '/dynamic/index.html' || /^\/dynamic\/page\d+\.html$/.test(path)) {
+      return 'dynamic';
+    }
+    return path === '/about.html' ? 'about' : '';
+  }
+
+  function mountTitleActions() {
+    const pageType = getChromePageType();
+    if (!pageType) return null;
+
+    const actions = document.querySelector('#header .title-right, .title-right');
+    const themeAction = actions?.querySelector('a[onclick*="modeSwitch"]');
+    if (!actions || !themeAction) return null;
+
+    document.body.classList.add('site-title-actions-page', `site-title-actions-page--${pageType}`);
+    actions.classList.add('site-title-actions');
+    themeAction.classList.add('site-theme-action');
+    themeAction.setAttribute('aria-label', themeAction.getAttribute('title') || '切换主题');
+    actions.append(themeAction);
+    return actions;
+  }
+
   function mountGlobalNavigation() {
     if (document.querySelector('.site-global-nav')) return;
 
@@ -47,14 +70,7 @@
   }
 
   function mountVisitStats() {
-    if (document.querySelector('.site-visit-stats')) return;
-
-    const path = getCurrentPath();
-    const isDynamicPage = path === '/dynamic'
-      || path === '/dynamic/index.html'
-      || /^\/dynamic\/page\d+\.html$/.test(path);
-    const isAboutPage = path === '/about.html';
-    if (!isDynamicPage && !isAboutPage) return;
+    if (document.querySelector('.site-visit-stats') || !getChromePageType()) return;
 
     const today = new Date();
     const todayAtMidnight = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
@@ -63,7 +79,8 @@
     const stats = document.createElement('aside');
     stats.className = 'site-visit-stats';
     stats.setAttribute('aria-label', '网站运行和访问统计');
-    stats.innerHTML = `本站已运行 <strong>${runningDays}</strong> 天 <span aria-hidden="true">|</span> 总访问量 <strong class="site-visit-count">--</strong> 次`;
+    stats.innerHTML = `本站已运行 <strong>${runningDays}</strong> 天 <span aria-hidden="true">|</span> 总访问 <strong class="site-visit-count">--</strong> 次`;
+    document.body.classList.add('has-site-visit-stats');
     document.body.prepend(stats);
 
     const count = stats.querySelector('.site-visit-count');
@@ -84,7 +101,7 @@
     window.setTimeout(() => observer.disconnect(), 60000);
   }
 
-  function mountMusicControl() {
+  function mountMusicControl(titleActions) {
     if (document.querySelector('.site-music-player')) return;
 
     const player = document.createElement('section');
@@ -190,7 +207,13 @@
     audio.volume = 0.42;
     audio.setAttribute('aria-hidden', 'true');
 
-    document.body.append(player, audio);
+    if (titleActions) {
+      player.classList.add('site-music-player--title-action');
+      titleActions.append(player);
+    } else {
+      document.body.append(player);
+    }
+    document.body.append(audio);
 
     function alignOsMusicPlayer() {
       if (!document.body.classList.contains('os-page')) return;
@@ -646,9 +669,10 @@
   }
 
   function initializeSiteChrome() {
+    const titleActions = mountTitleActions();
     mountGlobalNavigation();
     mountVisitStats();
-    mountMusicControl();
+    mountMusicControl(titleActions);
   }
 
   if (document.readyState === 'loading') {

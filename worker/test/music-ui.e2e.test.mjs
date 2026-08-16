@@ -72,8 +72,18 @@ async function apiResponse(request, pathname) {
   return null;
 }
 
-function pageFixture(title) {
-  return `<!doctype html><html lang="zh-CN" data-color-mode="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="/site-nav.css"></head><body><div class="title-right"><a href="#" onclick="modeSwitch()" aria-label="切换主题">主题</a></div><main id="content"><h1>${title}</h1></main><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
+function titleActionsFixture(pathname) {
+  if (pathname === '/dynamic/') {
+    return `<div class="title-left"><span class="mobile-page-mark" aria-hidden="true"></span><strong>轻风雨斜 OS</strong></div><div class="title-right"><a href="/search.html" id="buttonSearch" class="btn btn-invisible circle" title="搜索"><svg width="16" height="16"></svg></a><a href="/rss.xml" id="buttonRSS" class="btn btn-invisible circle" title="RSS"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
+  }
+  if (pathname === '/about.html') {
+    return `<h1 class="postTitle">关于</h1><div class="title-right"><a href="/" id="buttonHome" class="btn btn-invisible circle" title="首页"><svg width="16" height="16"></svg></a><a href="https://github.com/example/issues/3" class="btn btn-invisible circle" title="Issue"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
+  }
+  return `<div class="title-right"><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
+}
+
+function pageFixture(pathname) {
+  return `<!doctype html><html lang="zh-CN" data-color-mode="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pathname}</title><link rel="stylesheet" href="/site-nav.css"><style>body{box-sizing:border-box;min-width:200px;max-width:900px;margin:20px auto;padding:45px;font:16px/1.25 sans-serif}#header{display:flex;padding-bottom:8px;border-bottom:1px solid #d0d7de;margin-bottom:16px}.title-left{display:flex;align-items:center;gap:8px;white-space:nowrap}.mobile-page-mark{width:40px;height:40px;border-radius:50%;background:#d0d7de}.postTitle{margin:auto 0;font-size:40px}.title-right{display:flex;margin:auto 0 0 auto}.title-right .circle{box-sizing:border-box;padding:14px 16px;margin-right:8px}.title-right svg{display:block}@media(max-width:600px){body{padding:8px}.title-left strong{display:none}.postTitle{font-size:24px}}</style></head><body><header id="header">${titleActionsFixture(pathname)}</header><main id="content"><h2>${pathname}</h2></main><span id="busuanzi_value_site_pv" hidden>12345</span><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
 }
 
 function contentType(filePath) {
@@ -181,7 +191,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
   page.on('dialog', (dialog) => dialog.accept());
 
   try {
-    await t.test('compact player stays beside theme and restores track and progress across pages', async () => {
+    await t.test('title action players stay adjacent and restore track and progress across pages', async () => {
       music = makeMusic([
         { id: 'track-a', title: '第一首', url: 'https://audio.test/one.mp3' },
         { id: 'track-b', title: '第二首', url: 'https://audio.test/two.mp3' }
@@ -190,9 +200,17 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       await page.goto(`${origin}/dynamic/`);
       await waitForTrack(page, 'track-a');
       await page.waitForSelector('.site-music-player[data-music-state="playing"]');
-      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).position), 'fixed');
-      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).left), '72px');
-      assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').evaluate((element) => getComputedStyle(element).left), '20px');
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).position), 'static');
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => element.parentElement?.classList.contains('title-right')), true);
+      assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').evaluate((element) => getComputedStyle(element).position), 'static');
+      assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').count(), 1);
+      assert.deepEqual(await page.locator('.title-right').evaluate((actions) => [...actions.children].map((element) => {
+        if (element.id === 'buttonSearch') return 'search';
+        if (element.id === 'buttonRSS') return 'rss';
+        if (element.matches('[onclick*="modeSwitch"]')) return 'theme';
+        if (element.classList.contains('site-music-player')) return 'music';
+        return 'other';
+      })), ['search', 'rss', 'theme', 'music']);
       assert.equal(await page.locator('.site-music-controls [data-music-action]').count(), 4);
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
       assert.equal(await page.locator('[data-music-action="mode"]').getAttribute('data-music-mode'), 'sequence');
@@ -219,6 +237,15 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       await page.locator('.site-global-nav a[href="/about.html"]').click();
       await waitForTrack(page, 'track-b');
       await page.waitForFunction(() => Math.abs(document.querySelector('.site-background-audio').currentTime - 37.5) < 0.1);
+      assert.deepEqual(await page.locator('.title-right').evaluate((actions) => [...actions.children].map((element) => {
+        if (element.id === 'buttonHome') return 'home';
+        if (element.getAttribute('title') === 'Issue') return 'issue';
+        if (element.matches('[onclick*="modeSwitch"]')) return 'theme';
+        if (element.classList.contains('site-music-player')) return 'music';
+        return 'other';
+      })), ['home', 'issue', 'theme', 'music']);
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => element.parentElement?.classList.contains('title-right')), true);
+      assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').count(), 1);
 
       for (const route of ['/search.html', '/dynamic/post/test.html']) {
         await page.goto(`${origin}${route}`);
@@ -239,10 +266,66 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       await page.locator('[data-music-action="mode"]').click();
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
 
-      await page.setViewportSize({ width: 390, height: 844 });
-      const themeBox = await page.locator('.title-right a[onclick*="modeSwitch"]').boundingBox();
-      const playerBox = await page.locator('.site-music-player').boundingBox();
-      assert.ok(themeBox.x + themeBox.width < playerBox.x);
+      for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 667 }]) {
+        await page.setViewportSize(viewport);
+        for (const route of ['/dynamic/', '/about.html']) {
+          await page.goto(`${origin}${route}`);
+          await waitForTrack(page, 'track-b');
+          await page.waitForFunction(() => document.querySelector('.site-visit-count')?.textContent === '12345');
+          const layout = await page.evaluate(() => {
+            const actions = document.querySelector('.title-right');
+            const header = document.querySelector('#header');
+            const player = document.querySelector('.site-music-player');
+            const stats = document.querySelector('.site-visit-stats');
+            const theme = document.querySelector('.title-right a[onclick*="modeSwitch"]');
+            const rect = (element) => {
+              const box = element.getBoundingClientRect();
+              return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
+            };
+            return {
+              actions: rect(actions),
+              header: rect(header),
+              player: rect(player),
+              stats: rect(stats),
+              theme: rect(theme),
+              firstElementIsStats: document.body.firstElementChild === stats,
+              playerParentIsActions: player.parentElement === actions,
+              playerPosition: getComputedStyle(player).position,
+              themePosition: getComputedStyle(theme).position,
+              statsWhiteSpace: getComputedStyle(stats).whiteSpace,
+              statsFits: stats.scrollWidth <= stats.clientWidth,
+              themeCount: document.querySelectorAll('.title-right a[onclick*="modeSwitch"]').length,
+              viewportWidth: window.innerWidth,
+              documentWidth: document.documentElement.scrollWidth,
+              order: [...actions.children].map((element) => {
+                if (element.id === 'buttonSearch') return 'search';
+                if (element.id === 'buttonRSS') return 'rss';
+                if (element.id === 'buttonHome') return 'home';
+                if (element.getAttribute('title') === 'Issue') return 'issue';
+                if (element.matches('[onclick*="modeSwitch"]')) return 'theme';
+                if (element.classList.contains('site-music-player')) return 'music';
+                return 'other';
+              })
+            };
+          });
+          const expectedOrder = route === '/dynamic/'
+            ? ['search', 'rss', 'theme', 'music']
+            : ['home', 'issue', 'theme', 'music'];
+          assert.deepEqual(layout.order, expectedOrder, `${route} ${viewport.width}px action order`);
+          assert.equal(layout.themeCount, 1);
+          assert.equal(layout.playerParentIsActions, true);
+          assert.equal(layout.playerPosition, 'static');
+          assert.equal(layout.themePosition, 'static');
+          assert.equal(layout.statsWhiteSpace, 'nowrap');
+          assert.equal(layout.statsFits, true);
+          assert.equal(layout.firstElementIsStats, true);
+          assert.ok(layout.stats.top <= 4.5, `${route} ${viewport.width}px stats top ${layout.stats.top}`);
+          assert.ok(layout.stats.bottom <= layout.header.top, `${route} ${viewport.width}px stats overlap header`);
+          assert.ok(layout.actions.left >= -0.5 && layout.actions.right <= layout.viewportWidth + 0.5, `${route} ${viewport.width}px actions overflow`);
+          assert.ok(layout.player.left > layout.theme.left, `${route} ${viewport.width}px player order`);
+          assert.ok(layout.documentWidth <= layout.viewportWidth, `${route} ${viewport.width}px horizontal overflow`);
+        }
+      }
       await page.setViewportSize({ width: 1440, height: 900 });
     });
 
