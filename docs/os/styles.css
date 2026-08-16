@@ -603,6 +603,37 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 
 /* Mobile-only phone shell. Desktop geometry above 800px remains untouched. */
 @media (max-width: 800px) {
+  .linux-boot {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    font-size: 9px;
+    line-height: 1.35;
+  }
+  .linux-boot-header { padding-bottom: 8px; font-size: 8px; }
+  .linux-boot-logo { display: none; }
+  .boot-progress {
+    top: calc(env(safe-area-inset-top) + 84px);
+    width: calc(100vw - 32px);
+  }
+  .boot-progress-row { gap: 8px; }
+  .boot-progress-value { flex-basis: 32px; font-size: 9px; }
+  .boot-progress-pet { width: 48px; height: 52px; }
+  .boot-progress-pet-sprite { transform: scale(.8); transform-origin: left bottom; }
+  .boot-progress-status { margin-top: 7px; font-size: 9px; }
+  .linux-boot-log {
+    top: calc(env(safe-area-inset-top) + 142px);
+    right: 12px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: 12px;
+    max-height: none;
+  }
+  .linux-boot-log p {
+    margin: 1px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .boot-log-line > span { width: 72px; }
+
   html, body { overscroll-behavior: none; }
   body { background: #070405; }
   .site-viewport { cursor: default; touch-action: pan-y; }

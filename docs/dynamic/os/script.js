@@ -90,7 +90,7 @@ function runBootSequence() {
         ? `<span>[&nbsp; <b>OK</b> &nbsp;]</span> ${message}`
         : `<span>[&nbsp;&nbsp;INFO&nbsp;]</span> ${message}`;
       bootLog.append(line);
-      line.scrollIntoView({ block: 'nearest' });
+      bootLog.scrollTop = bootLog.scrollHeight;
       updateBootProgress(index, message);
       if (index === bootMessages.length - 1) window.setTimeout(finishBootSequence, bootCompleteDelay);
     }, bootStartDelay + index * bootStepDelay);
