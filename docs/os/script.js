@@ -759,11 +759,17 @@ function createFaviconLoader() {
 
 const faviconLoader = createFaviconLoader();
 
-function makeFavicon(link, fallback = '↗') {
+function shortFaviconFallback(title) {
+  return [...String(title || '').trim()].slice(0, 2).join('') || '↗';
+}
+
+function makeFavicon(link, fallback = '') {
   const wrapper = document.createElement('span');
+  const fallbackText = link.icon || fallback || shortFaviconFallback(link.title);
   wrapper.className = 'navigation-favicon';
+  if (!link.icon) wrapper.classList.add('is-text-fallback');
   wrapper.style.setProperty('--navigation-color', link.color || '#e8d9dc');
-  wrapper.textContent = link.icon || fallback;
+  wrapper.textContent = fallbackText;
   faviconLoader.enqueue(link.id, wrapper);
   return wrapper;
 }
