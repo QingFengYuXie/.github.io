@@ -297,7 +297,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       await page.locator('[data-music-action="mode"]').click();
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
 
-      for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 667 }]) {
+      for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 667 }, { width: 1280, height: 800 }]) {
         await page.setViewportSize(viewport);
         for (const route of ['/dynamic/', '/about.html']) {
           await page.goto(`${origin}${route}`);
@@ -309,10 +309,24 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
             const player = document.querySelector('.site-music-player');
             const stats = document.querySelector('.site-visit-stats');
             const theme = document.querySelector('.title-right a[onclick*="modeSwitch"]');
+            const visibleActions = [...actions.children].filter((element) => getComputedStyle(element).display !== 'none');
+            const iconActions = visibleActions.filter((element) => element.matches('a'));
+            const iconSvgs = [
+              ...iconActions.map((action) => action.querySelector('svg')),
+              ...player.querySelectorAll('.site-music-control > svg')
+            ];
             const rect = (element) => {
               const box = element.getBoundingClientRect();
               return { top: box.top, right: box.right, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
             };
+            const centerY = (element) => {
+              const box = element.getBoundingClientRect();
+              return box.top + box.height / 2;
+            };
+            const actionRects = visibleActions.map(rect);
+            const actionCenters = visibleActions.map(centerY);
+            const iconCenters = iconSvgs.map(centerY);
+            const adjacentGaps = actionRects.slice(1).map((box, index) => box.left - actionRects[index].right);
             return {
               actions: rect(actions),
               header: rect(header),
@@ -331,6 +345,14 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
                 const controlBox = control.getBoundingClientRect();
                 return controlBox.left >= playerBox.left - .5 && controlBox.right <= playerBox.right + .5;
               }),
+              actionCenterSpread: Math.max(...actionCenters) - Math.min(...actionCenters),
+              iconCenterSpread: Math.max(...iconCenters) - Math.min(...iconCenters),
+              adjacentGaps,
+              expectedGap: Number.parseFloat(getComputedStyle(actions).columnGap),
+              iconActionsUseSharedClass: iconActions.every((action) => action.classList.contains('site-title-icon-action')),
+              iconActionsCentered: iconActions.every((action) => Math.abs(centerY(action) - centerY(action.querySelector('svg'))) <= .5),
+              iconActionSizes: iconActions.map((action) => rect(action).width),
+              actionColors: [...iconActions, ...player.querySelectorAll('.site-music-control')].map((element) => getComputedStyle(element).color),
               themePosition: getComputedStyle(theme).position,
               statsWhiteSpace: getComputedStyle(stats).whiteSpace,
               statsFits: stats.scrollWidth <= stats.clientWidth,
@@ -360,15 +382,51 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
           assert.equal(layout.playerBoxShadow, 'none');
           assert.equal(layout.playerFitsContent, true);
           assert.equal(layout.controlsFitPlayer, true);
+          assert.ok(layout.actionCenterSpread <= .5, `${route} ${viewport.width}px action center spread ${layout.actionCenterSpread}`);
+          assert.ok(layout.iconCenterSpread <= .5, `${route} ${viewport.width}px icon center spread ${layout.iconCenterSpread}`);
+          assert.equal(layout.iconActionsUseSharedClass, true);
+          assert.equal(layout.iconActionsCentered, true);
+          assert.ok(layout.iconActionSizes.every((size) => Math.abs(size - layout.theme.width) <= .5), `${route} ${viewport.width}px inconsistent icon action sizes`);
+          assert.ok(layout.iconActionSizes.every((size) => Math.abs(size - layout.player.height) <= .5), `${route} ${viewport.width}px action and player heights differ`);
+          assert.ok(layout.adjacentGaps.every((gap) => Math.abs(gap - layout.expectedGap) <= .5), `${route} ${viewport.width}px inconsistent action gaps ${layout.adjacentGaps}`);
+          assert.equal(new Set(layout.actionColors).size, 1, `${route} ${viewport.width}px inconsistent action colors`);
           assert.equal(layout.themePosition, 'static');
           assert.equal(layout.statsWhiteSpace, 'nowrap');
           assert.equal(layout.statsFits, true);
           assert.equal(layout.firstElementIsStats, true);
-          assert.ok(layout.stats.top <= 4.5, `${route} ${viewport.width}px stats top ${layout.stats.top}`);
+          const maximumStatsTop = viewport.width <= 600 ? 4.5 : 8.5;
+          assert.ok(layout.stats.top <= maximumStatsTop, `${route} ${viewport.width}px stats top ${layout.stats.top}`);
           assert.ok(layout.stats.bottom <= layout.header.top, `${route} ${viewport.width}px stats overlap header`);
           assert.ok(layout.actions.left >= -0.5 && layout.actions.right <= layout.viewportWidth + 0.5, `${route} ${viewport.width}px actions overflow`);
           assert.ok(layout.player.left > layout.theme.left, `${route} ${viewport.width}px player order`);
           assert.ok(layout.documentWidth <= layout.viewportWidth, `${route} ${viewport.width}px horizontal overflow`);
+
+          for (const colorMode of ['light', 'dark', 'auto']) {
+            await page.evaluate((mode) => document.documentElement.setAttribute('data-color-mode', mode), colorMode);
+            await page.waitForTimeout(300);
+            const themedLayout = await page.evaluate(() => {
+              const actions = document.querySelector('.site-title-actions');
+              const player = actions.querySelector('.site-music-player');
+              const elements = [...actions.querySelectorAll(':scope > a'), ...player.querySelectorAll('.site-music-control')]
+                .filter((element) => getComputedStyle(element).display !== 'none');
+              const centerY = (element) => {
+                const box = element.getBoundingClientRect();
+                return box.top + box.height / 2;
+              };
+              const iconCenters = [
+                ...[...actions.children]
+                  .filter((element) => element.matches('a') && getComputedStyle(element).display !== 'none')
+                  .map((element) => element.querySelector('svg')),
+                ...player.querySelectorAll('.site-music-control > svg')
+              ].map(centerY);
+              return {
+                colors: elements.map((element) => getComputedStyle(element).color),
+                iconCenterSpread: Math.max(...iconCenters) - Math.min(...iconCenters)
+              };
+            });
+            assert.equal(new Set(themedLayout.colors).size, 1, `${route} ${viewport.width}px ${colorMode} action colors`);
+            assert.ok(themedLayout.iconCenterSpread <= .5, `${route} ${viewport.width}px ${colorMode} icon center spread ${themedLayout.iconCenterSpread}`);
+          }
         }
       }
       await page.setViewportSize({ width: 1440, height: 900 });
@@ -421,6 +479,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
     });
 
     await t.test('OS player layout and existing desktop features do not regress', async () => {
+      await page.setViewportSize({ width: 1440, height: 900 });
       music = makeMusic([{ id: 'track-a', title: '第一首', url: 'https://audio.test/one.mp3' }], 14);
       await page.goto(`${origin}/os/`, { waitUntil: 'domcontentloaded' });
       assert.equal(await page.getByText('BOOT SEQUENCE', { exact: true }).count(), 0);
@@ -429,7 +488,10 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.ok((await page.locator('.boot-progress-pet-sprite').boundingBox()).width < 72);
       await page.waitForFunction(() => document.querySelector('.boot-progress-pet-sprite')?.dataset.bootPetFrame !== undefined);
       const firstBootPetFrame = await page.locator('.boot-progress-pet-sprite').getAttribute('data-boot-pet-frame');
-      await page.waitForTimeout(130);
+      await page.waitForFunction((previousFrame) => {
+        const currentFrame = document.querySelector('.boot-progress-pet-sprite')?.dataset.bootPetFrame;
+        return currentFrame !== undefined && currentFrame !== previousFrame;
+      }, firstBootPetFrame, { timeout: 2000 });
       const nextBootPetFrame = await page.locator('.boot-progress-pet-sprite').getAttribute('data-boot-pet-frame');
       assert.notEqual(nextBootPetFrame, firstBootPetFrame);
       await waitForTrack(page, 'track-a');
