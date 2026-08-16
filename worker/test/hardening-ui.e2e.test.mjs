@@ -154,6 +154,40 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await context.close();
     });
 
+    await t.test('mobile navigation folders stay in the upper safe viewport', async () => {
+      state.desktop = makeDesktop([{
+        id: 'folder-mobile',
+        type: 'folder',
+        title: '移动导航',
+        icon: '▰',
+        color: '#f4c84a',
+        links: Array.from({ length: 12 }, (_, index) => ({
+          id: `mobile-link-${index}`,
+          type: 'link',
+          title: `导航 ${index + 1}`,
+          url: `https://mobile-${index}.example`,
+          icon: String(index + 1),
+          color: '#e8d9dc',
+          openMode: 'new',
+          position: index
+        }))
+      }]);
+      state.faviconFallbackIds.clear();
+      const context = await browser.newContext({ viewport: { width: 390, height: 667 } });
+      const page = await context.newPage();
+      await page.goto(`${origin}/os/`, { waitUntil: 'load' });
+      await page.locator('[data-navigation-id="folder-mobile"]').click();
+      await page.waitForSelector('#navigationFolder.is-open');
+      await page.waitForTimeout(250);
+
+      const panel = await page.locator('.navigation-folder-panel').boundingBox();
+      assert.ok(panel);
+      assert.ok(panel.y >= 52);
+      assert.ok(panel.y <= 667 * 0.25);
+      assert.ok(panel.y + panel.height <= 667 - 70);
+      await context.close();
+    });
+
     await t.test('favicons start after load and stay same-origin with bounded concurrency', async () => {
       state.desktop = makeDesktop([
         { id: 'link-a', type: 'link', title: '第一项', url: 'https://a.example', icon: 'A', color: '#e8d9dc', openMode: 'new' },
