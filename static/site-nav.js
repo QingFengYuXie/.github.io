@@ -113,7 +113,11 @@
     const previousButton = document.createElement('button');
     const playButton = document.createElement('button');
     const nextButton = document.createElement('button');
-    const playLegacyIcon = (isPlaying) => `<span aria-hidden="true">${isPlaying ? 'Ⅱ' : '▶'}</span>`;
+    const playIcon = (isPlaying) => titleActions
+      ? (isPlaying
+        ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>'
+        : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg>')
+      : `<span aria-hidden="true">${isPlaying ? 'Ⅱ' : '▶'}</span>`;
     let musicEnabled = true;
     let tracks = [];
     let currentIndex = -1;
@@ -184,21 +188,25 @@
     previousButton.dataset.musicAction = 'previous';
     previousButton.setAttribute('aria-label', '上一首');
     previousButton.title = '上一首';
-    previousButton.innerHTML = '<span aria-hidden="true">⏮</span>';
+    previousButton.innerHTML = titleActions
+      ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6V6Z"/></svg>'
+      : '<span aria-hidden="true">⏮</span>';
 
     playButton.type = 'button';
     playButton.className = 'site-music-control site-music-play';
     playButton.dataset.musicAction = 'play';
     playButton.setAttribute('aria-label', '播放音乐');
     playButton.title = '播放';
-    playButton.innerHTML = playLegacyIcon(false);
+    playButton.innerHTML = playIcon(false);
 
     nextButton.type = 'button';
     nextButton.className = 'site-music-control';
     nextButton.dataset.musicAction = 'next';
     nextButton.setAttribute('aria-label', '下一首');
     nextButton.title = '下一首';
-    nextButton.innerHTML = '<span aria-hidden="true">⏭</span>';
+    nextButton.innerHTML = titleActions
+      ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 5v14M6 6l8 6-8 6V6Z"/></svg>'
+      : '<span aria-hidden="true">⏭</span>';
 
     player.querySelector('.site-music-controls').append(modeButton, previousButton, playButton, nextButton);
 
@@ -209,6 +217,9 @@
 
     if (titleActions) {
       player.classList.add('site-music-player--title-action');
+      player.querySelectorAll('.site-music-control').forEach((control) => {
+        control.classList.add('btn', 'btn-invisible', 'circle');
+      });
       titleActions.append(player);
     } else {
       document.body.append(player);
@@ -394,7 +405,7 @@
         : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7h12m-3-3 3 3-3 3m5 7H7m3 3-3-3 3-3"/></svg>';
       playButton.setAttribute('aria-label', isPlaying ? '暂停音乐' : '播放音乐');
       playButton.title = isPlaying ? '暂停' : '播放';
-      playButton.innerHTML = playLegacyIcon(isPlaying);
+      playButton.innerHTML = playIcon(isPlaying);
     }
 
     function requestPlay() {

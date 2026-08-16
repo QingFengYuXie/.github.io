@@ -216,15 +216,45 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'sequence');
       assert.equal(await page.locator('[data-music-action="mode"]').getAttribute('data-music-mode'), 'sequence');
       assert.equal(await page.locator('.site-music-disc').count(), 0);
-      assert.ok((await page.locator('.site-music-player').boundingBox()).width <= 120);
+      const titlePlayerLayout = await page.locator('.site-music-player').evaluate((player) => {
+        const playerBox = player.getBoundingClientRect();
+        const controls = [...player.querySelectorAll('.site-music-control')];
+        const playerStyle = getComputedStyle(player);
+        return {
+          width: playerBox.width,
+          clientWidth: player.clientWidth,
+          scrollWidth: player.scrollWidth,
+          backgroundColor: playerStyle.backgroundColor,
+          borderStyle: playerStyle.borderStyle,
+          boxShadow: playerStyle.boxShadow,
+          controlColor: getComputedStyle(controls[0]).color,
+          controlsUseNativeClasses: controls.every((control) => control.matches('.btn.btn-invisible.circle')),
+          controlsResetGmeekSpacing: controls.every((control) => {
+            const style = getComputedStyle(control);
+            return style.margin === '0px' && style.padding === '0px';
+          }),
+          controlsFit: controls.every((control) => {
+            const box = control.getBoundingClientRect();
+            return box.left >= playerBox.left - .5 && box.right <= playerBox.right + .5;
+          })
+        };
+      });
+      assert.ok(titlePlayerLayout.width <= 120);
+      assert.ok(titlePlayerLayout.scrollWidth <= titlePlayerLayout.clientWidth);
+      assert.equal(titlePlayerLayout.backgroundColor, 'rgba(0, 0, 0, 0)');
+      assert.equal(titlePlayerLayout.borderStyle, 'none');
+      assert.equal(titlePlayerLayout.boxShadow, 'none');
+      assert.equal(titlePlayerLayout.controlColor, 'rgb(9, 105, 218)');
+      assert.equal(titlePlayerLayout.controlsUseNativeClasses, true);
+      assert.equal(titlePlayerLayout.controlsResetGmeekSpacing, true);
+      assert.equal(titlePlayerLayout.controlsFit, true);
       assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
-      assert.equal(await page.locator('.site-music-play').evaluate((element) => getComputedStyle(element).borderColor), 'rgb(9, 105, 218)');
       assert.equal(await page.locator('.site-music-play-icon').count(), 0);
-      assert.equal(await page.locator('.site-music-play > span').count(), 1);
-      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
+      assert.equal(await page.locator('.site-music-play > svg').count(), 1);
+      assert.equal(await page.locator('.site-music-play path').getAttribute('d'), 'M8 5v14M16 5v14');
       await page.locator('[data-music-action="play"]').click();
       await page.waitForSelector('.site-music-player[data-music-state="paused"]');
-      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'none');
+      assert.equal(await page.locator('.site-music-play path').getAttribute('d'), 'm8 5 11 7-11 7Z');
       await page.locator('[data-music-action="play"]').click();
       await page.waitForSelector('.site-music-player[data-music-state="playing"]');
 
@@ -292,6 +322,15 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               firstElementIsStats: document.body.firstElementChild === stats,
               playerParentIsActions: player.parentElement === actions,
               playerPosition: getComputedStyle(player).position,
+              playerBackground: getComputedStyle(player).backgroundColor,
+              playerBorderStyle: getComputedStyle(player).borderStyle,
+              playerBoxShadow: getComputedStyle(player).boxShadow,
+              playerFitsContent: player.scrollWidth <= player.clientWidth,
+              controlsFitPlayer: [...player.querySelectorAll('.site-music-control')].every((control) => {
+                const playerBox = player.getBoundingClientRect();
+                const controlBox = control.getBoundingClientRect();
+                return controlBox.left >= playerBox.left - .5 && controlBox.right <= playerBox.right + .5;
+              }),
               themePosition: getComputedStyle(theme).position,
               statsWhiteSpace: getComputedStyle(stats).whiteSpace,
               statsFits: stats.scrollWidth <= stats.clientWidth,
@@ -316,6 +355,11 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
           assert.equal(layout.themeCount, 1);
           assert.equal(layout.playerParentIsActions, true);
           assert.equal(layout.playerPosition, 'static');
+          assert.equal(layout.playerBackground, 'rgba(0, 0, 0, 0)');
+          assert.equal(layout.playerBorderStyle, 'none');
+          assert.equal(layout.playerBoxShadow, 'none');
+          assert.equal(layout.playerFitsContent, true);
+          assert.equal(layout.controlsFitPlayer, true);
           assert.equal(layout.themePosition, 'static');
           assert.equal(layout.statsWhiteSpace, 'nowrap');
           assert.equal(layout.statsFits, true);
