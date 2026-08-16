@@ -784,15 +784,17 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
     position: fixed;
     z-index: 10010;
     inset: 0;
-    place-items: end stretch;
-    padding: calc(env(safe-area-inset-top) + 52px) 10px calc(env(safe-area-inset-bottom) + 10px);
+    height: 100dvh;
+    place-items: start center;
+    overflow: hidden;
+    padding: calc(env(safe-area-inset-top) + 68px) 10px calc(env(safe-area-inset-bottom) + 82px);
     background: rgba(3, 2, 3, .7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
   .navigation-folder-panel {
-    width: 100%;
-    max-height: min(76vh, 680px);
+    width: min(560px, 100%);
+    max-height: min(68dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 150px), 620px);
     padding: 20px 16px calc(22px + env(safe-area-inset-bottom));
     border-radius: 28px;
     transform: translateY(22px);
