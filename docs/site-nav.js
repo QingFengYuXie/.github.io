@@ -37,7 +37,13 @@
 
     document.body.classList.add('site-title-actions-page', `site-title-actions-page--${pageType}`);
     actions.classList.add('site-title-actions');
-    themeAction.classList.add('site-theme-action');
+    [...actions.children]
+      .filter((action) => action.matches('a') && action !== themeAction && getComputedStyle(action).display !== 'none')
+      .forEach((action) => {
+        action.classList.add('site-title-icon-action');
+        action.setAttribute('aria-label', action.getAttribute('aria-label') || action.getAttribute('title') || '页面操作');
+      });
+    themeAction.classList.add('site-title-icon-action', 'site-theme-action');
     themeAction.setAttribute('aria-label', themeAction.getAttribute('title') || '切换主题');
     actions.append(themeAction);
     return actions;

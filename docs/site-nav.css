@@ -256,10 +256,16 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 }
 
 body.site-title-actions-page .site-title-actions {
+  --site-title-action-size: 44px;
+  --site-title-action-gap: 8px;
+  display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: var(--site-title-action-gap);
   min-width: 0;
+  min-height: var(--site-title-action-size);
 }
 
 body.site-title-actions-page .site-title-actions > a,
@@ -268,26 +274,41 @@ body.site-title-actions-page .site-title-actions > button {
   margin: 0 !important;
 }
 
-body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"] {
-  position: static !important;
-  inset: auto !important;
-  z-index: auto !important;
+body.site-title-actions-page .site-title-actions a.site-title-icon-action {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  width: 44px !important;
-  height: 44px !important;
+  box-sizing: border-box;
+  width: var(--site-title-action-size) !important;
+  height: var(--site-title-action-size) !important;
   margin: 0 !important;
   padding: 0 !important;
+  color: var(--fgColor-accent, var(--color-accent-fg, #0969da));
   border: 0 !important;
   border-radius: 50%;
   background: transparent !important;
   box-shadow: none !important;
+  line-height: 1 !important;
+  vertical-align: middle;
   transform: none !important;
 }
 
-body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"]:hover {
+body.site-title-actions-page .site-title-actions a.site-title-icon-action > svg {
+  display: block;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"] {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+}
+
+body.site-title-actions-page .site-title-actions a.site-title-icon-action:hover {
+  color: var(--fgColor-accent, var(--color-accent-fg, #0969da));
   background: var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg, rgba(175, 184, 193, .2))) !important;
+  transform: none !important;
 }
 
 body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player--title-action,
@@ -296,8 +317,10 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
   inset: auto;
   z-index: auto;
   flex: 0 0 auto;
+  align-self: center;
   width: auto;
-  min-height: 44px;
+  height: var(--site-title-action-size);
+  min-height: var(--site-title-action-size);
   margin: 0;
   padding: 0;
   overflow: visible;
@@ -455,15 +478,13 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
   }
 
   body.site-title-actions-page .site-title-actions {
-    gap: 4px;
+    --site-title-action-size: 36px;
+    --site-title-action-gap: 4px;
   }
 
-  body.site-title-actions-page .site-title-actions > a,
-  body.site-title-actions-page .site-title-actions > button,
-  body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"] {
-    width: 36px !important;
-    height: 36px !important;
-    padding: 0 !important;
+  body.site-title-actions-page .site-title-actions a.site-title-icon-action {
+    width: var(--site-title-action-size) !important;
+    height: var(--site-title-action-size) !important;
   }
 
   body.site-title-actions-page--dynamic #buttonRSS {
