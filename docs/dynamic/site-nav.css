@@ -399,82 +399,70 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
     z-index: 9998;
     top: auto;
     right: auto;
-    bottom: max(8px, env(safe-area-inset-bottom));
+    bottom: max(18px, env(safe-area-inset-bottom));
     left: 50%;
     display: flex;
-    justify-content: center;
-    width: min(370px, calc(100vw - 24px));
-    min-height: 68px;
-    gap: 3px;
-    padding: 7px 8px;
-    border: 1px solid rgba(255, 255, 255, .13);
-    border-radius: 24px;
-    background: rgba(20, 12, 15, .86);
-    box-shadow: 0 14px 38px rgba(0, 0, 0, .48), inset 0 1px rgba(255, 255, 255, .055);
-    backdrop-filter: blur(20px) saturate(1.18);
-    -webkit-backdrop-filter: blur(20px) saturate(1.18);
+    justify-content: flex-start;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    min-height: 0;
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid var(--borderColor-default, var(--color-border-default, rgba(31, 35, 40, .15)));
+    border-radius: 14px;
+    background: var(--bgColor-default, var(--color-canvas-default, rgba(255, 255, 255, .94)));
+    box-shadow: 0 10px 32px rgba(0, 0, 0, .18);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     transform: translateX(-50%);
     transition: opacity .2s ease, visibility .2s ease;
   }
 
   body.os-page .site-global-nav::after {
-    content: '';
-    position: absolute;
-    bottom: -7px;
-    left: 50%;
-    width: 104px;
-    height: 4px;
-    border-radius: 99px;
-    background: rgba(255, 255, 255, .76);
-    transform: translateX(-50%);
-    pointer-events: none;
+    content: none;
+    display: none;
   }
 
   body.os-page .site-global-nav a {
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    height: 52px;
-    gap: 3px;
-    padding: 4px 3px 3px;
-    color: rgba(226, 209, 213, .7);
-    border-radius: 16px;
-    font: 600 9px/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
-    letter-spacing: .1px;
+    display: block;
+    flex: 0 0 auto;
+    min-width: 78px;
+    height: auto;
+    gap: 0;
+    padding: 9px 14px;
+    color: var(--fgColor-muted, var(--color-fg-muted, #59636e));
+    border-radius: 9px;
+    background: transparent;
+    font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: normal;
+    text-align: center;
     transform: none;
   }
 
   body.os-page .site-global-nav a::before {
-    display: grid;
-    place-items: center;
-    width: 27px;
-    height: 27px;
-    color: rgba(240, 224, 228, .82);
-    font: 600 19px/1 -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif;
+    content: none !important;
+    display: none;
   }
-
-  body.os-page .site-global-nav a:nth-child(1)::before { content: '◫'; }
-  body.os-page .site-global-nav a:nth-child(2)::before { content: '⌂'; }
-  body.os-page .site-global-nav a:nth-child(3)::before { content: '@'; }
-  body.os-page .site-global-nav a:hover { color: #fff; background: rgba(255, 255, 255, .055); transform: none; }
+  body.os-page .site-global-nav a:hover {
+    color: var(--fgColor-default, var(--color-fg-default, #1f2328));
+    background: var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg, rgba(175, 184, 193, .2)));
+    transform: translateY(-1px);
+  }
   body.os-page .site-global-nav a[aria-current="page"] {
-    color: #fff;
-    background: linear-gradient(145deg, rgba(183, 29, 49, .82), rgba(112, 18, 33, .9));
-    box-shadow: inset 0 1px rgba(255, 255, 255, .1), 0 6px 17px rgba(95, 7, 22, .32);
+    color: var(--fgColor-onEmphasis, var(--color-fg-on-emphasis, #fff));
+    background: var(--bgColor-accent-emphasis, var(--color-accent-emphasis, #cf263c));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--bgColor-accent-emphasis, var(--color-accent-emphasis, #cf263c)) 32%, transparent);
   }
-  body.os-page .site-global-nav a[aria-current="page"]::before { color: #fff; }
 
   body.os-page .site-music-player {
     z-index: 9999;
-    top: auto !important;
+    top: calc(env(safe-area-inset-top) + 12px) !important;
     right: max(14px, env(safe-area-inset-right)) !important;
-    bottom: calc(max(8px, env(safe-area-inset-bottom)) + 78px) !important;
+    bottom: auto !important;
     left: auto !important;
     width: 112px;
-    min-height: 38px;
+    height: 42px;
+    min-height: 42px;
     padding: 4px;
     border-color: rgba(255, 105, 123, .25);
     border-radius: 15px;
