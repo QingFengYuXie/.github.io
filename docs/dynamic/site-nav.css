@@ -423,6 +423,12 @@ body.site-title-actions-page .site-music-player--title-action {
     display: inline-flex !important;
   }
 
+  body.site-title-actions-page--dynamic .SideNav {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
   body.site-title-actions-page:not(.os-page) .site-music-player--title-action {
     position: static;
     inset: auto;
