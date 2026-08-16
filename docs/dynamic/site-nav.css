@@ -414,9 +414,6 @@ body.site-title-actions-page .site-music-player--title-action {
   body.site-title-actions-page .site-title-actions > a,
   body.site-title-actions-page .site-title-actions > button,
   body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"] {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
     width: 36px !important;
     height: 36px !important;
     padding: 0 !important;
