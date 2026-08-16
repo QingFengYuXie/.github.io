@@ -1,14 +1,18 @@
 .site-visit-stats {
   position: absolute;
   z-index: 9997;
+  box-sizing: border-box;
   top: max(8px, env(safe-area-inset-top));
   left: 50%;
   width: min(1012px, calc(100% - 32px));
   margin: 0;
+  overflow: hidden;
   transform: translateX(-50%);
   color: var(--fgColor-muted, var(--color-fg-muted, #59636e));
   font: 500 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   letter-spacing: .1px;
   pointer-events: none;
 }
@@ -251,6 +255,51 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
   padding: 0 !important;
 }
 
+body.site-title-actions-page .site-title-actions {
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+body.site-title-actions-page .site-title-actions > a,
+body.site-title-actions-page .site-title-actions > button {
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
+
+body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"] {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50%;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"]:hover {
+  background: var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg, rgba(175, 184, 193, .2))) !important;
+}
+
+body.site-title-actions-page .site-music-player--title-action {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  flex: 0 0 110px;
+  width: 110px;
+  min-height: 44px;
+  margin: 0;
+}
+
 .os-page .desktop-clock-controls {
   position: fixed;
   z-index: 18;
@@ -307,9 +356,14 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
 
 @media (max-width: 600px) {
   .site-visit-stats {
-    width: calc(100% - 88px);
-    font-size: 11px;
-    top: max(68px, calc(env(safe-area-inset-top) + 56px));
+    top: max(4px, env(safe-area-inset-top));
+    width: calc(100% - 16px);
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  body.has-site-visit-stats:not(.os-page) {
+    padding-top: max(28px, calc(env(safe-area-inset-top) + 28px)) !important;
   }
 
   .site-global-nav {
@@ -351,6 +405,45 @@ body:not(.os-page) .title-right a[onclick*="modeSwitch"] {
     left: max(12px, env(safe-area-inset-left)) !important;
     width: 42px !important;
     height: 42px !important;
+  }
+
+  body.site-title-actions-page .site-title-actions {
+    gap: 4px;
+  }
+
+  body.site-title-actions-page .site-title-actions > a,
+  body.site-title-actions-page .site-title-actions > button,
+  body.site-title-actions-page .site-title-actions a.site-theme-action[onclick*="modeSwitch"] {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+  }
+
+  body.site-title-actions-page--dynamic #buttonRSS {
+    display: inline-flex !important;
+  }
+
+  body.site-title-actions-page:not(.os-page) .site-music-player--title-action {
+    position: static;
+    inset: auto;
+    flex: 0 0 94px;
+    width: 94px;
+    min-height: 36px;
+    padding: 3px 2px;
+    border-radius: 13px;
+  }
+
+  body.site-title-actions-page:not(.os-page) .site-music-player--title-action .site-music-control {
+    width: 20px;
+    height: 20px;
+  }
+
+  body.site-title-actions-page:not(.os-page) .site-music-player--title-action .site-music-play {
+    width: 24px;
+    height: 24px;
   }
 
   .os-page .desktop-clock-controls {
