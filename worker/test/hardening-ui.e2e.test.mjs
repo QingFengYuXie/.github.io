@@ -134,6 +134,50 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
   const browser = await chromium.launch({ executablePath: edgeExecutable, headless: true });
 
   try {
+    await t.test('mobile boot log stays clear of progress on short screens', async () => {
+      const mobileContext = await browser.newContext({ viewport: { width: 320, height: 568 } });
+      const mobilePage = await mobileContext.newPage();
+      await mobilePage.goto(`${origin}/os/`, { waitUntil: 'domcontentloaded' });
+      await mobilePage.waitForFunction(() => document.querySelectorAll('#bootLog p').length === 10);
+      const mobileBoot = await mobilePage.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom, height: box.height };
+        };
+        const log = document.querySelector('#bootLog');
+        return {
+          bootScreen: rect('#bootScreen'),
+          progressStatus: rect('#bootProgressStatus'),
+          log: rect('#bootLog'),
+          lastLine: rect('#bootLog p:last-child'),
+          logFontSize: getComputedStyle(log).fontSize,
+          lineWhiteSpace: getComputedStyle(log.querySelector('p')).whiteSpace,
+          documentScrollTop: document.documentElement.scrollTop,
+          bodyScrollTop: document.body.scrollTop
+        };
+      });
+
+      assert.ok(mobileBoot.log.top >= mobileBoot.progressStatus.bottom + 8);
+      assert.ok(mobileBoot.lastLine.bottom <= mobileBoot.log.bottom + 1);
+      assert.equal(mobileBoot.logFontSize, '9px');
+      assert.equal(mobileBoot.lineWhiteSpace, 'nowrap');
+      assert.equal(mobileBoot.bootScreen.top, 0);
+      assert.equal(mobileBoot.documentScrollTop, 0);
+      assert.equal(mobileBoot.bodyScrollTop, 0);
+      await mobileContext.close();
+
+      const desktopContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const desktopPage = await desktopContext.newPage();
+      await desktopPage.goto(`${origin}/os/`, { waitUntil: 'domcontentloaded' });
+      const desktopBoot = await desktopPage.evaluate(() => ({
+        logFontSize: getComputedStyle(document.querySelector('#bootLog')).fontSize,
+        logoDisplay: getComputedStyle(document.querySelector('.linux-boot-logo')).display
+      }));
+      assert.equal(desktopBoot.logFontSize, '12px');
+      assert.notEqual(desktopBoot.logoDisplay, 'none');
+      await desktopContext.close();
+    });
+
     await t.test('live navigation renders when cache writes are blocked', async () => {
       const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
       await context.addInitScript(() => {
