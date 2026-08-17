@@ -7,8 +7,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; media-src 'self' https:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'" />
     <title>轻风雨斜 OS · 管理后台</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./admin.css?v=20260815-1" />
-    <script data-cfasync="false" src="./admin.js?v=20260815-1" defer></script>
+    <link rel="stylesheet" href="./admin.css?v=20260815-3" />
+    <script data-cfasync="false" src="./admin.js?v=20260815-3" defer></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -70,9 +70,17 @@
         </nav>
 
         <div class="workspace-grid" id="desktopManagerView" data-admin-section="desktop">
+          <section class="desktop-pages-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow"><i></i> DESKTOP PAGES</p><h2>桌面页</h2></div>
+              <button class="primary-button" id="addDesktopPageButton" type="button">＋ 页面</button>
+            </div>
+            <p class="manager-help">每个桌面页拥有独立的网址和文件夹；拖动页面可调整电脑端侧栏和桌面切换顺序。</p>
+            <div class="desktop-page-manager-list" id="desktopPageManagerList" aria-live="polite"></div>
+          </section>
           <section class="manager-panel">
             <div class="panel-heading">
-              <div><p class="eyebrow"><i></i> DESKTOP ITEMS</p><h2>桌面内容</h2></div>
+              <div><p class="eyebrow"><i></i> DESKTOP ITEMS</p><h2 id="desktopContentTitle">桌面内容</h2></div>
               <div class="toolbar">
                 <button class="secondary-button" id="addFolderButton" type="button">＋ 文件夹</button>
                 <button class="primary-button" id="addLinkButton" type="button">＋ 网址</button>
@@ -130,6 +138,38 @@
         </div>
       </section>
     </main>
+
+    <dialog class="editor-dialog small-dialog" id="pageDialog">
+      <form method="dialog" class="dialog-card" id="pageForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow"><i></i> EDIT DESKTOP PAGE</p><h2 id="pageDialogTitle">新增桌面页</h2></div>
+          <button class="icon-button" type="button" data-close-dialog="pageDialog" aria-label="关闭">×</button>
+        </div>
+        <input id="pageId" type="hidden" />
+        <label><span>页面名称</span><input id="pageName" maxlength="40" required /></label>
+        <p class="form-message" id="pageMessage" role="status"></p>
+        <div class="dialog-actions">
+          <button class="ghost-button" type="button" data-close-dialog="pageDialog">取消</button>
+          <button class="primary-button" type="submit">保存页面</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="editor-dialog small-dialog" id="deletePageDialog">
+      <form method="dialog" class="dialog-card" id="deletePageForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow"><i></i> DELETE DESKTOP PAGE</p><h2>删除桌面页</h2></div>
+          <button class="icon-button" type="button" data-close-dialog="deletePageDialog" aria-label="关闭">×</button>
+        </div>
+        <p class="dialog-copy">该页面的文件夹和网址会被迁移到目标页面，不会被删除。</p>
+        <label><span>迁移到</span><select id="deletePageTarget" required></select></label>
+        <p class="form-message" id="deletePageMessage" role="status"></p>
+        <div class="dialog-actions">
+          <button class="ghost-button" type="button" data-close-dialog="deletePageDialog">取消</button>
+          <button class="danger-button" type="submit">迁移并删除</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="editor-dialog" id="itemDialog">
       <form method="dialog" class="dialog-card" id="itemForm">

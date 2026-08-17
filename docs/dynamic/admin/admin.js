@@ -2,9 +2,12 @@ const API_ROOT = '/api/v1';
 const state = {
   csrfToken: '',
   desktop: null,
+  selectedPageId: '',
   music: null,
   pendingFolderDelete: null,
+  pendingPageDelete: null,
   dragItem: null,
+  dragPageId: null,
   dragMusicId: null,
   previewTrackId: null
 };
@@ -17,6 +20,12 @@ const dashboardAlert = document.querySelector('#dashboardAlert');
 const dashboardAlertMessage = document.querySelector('#dashboardAlertMessage');
 const retryDashboardButton = document.querySelector('#retryDashboardButton');
 const desktopList = document.querySelector('#desktopList');
+const desktopPageManagerList = document.querySelector('#desktopPageManagerList');
+const pageDialog = document.querySelector('#pageDialog');
+const pageForm = document.querySelector('#pageForm');
+const deletePageDialog = document.querySelector('#deletePageDialog');
+const deletePageForm = document.querySelector('#deletePageForm');
+const desktopContentTitle = document.querySelector('#desktopContentTitle');
 const emptyState = document.querySelector('#emptyState');
 const previewIcons = document.querySelector('#previewIcons');
 const saveStatus = document.querySelector('#saveStatus');
@@ -201,18 +210,91 @@ function makeManagerItem(item, parentFolderId = '') {
   return article;
 }
 
+function normalizeDesktopData(desktop) {
+  if (!desktop || typeof desktop !== 'object') return null;
+  if (Array.isArray(desktop.pages)) return desktop;
+  if (!Array.isArray(desktop.items)) return { ...desktop, pages: [] };
+  return {
+    ...desktop,
+    pages: [{
+      id: 'desktop-page-home',
+      name: '主页',
+      position: 0,
+      items: desktop.items
+    }]
+  };
+}
+
+function desktopPages() {
+  return state.desktop?.pages || [];
+}
+
+function selectedPage() {
+  return desktopPages().find((page) => page.id === state.selectedPageId) || desktopPages()[0] || null;
+}
+
+function selectedItems() {
+  return selectedPage()?.items || [];
+}
+
+function syncSelectedPage(preferredId = state.selectedPageId) {
+  const pages = desktopPages();
+  state.selectedPageId = pages.some((page) => page.id === preferredId) ? preferredId : (pages[0]?.id || '');
+}
+
 function allFolders() {
-  return (state.desktop?.items || []).filter((item) => item.type === 'folder');
+  return selectedItems().filter((item) => item.type === 'folder');
 }
 
 function allLinks() {
-  return (state.desktop?.items || []).flatMap((item) => item.type === 'folder' ? item.links : [item]);
+  return selectedItems().flatMap((item) => item.type === 'folder' ? item.links : [item]);
+}
+
+function makePageManagerItem(page, index) {
+  const article = document.createElement('article');
+  article.className = 'desktop-page-manager-item';
+  article.dataset.pageId = page.id;
+  article.draggable = true;
+  if (page.id === state.selectedPageId) article.classList.add('is-selected');
+
+  const select = document.createElement('button');
+  select.type = 'button';
+  select.className = 'desktop-page-select';
+  select.dataset.action = 'select-page';
+  select.setAttribute('aria-pressed', String(page.id === state.selectedPageId));
+  const order = document.createElement('span');
+  order.className = 'desktop-page-order';
+  order.textContent = String(index + 1).padStart(2, '0');
+  const copy = document.createElement('span');
+  const name = document.createElement('strong');
+  name.textContent = page.name;
+  const count = document.createElement('small');
+  const links = page.items.flatMap((item) => item.type === 'folder' ? item.links : [item]);
+  count.textContent = `${page.items.filter((item) => item.type === 'folder').length} 个文件夹 · ${links.length} 个网址`;
+  copy.append(name, count);
+  select.append(order, copy);
+
+  const actions = document.createElement('div');
+  actions.className = 'desktop-page-actions';
+  actions.append(
+    button('↑', 'move-page-up', '上移页面'),
+    button('↓', 'move-page-down', '下移页面'),
+    button('重命名', 'rename-page'),
+    button('删除', 'delete-page')
+  );
+  article.append(select, actions);
+  return article;
+}
+
+function renderPages() {
+  desktopPageManagerList.replaceChildren();
+  desktopPages().forEach((page, index) => desktopPageManagerList.append(makePageManagerItem(page, index)));
 }
 
 function renderPreview() {
   previewIcons.replaceChildren();
   const terminal = { type: 'link', title: '终端', icon: '$_', color: '#ef3f57' };
-  [terminal, ...(state.desktop?.items || [])].slice(0, 11).forEach((item) => {
+  [terminal, ...selectedItems()].slice(0, 11).forEach((item) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'preview-item';
     wrapper.append(makeIcon(item, 'preview-item-icon'));
@@ -225,11 +307,18 @@ function renderPreview() {
 
 function render() {
   if (!state.desktop) return;
+  syncSelectedPage();
+  const page = selectedPage();
+  const items = selectedItems();
+  renderPages();
   desktopList.replaceChildren();
-  state.desktop.items.forEach((item) => desktopList.append(makeManagerItem(item)));
-  emptyState.hidden = state.desktop.items.length > 0;
-  document.querySelector('#folderCount').textContent = String(allFolders().length);
-  document.querySelector('#linkCount').textContent = String(allLinks().length);
+  items.forEach((item) => desktopList.append(makeManagerItem(item)));
+  emptyState.hidden = items.length > 0;
+  document.querySelector('#addFolderButton').disabled = !page;
+  document.querySelector('#addLinkButton').disabled = !page;
+  if (desktopContentTitle) desktopContentTitle.textContent = page ? `${page.name} · 桌面内容` : '桌面内容';
+  document.querySelector('#folderCount').textContent = String(desktopPages().flatMap((entry) => entry.items).filter((item) => item.type === 'folder').length);
+  document.querySelector('#linkCount').textContent = String(desktopPages().flatMap((entry) => entry.items).flatMap((item) => item.type === 'folder' ? item.links : [item]).length);
   document.querySelector('#versionCount').textContent = String(state.desktop.version || 1);
   renderPreview();
 }
@@ -353,7 +442,8 @@ async function loadDesktop() {
   setSaveStatus('正在读取桌面数据…', 'saving');
   try {
     const desktop = await api('/desktop');
-    state.desktop = desktop;
+    state.desktop = normalizeDesktopData(desktop);
+    syncSelectedPage();
     render();
     setSaveStatus('所有修改都会立即保存。');
   } catch (error) {
@@ -398,7 +488,10 @@ async function saveResult(promise, successMessage) {
   setSaveStatus('正在保存到云端…', 'saving');
   try {
     const result = await promise;
-    if (result.desktop) state.desktop = result.desktop;
+    if (result.desktop) {
+      state.desktop = normalizeDesktopData(result.desktop);
+      syncSelectedPage();
+    }
     render();
     setSaveStatus('已保存，公开桌面刷新后立即生效。');
     showToast(successMessage);
@@ -446,7 +539,7 @@ function openItemDialog(type, item = null, parentFolderId = '') {
 }
 
 function findItem(id) {
-  for (const item of state.desktop.items) {
+  for (const item of selectedItems()) {
     if (item.id === id) return { item, parentFolderId: '' };
     if (item.type === 'folder') {
       const link = item.links.find((child) => child.id === id);
@@ -459,14 +552,16 @@ function findItem(id) {
 function layoutPayload() {
   return {
     version: Number(state.desktop?.version || 0),
-    topLevel: state.desktop.items.map((item) => ({ id: item.id, type: item.type })),
+    pageId: state.selectedPageId,
+    topLevel: selectedItems().map((item) => ({ id: item.id, type: item.type })),
     folders: Object.fromEntries(allFolders().map((folder) => [folder.id, folder.links.map((link) => link.id)]))
   };
 }
 
 function removeItemFromState(id) {
-  const topIndex = state.desktop.items.findIndex((item) => item.id === id);
-  if (topIndex >= 0) return state.desktop.items.splice(topIndex, 1)[0];
+  const items = selectedItems();
+  const topIndex = items.findIndex((item) => item.id === id);
+  if (topIndex >= 0) return items.splice(topIndex, 1)[0];
   for (const folder of allFolders()) {
     const childIndex = folder.links.findIndex((link) => link.id === id);
     if (childIndex >= 0) return folder.links.splice(childIndex, 1)[0];
@@ -532,12 +627,13 @@ function createLatestSaveQueue({ payload, save, apply, renderView, setStatus, su
 
 function applyDesktopLayoutResult(result, preserveLocalOrder) {
   if (!result.desktop) throw new Error('服务器没有返回桌面数据。');
+  const desktop = normalizeDesktopData(result.desktop);
   if (!preserveLocalOrder) {
-    if (!state.desktop || result.desktop.version >= state.desktop.version) state.desktop = result.desktop;
+    if (!state.desktop || desktop.version >= state.desktop.version) state.desktop = desktop;
     return;
   }
-  state.desktop.version = Math.max(state.desktop.version, result.desktop.version);
-  state.desktop.updatedAt = Math.max(state.desktop.updatedAt, result.desktop.updatedAt);
+  state.desktop.version = Math.max(state.desktop.version, desktop.version);
+  state.desktop.updatedAt = Math.max(state.desktop.updatedAt, desktop.updatedAt);
 }
 
 const enqueueDesktopLayoutSave = createLatestSaveQueue({
@@ -553,6 +649,117 @@ const enqueueDesktopLayoutSave = createLatestSaveQueue({
 function persistLayout() {
   return enqueueDesktopLayoutSave().catch(() => {});
 }
+
+function pageLayoutPayload() {
+  return {
+    version: Number(state.desktop?.version || 0),
+    ids: desktopPages().map((page) => page.id)
+  };
+}
+
+const enqueuePageLayoutSave = createLatestSaveQueue({
+  payload: pageLayoutPayload,
+  save: (body) => api('/admin/pages/layout', { method: 'PUT', body }),
+  apply: applyDesktopLayoutResult,
+  renderView: render,
+  setStatus: setSaveStatus,
+  successMessage: '页面顺序已保存',
+  reload: loadDesktop
+});
+
+function persistPageLayout() {
+  return enqueuePageLayoutSave().catch(() => {});
+}
+
+function openPageDialog(page = null) {
+  document.querySelector('#pageDialogTitle').textContent = page ? '重命名桌面页' : '新增桌面页';
+  document.querySelector('#pageId').value = page?.id || '';
+  document.querySelector('#pageName').value = page?.name || '';
+  document.querySelector('#pageMessage').textContent = '';
+  pageDialog.showModal();
+  document.querySelector('#pageName').focus();
+}
+
+function openDeletePageDialog(page) {
+  const targets = desktopPages().filter((candidate) => candidate.id !== page.id);
+  if (!targets.length) {
+    showToast('至少需要保留一个桌面页。');
+    return;
+  }
+  state.pendingPageDelete = page.id;
+  const select = document.querySelector('#deletePageTarget');
+  select.replaceChildren(...targets.map((target) => new Option(target.name, target.id)));
+  document.querySelector('#deletePageMessage').textContent = '';
+  deletePageDialog.showModal();
+  select.focus();
+}
+
+desktopPageManagerList.addEventListener('click', (event) => {
+  const actionButton = event.target.closest('[data-action]');
+  const item = event.target.closest('[data-page-id]');
+  if (!actionButton || !item) return;
+  const pages = desktopPages();
+  const index = pages.findIndex((page) => page.id === item.dataset.pageId);
+  if (index < 0) return;
+  const page = pages[index];
+  const action = actionButton.dataset.action;
+  if (action === 'select-page') {
+    state.selectedPageId = page.id;
+    render();
+    return;
+  }
+  if (action === 'rename-page') {
+    openPageDialog(page);
+    return;
+  }
+  if (action === 'delete-page') {
+    openDeletePageDialog(page);
+    return;
+  }
+  if (action === 'move-page-up' || action === 'move-page-down') {
+    const nextIndex = action === 'move-page-up' ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= pages.length) return;
+    [pages[index], pages[nextIndex]] = [pages[nextIndex], pages[index]];
+    persistPageLayout();
+  }
+});
+
+desktopPageManagerList.addEventListener('dragstart', (event) => {
+  const item = event.target.closest('[data-page-id]');
+  if (!item) return;
+  state.dragPageId = item.dataset.pageId;
+  item.classList.add('is-dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', state.dragPageId);
+});
+
+desktopPageManagerList.addEventListener('dragend', (event) => {
+  event.target.closest('[data-page-id]')?.classList.remove('is-dragging');
+  desktopPageManagerList.classList.remove('drag-over');
+  state.dragPageId = null;
+});
+
+desktopPageManagerList.addEventListener('dragover', (event) => {
+  if (!state.dragPageId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  desktopPageManagerList.classList.add('drag-over');
+});
+
+desktopPageManagerList.addEventListener('drop', (event) => {
+  if (!state.dragPageId) return;
+  event.preventDefault();
+  desktopPageManagerList.classList.remove('drag-over');
+  const pages = desktopPages();
+  const sourceIndex = pages.findIndex((page) => page.id === state.dragPageId);
+  const target = event.target.closest('[data-page-id]');
+  let targetIndex = target ? pages.findIndex((page) => page.id === target.dataset.pageId) : pages.length;
+  if (sourceIndex < 0 || targetIndex === sourceIndex) return;
+  const [moving] = pages.splice(sourceIndex, 1);
+  if (sourceIndex < targetIndex) targetIndex -= 1;
+  pages.splice(Math.max(0, targetIndex), 0, moving);
+  persistPageLayout();
+});
 
 desktopList.addEventListener('dragstart', (event) => {
   const item = event.target.closest('[data-manager-id]');
@@ -589,7 +796,7 @@ desktopList.addEventListener('drop', (event) => {
     const folder = allFolders().find((item) => item.id === list.dataset.folderId);
     folder?.links.splice(Math.max(0, index), 0, moving);
   } else {
-    state.desktop.items.splice(Math.max(0, index), 0, moving);
+    selectedItems().splice(Math.max(0, index), 0, moving);
   }
   persistLayout();
 });
@@ -618,7 +825,7 @@ desktopList.addEventListener('click', async (event) => {
   if (action === 'move-up' || action === 'move-down') {
     const collection = parentFolderId
       ? allFolders().find((folder) => folder.id === parentFolderId).links
-      : state.desktop.items;
+      : selectedItems();
     const index = collection.findIndex((entry) => entry.id === item.id);
     const nextIndex = action === 'move-up' ? index - 1 : index + 1;
     if (index < 0 || nextIndex < 0 || nextIndex >= collection.length) return;
@@ -737,6 +944,55 @@ musicList.addEventListener('click', async (event) => {
   }
 });
 
+pageForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const submit = pageForm.querySelector('[type="submit"]');
+  const id = document.querySelector('#pageId').value;
+  const name = document.querySelector('#pageName').value;
+  setBusy(submit, true);
+  document.querySelector('#pageMessage').textContent = '';
+  try {
+    const result = await saveResult(
+      api(`/admin/pages${id ? `/${encodeURIComponent(id)}` : ''}`, {
+        method: id ? 'PATCH' : 'POST',
+        body: { name }
+      }),
+      id ? '页面名称已更新' : '桌面页已添加'
+    );
+    const savedPage = result.desktop?.pages?.find((page) => id ? page.id === id : page.name === name.trim());
+    if (savedPage) state.selectedPageId = savedPage.id;
+    render();
+    pageDialog.close();
+  } catch (error) {
+    document.querySelector('#pageMessage').textContent = error.message;
+  } finally {
+    setBusy(submit, false);
+  }
+});
+
+deletePageForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const pageId = state.pendingPageDelete;
+  const targetPageId = document.querySelector('#deletePageTarget').value;
+  if (!pageId || !targetPageId) return;
+  const submit = deletePageForm.querySelector('[type="submit"]');
+  setBusy(submit, true);
+  document.querySelector('#deletePageMessage').textContent = '';
+  try {
+    state.selectedPageId = targetPageId;
+    await saveResult(
+      api(`/admin/pages/${encodeURIComponent(pageId)}?targetPageId=${encodeURIComponent(targetPageId)}`, { method: 'DELETE' }),
+      '页面内容已迁移，桌面页已删除'
+    );
+    state.pendingPageDelete = null;
+    deletePageDialog.close();
+  } catch (error) {
+    document.querySelector('#deletePageMessage').textContent = error.message;
+  } finally {
+    setBusy(submit, false);
+  }
+});
+
 itemForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submit = itemForm.querySelector('[type="submit"]');
@@ -745,12 +1001,14 @@ itemForm.addEventListener('submit', async (event) => {
   const body = type === 'folder' ? {
     name: document.querySelector('#itemName').value,
     icon: document.querySelector('#itemIcon').value,
-    color: document.querySelector('#itemColor').value
+    color: document.querySelector('#itemColor').value,
+    ...(!id ? { pageId: state.selectedPageId } : {})
   } : {
     title: document.querySelector('#itemName').value,
     url: document.querySelector('#itemUrl').value,
     icon: document.querySelector('#itemIcon').value,
     color: document.querySelector('#itemColor').value,
+    pageId: state.selectedPageId,
     folderId: document.querySelector('#itemFolder').value || null,
     openMode: document.querySelector('#itemOpenMode').value
   };
@@ -809,6 +1067,7 @@ async function deletePendingFolder(mode) {
 
 document.querySelector('#moveFolderLinksButton').addEventListener('click', () => deletePendingFolder('move'));
 document.querySelector('#deleteFolderLinksButton').addEventListener('click', () => deletePendingFolder('delete'));
+document.querySelector('#addDesktopPageButton').addEventListener('click', () => openPageDialog());
 document.querySelector('#addFolderButton').addEventListener('click', () => openItemDialog('folder'));
 document.querySelector('#addLinkButton').addEventListener('click', () => openItemDialog('link'));
 document.querySelector('#addMusicButton').addEventListener('click', () => openMusicDialog());
@@ -876,6 +1135,7 @@ document.querySelector('#logoutButton').addEventListener('click', async () => {
   try { await api('/auth/logout', { method: 'POST' }); } catch { /* Clear the local view even if the session expired. */ }
   state.csrfToken = '';
   state.desktop = null;
+  state.selectedPageId = '';
   state.music = null;
   stopMusicPreview();
   document.querySelector('#musicCount').textContent = '0';

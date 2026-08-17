@@ -7,7 +7,14 @@ const bootProgressPetSprite = document.querySelector('.boot-progress-pet-sprite'
 const bootProgressValue = document.querySelector('#bootProgressValue');
 const bootProgressStatus = document.querySelector('#bootProgressStatus');
 const desktop = document.querySelector('#desktop');
+const pageViewport = document.querySelector('#pageViewport');
+const pageTrack = document.querySelector('#pageTrack');
 const windows = [...document.querySelectorAll('.app-window')];
+const globalDesktopLayers = [
+  ...windows,
+  ...document.querySelectorAll('.navigation-folder, .desktop-context-menu, .command-palette')
+];
+globalDesktopLayers.forEach((layer) => pageViewport?.append(layer));
 const mobileLayoutMedia = window.matchMedia('(max-width: 800px)');
 let topZ = 60;
 let bootComplete = false;
@@ -536,35 +543,59 @@ if (desktopPet) {
 const defaultDesktopNavigation = {
   version: 1,
   updatedAt: 0,
-  items: [
-    {
-      id: 'folder-lightwind', type: 'folder', title: '轻风雨斜 OS', icon: '✦', color: '#f4c84a', position: 0,
-      links: [
-        { id: 'link-dynamic', type: 'link', title: '动态', url: '/dynamic/', icon: '◫', color: '#e33a52', openMode: 'same', position: 0 },
-        { id: 'link-about', type: 'link', title: '关于', url: '/about.html', icon: '@', color: '#d8b4bd', openMode: 'same', position: 1 }
-      ]
-    },
-    { id: 'link-github', type: 'link', title: 'GitHub', url: 'https://github.com/QingFengYuXie', icon: '⌘', color: '#ddd5d7', openMode: 'new', position: 1 },
-    { id: 'link-contact', type: 'link', title: '联系我', url: 'mailto:2399975530@qq.com', icon: '@', color: '#e8d9dc', openMode: 'same', position: 2 }
-  ]
+  pages: [{
+    id: 'desktop-page-home',
+    name: '主页',
+    position: 0,
+    items: [
+      {
+        id: 'folder-lightwind', type: 'folder', title: '轻风雨斜 OS', icon: '✦', color: '#f4c84a', position: 0,
+        links: [
+          { id: 'link-dynamic', type: 'link', title: '动态', url: '/dynamic/', icon: '◫', color: '#e33a52', openMode: 'same', position: 0 },
+          { id: 'link-about', type: 'link', title: '关于', url: '/about.html', icon: '@', color: '#d8b4bd', openMode: 'same', position: 1 }
+        ]
+      },
+      { id: 'link-github', type: 'link', title: 'GitHub', url: 'https://github.com/QingFengYuXie', icon: '⌘', color: '#ddd5d7', openMode: 'new', position: 1 },
+      { id: 'link-contact', type: 'link', title: '联系我', url: 'mailto:2399975530@qq.com', icon: '@', color: '#e8d9dc', openMode: 'same', position: 2 }
+    ]
+  }]
 };
 
-let desktopNavigation = defaultDesktopNavigation;
+let desktopPages = defaultDesktopNavigation.pages;
+let desktopNavigation = desktopPages[0];
+let currentPageIndex = 0;
+let pageGridElements = [];
 let desktopIconZ = 30;
 let desktopIcons = [];
-const iconGrid = document.querySelector('#desktopIcons');
-const navigationLoading = document.querySelector('#navigationLoading');
+let iconGrid = document.querySelector('#desktopIcons');
+const pageSidebar = document.querySelector('#desktopPageSidebar');
+const pageSidebarList = document.querySelector('#desktopPageSidebarList');
 const navigationFolder = document.querySelector('#navigationFolder');
 const navigationFolderTitle = document.querySelector('#navigationFolderTitle');
 const navigationFolderGrid = document.querySelector('#navigationFolderGrid');
 const navigationFolderEmpty = document.querySelector('#navigationFolderEmpty');
-const iconGridStorageKey = 'lightwind-desktop-grid-v2';
-const navigationCacheKey = 'lightwind-navigation-cache-v1';
+const iconGridStorageKey = 'lightwind-desktop-grid-v3';
+const navigationCacheKey = 'lightwind-navigation-cache-v2';
 const iconCellWidth = 112;
 const iconCellHeight = 96;
 
-function iconCellMetrics() {
-  const styles = getComputedStyle(iconGrid);
+function iconGridStorage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(iconGridStorageKey) || '{}');
+    return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveIconGrid() {
+  const saved = iconGridStorage();
+  saved[desktopNavigation.id] = Object.fromEntries(desktopIcons.map((icon) => [icon.dataset.navigationId, iconCell(icon)]));
+  try { localStorage.setItem(iconGridStorageKey, JSON.stringify(saved)); } catch { /* Optional layout persistence. */ }
+}
+
+function iconCellMetrics(target = iconGrid) {
+  const styles = getComputedStyle(target);
   return {
     width: Number.parseFloat(styles.getPropertyValue('--cell-w')) || iconCellWidth,
     height: Number.parseFloat(styles.getPropertyValue('--cell-h')) || iconCellHeight
@@ -614,18 +645,13 @@ function nearestFreeCell(targetX, targetY, movingIcon) {
   return cells[0] || iconCell(movingIcon);
 }
 
-function saveIconGrid() {
-  const positions = Object.fromEntries(desktopIcons.map((icon) => [icon.dataset.navigationId, iconCell(icon)]));
-  localStorage.setItem(iconGridStorageKey, JSON.stringify(positions));
-}
-
 function restoreIconGrid() {
+  const saved = iconGridStorage()[desktopNavigation.id] || {};
   try {
-    const saved = JSON.parse(localStorage.getItem(iconGridStorageKey));
     const { columns, rows } = gridCapacity();
     const occupied = new Set();
     desktopIcons.forEach((icon) => {
-      const position = saved && !Array.isArray(saved) ? saved[icon.dataset.navigationId] : null;
+      const position = saved[icon.dataset.navigationId];
       const defaultPosition = iconCell(icon);
       const targetX = Math.max(0, Math.min(columns - 1, Number(position?.x ?? defaultPosition.x) || 0));
       const targetY = Math.max(0, Math.min(rows - 1, Number(position?.y ?? defaultPosition.y) || 0));
@@ -677,22 +703,36 @@ function normalizeNavigationLink(value) {
 }
 
 function normalizeDesktopNavigation(value) {
-  if (!value || !Array.isArray(value.items) || value.items.length > 100) return null;
-  const items = value.items.map((item) => {
-    if (item?.type === 'link') return normalizeNavigationLink(item);
-    if (item?.type !== 'folder') return null;
-    const id = String(item.id || '');
-    const title = String(item.title || '').trim().slice(0, 40);
-    if (!/^[a-zA-Z0-9_-]{1,90}$/.test(id) || !title || !Array.isArray(item.links) || item.links.length > 100) return null;
-    return {
-      id, type: 'folder', title,
-      icon: String(item.icon || '▰').trim().slice(0, 24) || '▰',
-      color: /^#[0-9a-f]{6}$/i.test(item.color) ? item.color : '#f4c84a',
-      position: Number(item.position) || 0,
-      links: item.links.map(normalizeNavigationLink).filter(Boolean)
+  if (!value || !Array.isArray(value.pages) || value.pages.length < 1 || value.pages.length > 100) {
+    if (!value || !Array.isArray(value.items)) return null;
+    value = {
+      ...value,
+      pages: [{ id: 'desktop-page-home', name: '主页', position: 0, items: value.items }]
     };
+  }
+  const pages = value.pages.map((page, pageIndex) => {
+    const id = String(page?.id || '');
+    const name = String(page?.name || `桌面 ${pageIndex + 1}`).trim().slice(0, 40);
+    if (!/^[a-zA-Z0-9_-]{1,90}$/.test(id) || !name || !Array.isArray(page.items) || page.items.length > 100) return null;
+    const items = page.items.map((item) => {
+      if (item?.type === 'link') return normalizeNavigationLink(item);
+      if (item?.type !== 'folder') return null;
+      const folderId = String(item.id || '');
+      const title = String(item.title || '').trim().slice(0, 40);
+      if (!/^[a-zA-Z0-9_-]{1,90}$/.test(folderId) || !title || !Array.isArray(item.links) || item.links.length > 100) return null;
+      return {
+        id: folderId,
+        type: 'folder',
+        title,
+        icon: String(item.icon || '▰').trim().slice(0, 24) || '▰',
+        color: /^#[0-9a-f]{6}$/i.test(item.color) ? item.color : '#f4c84a',
+        position: Number(item.position) || 0,
+        links: item.links.map(normalizeNavigationLink).filter(Boolean)
+      };
+    }).filter(Boolean);
+    return { id, name, position: Number(page.position) || pageIndex, items };
   }).filter(Boolean);
-  return { version: Number(value.version) || 1, updatedAt: Number(value.updatedAt) || 0, items };
+  return pages.length ? { version: Number(value.version) || 1, updatedAt: Number(value.updatedAt) || 0, pages } : null;
 }
 
 function createFaviconLoader() {
@@ -941,12 +981,80 @@ function bindDesktopIcon(icon) {
   icon.addEventListener('dragstart', (event) => event.preventDefault());
 }
 
-function renderDesktopNavigation(data) {
-  desktopNavigation = data;
-  iconGrid.querySelectorAll('[data-managed-navigation]').forEach((element) => element.remove());
-  if (navigationLoading) navigationLoading.hidden = true;
-  const estimatedColumns = Math.max(1, Math.floor(iconGrid.clientWidth / iconCellMetrics().width));
-  data.items.forEach((item, itemIndex) => {
+function makeTerminalIcon() {
+  const button = document.createElement('button');
+  button.className = 'desktop-icon terminal-icon';
+  button.type = 'button';
+  button.dataset.open = 'terminalWindow';
+  button.dataset.navigationId = 'system-terminal';
+  button.title = '打开命令工具';
+  const icon = document.createElement('span');
+  icon.className = 'icon app-icon';
+  icon.textContent = '$_';
+  const label = document.createElement('span');
+  label.textContent = '终端';
+  button.append(icon, label);
+  return button;
+}
+
+function createAdditionalPage(page) {
+  const main = document.createElement('main');
+  main.className = 'desktop site-page home-page';
+  main.dataset.generatedPage = 'true';
+  main.dataset.pageId = page.id;
+  main.dataset.pageName = page.name;
+  main.setAttribute('aria-label', page.name);
+  main.innerHTML = '<div class="stars stars-a"></div><div class="stars stars-b"></div><div class="stars stars-c"></div><div class="aurora aurora-a"></div><div class="aurora aurora-b"></div>';
+
+  const topbar = document.createElement('div');
+  topbar.className = 'desktop-topbar generated-page-topbar';
+  const brand = document.createElement('div');
+  brand.className = 'os-brand';
+  brand.textContent = '轻风雨斜 OS';
+  const pageLabel = document.createElement('span');
+  pageLabel.className = 'generated-page-label';
+  pageLabel.textContent = page.name;
+  topbar.append(brand, pageLabel);
+
+  const grid = document.createElement('section');
+  grid.className = 'desktop-icons';
+  grid.dataset.pageId = page.id;
+  grid.setAttribute('aria-label', `${page.name}桌面网址导航`);
+  grid.setAttribute('aria-busy', 'true');
+  grid.append(makeTerminalIcon());
+  main.append(topbar, grid);
+  return main;
+}
+
+function renderPageSidebar() {
+  if (!pageSidebarList) return;
+  pageSidebarList.replaceChildren();
+  desktopPages.forEach((page, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'desktop-page-sidebar-item';
+    button.dataset.pageIndex = String(index);
+    button.setAttribute('aria-label', `切换到${page.name}`);
+    button.setAttribute('aria-current', String(index === currentPageIndex));
+    const number = document.createElement('span');
+    number.className = 'desktop-page-sidebar-number';
+    number.textContent = String(index + 1).padStart(2, '0');
+    const name = document.createElement('span');
+    name.className = 'desktop-page-sidebar-name';
+    name.textContent = page.name;
+    button.append(number, name);
+    pageSidebarList.append(button);
+  });
+  if (pageSidebar) pageSidebar.hidden = desktopPages.length === 0;
+}
+
+function renderPageNavigation(page, grid, isCurrent) {
+  grid.querySelectorAll('[data-managed-navigation]').forEach((element) => element.remove());
+  if (!grid.querySelector('.terminal-icon')) grid.prepend(makeTerminalIcon());
+  const loading = grid.querySelector('.navigation-loading');
+  if (loading) loading.hidden = true;
+  const estimatedColumns = Math.max(1, Math.floor(grid.clientWidth / iconCellMetrics(grid).width));
+  page.items.forEach((item, itemIndex) => {
     const button = document.createElement('button');
     const slot = itemIndex + 1;
     button.type = 'button';
@@ -960,12 +1068,152 @@ function renderDesktopNavigation(data) {
     const label = document.createElement('span');
     label.textContent = item.title;
     button.append(label);
-    iconGrid.append(button);
+    grid.append(button);
   });
-  iconGrid.setAttribute('aria-busy', 'false');
-  desktopIcons = [...iconGrid.querySelectorAll('.desktop-icon')];
+  grid.setAttribute('aria-busy', 'false');
+  if (isCurrent) {
+    desktopNavigation = page;
+    iconGrid = grid;
+    desktopIcons = [...grid.querySelectorAll('.desktop-icon')];
+    desktopIcons.forEach(bindDesktopIcon);
+    restoreIconGrid();
+  }
+}
+
+function activatePage(index) {
+  const page = desktopPages[index];
+  const grid = pageGridElements[index]?.querySelector('.desktop-icons');
+  if (!page || !grid) return;
+  currentPageIndex = index;
+  desktopNavigation = page;
+  iconGrid = grid;
+  desktopIcons = [...grid.querySelectorAll('.desktop-icon')];
   desktopIcons.forEach(bindDesktopIcon);
   restoreIconGrid();
+}
+
+function goToPage(index, source = 'programmatic') {
+  if (!desktopPages.length || !pageTrack) return;
+  const nextIndex = Math.max(0, Math.min(desktopPages.length - 1, Number(index) || 0));
+  currentPageIndex = nextIndex;
+  pageTrack.style.transform = `translate3d(${-nextIndex * 100}%, 0, 0)`;
+  pageTrack.dataset.pageIndex = String(nextIndex);
+  document.body.dataset.page = String(nextIndex);
+  pageGridElements.forEach((pageElement, pageIndex) => {
+    const inactive = pageIndex !== nextIndex;
+    pageElement.setAttribute('aria-hidden', String(inactive));
+    pageElement.inert = inactive;
+  });
+  renderPageSidebar();
+  activatePage(nextIndex);
+  if (source !== 'programmatic') pageViewport.focus({ preventScroll: true });
+}
+
+function renderDesktopPages(data) {
+  desktopPages = data.pages;
+  const firstPage = desktopPages[0];
+  desktop.dataset.pageId = firstPage.id;
+  desktop.dataset.pageName = firstPage.name;
+  desktop.setAttribute('aria-label', firstPage.name);
+  pageTrack.querySelectorAll('[data-generated-page]').forEach((element) => element.remove());
+  pageGridElements = [desktop];
+  desktopPages.slice(1).forEach((page) => {
+    const pageElement = createAdditionalPage(page);
+    pageTrack.append(pageElement);
+    pageGridElements.push(pageElement);
+  });
+  pageGridElements.forEach((pageElement, index) => {
+    const page = desktopPages[index];
+    renderPageNavigation(page, pageElement.querySelector('.desktop-icons'), index === 0);
+  });
+  renderPageSidebar();
+  goToPage(Math.min(currentPageIndex, desktopPages.length - 1));
+}
+
+function bindPageNavigation() {
+  pageSidebarList?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-page-index]');
+    if (button) goToPage(Number(button.dataset.pageIndex), 'sidebar');
+  });
+
+  let wheelLockedUntil = 0;
+  pageViewport?.addEventListener('wheel', (event) => {
+    if (mobileLayoutMedia.matches || Math.abs(event.deltaY) < 12) return;
+    if (event.target.closest('.app-window, .navigation-folder, .desktop-context-menu, .command-palette, .site-global-nav, .site-music-player')) return;
+    const now = Date.now();
+    if (now < wheelLockedUntil) {
+      event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    wheelLockedUntil = now + 620;
+    goToPage(currentPageIndex + (event.deltaY > 0 ? 1 : -1), 'wheel');
+  }, { passive: false });
+
+  let gesture = null;
+  pageViewport?.addEventListener('pointerdown', (event) => {
+    if (!mobileLayoutMedia.matches || event.pointerType === 'mouse') return;
+    if (event.target.closest('.app-window, .desktop-icon, .desktop-pet, .navigation-folder, .desktop-context-menu, .command-palette, .site-global-nav, .site-music-player, a, button, input, select, textarea')) return;
+    gesture = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startedAt: performance.now(),
+      horizontal: false
+    };
+  });
+  pageViewport?.addEventListener('pointermove', (event) => {
+    if (!gesture || event.pointerId !== gesture.pointerId) return;
+    const dx = event.clientX - gesture.startX;
+    const dy = event.clientY - gesture.startY;
+    if (!gesture.horizontal && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      gesture.horizontal = true;
+      try { pageViewport.setPointerCapture?.(event.pointerId); } catch { /* Synthetic events may not own a live pointer. */ }
+    }
+    if (!gesture.horizontal) return;
+    event.preventDefault();
+    pageTrack.classList.add('is-dragging');
+    const offset = (dx / Math.max(1, pageViewport.clientWidth)) * 100;
+    pageTrack.style.transform = `translate3d(${-currentPageIndex * 100 + offset}%, 0, 0)`;
+  }, { passive: false });
+  const finishGesture = (event) => {
+    if (!gesture || event.pointerId !== gesture.pointerId) return;
+    const dx = event.clientX - gesture.startX;
+    const elapsed = Math.max(1, performance.now() - gesture.startedAt);
+    const velocity = Math.abs(dx) / elapsed;
+    const threshold = Math.max(48, pageViewport.clientWidth * .14);
+    const shouldSwitch = gesture.horizontal && (Math.abs(dx) >= threshold || (Math.abs(dx) >= 32 && velocity >= .45));
+    pageTrack.classList.remove('is-dragging');
+    try {
+      if (pageViewport.hasPointerCapture?.(event.pointerId)) pageViewport.releasePointerCapture(event.pointerId);
+    } catch { /* The pointer may already have been released by the browser. */ }
+    if (shouldSwitch) {
+      goToPage(currentPageIndex + (dx < 0 ? 1 : -1), 'swipe');
+    } else {
+      goToPage(currentPageIndex, 'programmatic');
+    }
+    gesture = null;
+  };
+  pageViewport?.addEventListener('pointerup', finishGesture);
+  pageViewport?.addEventListener('pointercancel', (event) => {
+    if (gesture?.pointerId === event.pointerId) {
+      pageTrack.classList.remove('is-dragging');
+      goToPage(currentPageIndex, 'programmatic');
+      gesture = null;
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (!bootScreen.classList.contains('hidden') || event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+      event.preventDefault();
+      goToPage(currentPageIndex + 1, 'keyboard');
+    }
+    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+      event.preventDefault();
+      goToPage(currentPageIndex - 1, 'keyboard');
+    }
+  });
 }
 
 async function loadDesktopNavigation() {
@@ -976,13 +1224,13 @@ async function loadDesktopNavigation() {
   } catch {
     try { localStorage.removeItem(navigationCacheKey); } catch { /* Storage may be blocked. */ }
   }
-  renderDesktopNavigation(initial);
+  renderDesktopPages(initial);
   try {
     const response = await fetch('/api/v1/desktop', { headers: { accept: 'application/json' }, cache: 'no-cache' });
     if (!response.ok) throw new Error('navigation api unavailable');
     const data = normalizeDesktopNavigation(await response.json());
     if (!data) throw new Error('invalid navigation data');
-    renderDesktopNavigation(data);
+    renderDesktopPages(data);
     iconGrid.classList.remove('uses-cached-navigation');
     try {
       localStorage.setItem(navigationCacheKey, JSON.stringify(data));
@@ -997,6 +1245,7 @@ async function loadDesktopNavigation() {
 document.querySelector('#closeNavigationFolder')?.addEventListener('click', closeNavigationFolder);
 navigationFolder?.addEventListener('pointerdown', (event) => { if (event.target === navigationFolder) closeNavigationFolder(); });
 
+bindPageNavigation();
 loadDesktopNavigation();
 
 const clockElement = document.querySelector('#clock');
