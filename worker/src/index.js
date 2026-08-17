@@ -16,6 +16,7 @@ import {
   normalizeFolderInput,
   normalizeLinkInput,
   normalizeMusicInput,
+  normalizePageInput,
   readJson
 } from './validation.js';
 import { publicFavicon } from './favicon.js';
@@ -130,6 +131,7 @@ function mapLink(row) {
   return {
     id: row.id,
     type: 'link',
+    pageId: row.pageId || null,
     title: row.title,
     url: row.url,
     icon: row.icon || '',
@@ -161,41 +163,53 @@ async function getMusicData(env) {
 }
 
 async function getDesktopData(env) {
-  const [meta, folderResult, linkResult] = await Promise.all([
+  const [meta, pageResult, folderResult, linkResult] = await Promise.all([
     env.DB.prepare('SELECT version, updated_at AS updatedAt FROM desktop_meta WHERE id = 1').first(),
-    env.DB.prepare('SELECT id, name, icon, color, position FROM folders ORDER BY position, id').all(),
+    env.DB.prepare('SELECT id, name, position FROM desktop_pages ORDER BY position, id').all(),
+    env.DB.prepare('SELECT id, page_id AS pageId, name, icon, color, position FROM folders ORDER BY page_id, position, id').all(),
     env.DB.prepare(
-      `SELECT id, folder_id AS folderId, title, url, icon, color, open_mode AS openMode, position
-         FROM links ORDER BY position, id`
+      `SELECT id, page_id AS pageId, folder_id AS folderId, title, url, icon, color, open_mode AS openMode, position
+         FROM links ORDER BY page_id, folder_id, position, id`
     ).all()
   ]);
   const linksByFolder = new Map();
-  const topLevel = [];
+  const linksByPage = new Map();
+  const foldersByPage = new Map();
   for (const row of linkResult.results || []) {
     const link = mapLink(row);
     if (row.folderId) {
       if (!linksByFolder.has(row.folderId)) linksByFolder.set(row.folderId, []);
       linksByFolder.get(row.folderId).push(link);
     } else {
-      topLevel.push(link);
+      if (!linksByPage.has(row.pageId)) linksByPage.set(row.pageId, []);
+      linksByPage.get(row.pageId).push(link);
     }
   }
-  for (const folder of folderResult.results || []) {
-    topLevel.push({
-      id: folder.id,
+  for (const row of folderResult.results || []) {
+    const folder = {
+      id: row.id,
       type: 'folder',
-      title: folder.name,
-      icon: folder.icon || '▰',
-      color: folder.color,
-      position: Number(folder.position),
-      links: linksByFolder.get(folder.id) || []
-    });
+      pageId: row.pageId,
+      title: row.name,
+      icon: row.icon || '▰',
+      color: row.color,
+      position: Number(row.position),
+      links: linksByFolder.get(row.id) || []
+    };
+    if (!foldersByPage.has(row.pageId)) foldersByPage.set(row.pageId, []);
+    foldersByPage.get(row.pageId).push(folder);
   }
-  topLevel.sort((left, right) => left.position - right.position || left.id.localeCompare(right.id));
+  const pages = (pageResult.results || []).map((page) => ({
+    id: page.id,
+    name: page.name,
+    position: Number(page.position),
+    items: [...(foldersByPage.get(page.id) || []), ...(linksByPage.get(page.id) || [])]
+      .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id))
+  }));
   return {
     version: Number(meta?.version || 1),
     updatedAt: Number(meta?.updatedAt || unixTime()),
-    items: topLevel
+    pages
   };
 }
 
@@ -296,14 +310,28 @@ async function changePassword(request, env) {
   return json({ ok: true }, 200, { 'cache-control': 'no-store' });
 }
 
-async function nextTopLevelPosition(env) {
+async function assertPageExists(env, pageId) {
+  if (!pageId) throw new HttpError(400, '桌面页不能为空。', 'INVALID_PAGE');
+  const page = await env.DB.prepare('SELECT id, name, position FROM desktop_pages WHERE id = ?').bind(pageId).first();
+  if (!page) throw new HttpError(400, '目标桌面页不存在。', 'INVALID_PAGE');
+  return page;
+}
+
+async function nextPagePosition(env) {
+  const row = await env.DB.prepare(
+    'SELECT COALESCE(MAX(position), -1) + 1 AS position FROM desktop_pages'
+  ).first();
+  return Number(row?.position || 0);
+}
+
+async function nextTopLevelPosition(env, pageId) {
   const row = await env.DB.prepare(
     `SELECT COALESCE(MAX(position), -1) + 1 AS position FROM (
-       SELECT position FROM folders
+       SELECT position FROM folders WHERE page_id = ?
        UNION ALL
-       SELECT position FROM links WHERE folder_id IS NULL
+       SELECT position FROM links WHERE page_id = ? AND folder_id IS NULL
      )`
-  ).first();
+  ).bind(pageId, pageId).first();
   return Number(row?.position || 0);
 }
 
@@ -345,15 +373,126 @@ async function adminMusicMutationResponse(env) {
   return json({ ok: true, music: await getMusicData(env) }, 200, { 'cache-control': 'no-store' });
 }
 
+async function defaultPageId(env) {
+  const page = await env.DB.prepare('SELECT id FROM desktop_pages ORDER BY position, id LIMIT 1').first();
+  if (!page) throw new HttpError(503, '尚未配置桌面页。', 'DESKTOP_NOT_INITIALIZED');
+  return page.id;
+}
+
+async function resolvePageId(env, pageId) {
+  return pageId || defaultPageId(env);
+}
+
+async function assertUniquePageName(env, name, id = null) {
+  const page = id
+    ? await env.DB.prepare('SELECT id FROM desktop_pages WHERE name = ? AND id != ?').bind(name, id).first()
+    : await env.DB.prepare('SELECT id FROM desktop_pages WHERE name = ?').bind(name).first();
+  if (page) throw new HttpError(409, '桌面页名称已存在。', 'DUPLICATE_PAGE_NAME');
+}
+
+async function createPage(request, env) {
+  await requireAdmin(request, env, { csrf: true });
+  const input = normalizePageInput(await readJson(request));
+  await assertUniquePageName(env, input.name);
+  const now = unixTime();
+  const id = `desktop-page-${crypto.randomUUID()}`;
+  await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO desktop_pages (id, name, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+    ).bind(id, input.name, await nextPagePosition(env), now, now),
+    touchDesktop(env, now)
+  ]);
+  return adminMutationResponse(env);
+}
+
+async function updatePage(request, env, id) {
+  await requireAdmin(request, env, { csrf: true });
+  const current = await assertPageExists(env, id);
+  const input = normalizePageInput(await readJson(request), current);
+  await assertUniquePageName(env, input.name, id);
+  const now = unixTime();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE desktop_pages SET name = ?, updated_at = ? WHERE id = ?')
+      .bind(input.name, now, id),
+    touchDesktop(env, now)
+  ]);
+  return adminMutationResponse(env);
+}
+
+async function updatePageLayout(request, env) {
+  await requireAdmin(request, env, { csrf: true });
+  const body = await readJson(request, 32768);
+  const expectedVersion = await requireCurrentDesktopVersion(env, body.version);
+  if (!Array.isArray(body.ids) || body.ids.length < 1 || body.ids.length > 100) {
+    throw new HttpError(400, '桌面页排序数据无效。', 'INVALID_PAGE_LAYOUT');
+  }
+  const pageResult = await env.DB.prepare('SELECT id FROM desktop_pages').all();
+  const allPages = new Set((pageResult.results || []).map((page) => page.id));
+  const orderedIds = body.ids.map((value) => String(value || ''));
+  const suppliedPages = new Set(orderedIds);
+  if (orderedIds.length !== suppliedPages.size || !sameSet(suppliedPages, allPages)) {
+    throw new HttpError(400, '桌面页排序必须包含全部且不重复的页面。', 'INVALID_PAGE_LAYOUT');
+  }
+  const now = unixTime();
+  const statements = orderedIds.map((pageId, position) => (
+    env.DB.prepare(
+      `UPDATE desktop_pages SET position = ?, updated_at = ?
+        WHERE id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
+    ).bind(position, now, pageId, expectedVersion)
+  ));
+  statements.push(touchDesktop(env, now, expectedVersion));
+  const results = await env.DB.batch(statements);
+  assertVersionWasUpdated(results, '桌面数据已在其他页面更新，请重新读取后再排序。', 'DESKTOP_VERSION_CONFLICT');
+  return adminMutationResponse(env);
+}
+
+async function deletePage(request, env, id) {
+  await requireAdmin(request, env, { csrf: true });
+  const source = await assertPageExists(env, id);
+  const pageCount = await env.DB.prepare('SELECT COUNT(*) AS total FROM desktop_pages').first();
+  if (Number(pageCount?.total || 0) <= 1) {
+    throw new HttpError(400, '至少需要保留一个桌面页。', 'LAST_DESKTOP_PAGE');
+  }
+  const targetId = new URL(request.url).searchParams.get('targetPageId');
+  if (!targetId || targetId === id) {
+    throw new HttpError(400, '请选择一个不同的目标桌面页。', 'INVALID_TARGET_PAGE');
+  }
+  await assertPageExists(env, targetId);
+  const sourceItems = (await env.DB.prepare(
+    `SELECT id, 'folder' AS type, position FROM folders WHERE page_id = ?
+     UNION ALL
+     SELECT id, 'link' AS type, position FROM links WHERE page_id = ? AND folder_id IS NULL
+     ORDER BY position, id`
+  ).bind(id, id).all()).results || [];
+  const targetBase = await nextTopLevelPosition(env, targetId);
+  const now = unixTime();
+  const statements = [
+    env.DB.prepare('UPDATE folders SET page_id = ?, updated_at = ? WHERE page_id = ?').bind(targetId, now, id),
+    env.DB.prepare('UPDATE links SET page_id = ?, updated_at = ? WHERE page_id = ?').bind(targetId, now, id)
+  ];
+  sourceItems.forEach((item, index) => {
+    const table = item.type === 'folder' ? 'folders' : 'links';
+    statements.push(env.DB.prepare(`UPDATE ${table} SET position = ?, updated_at = ? WHERE id = ?`)
+      .bind(targetBase + index, now, item.id));
+  });
+  statements.push(env.DB.prepare('DELETE FROM desktop_pages WHERE id = ?').bind(id));
+  statements.push(touchDesktop(env, now));
+  await env.DB.batch(statements);
+  return adminMutationResponse(env);
+}
+
 async function createFolder(request, env) {
   await requireAdmin(request, env, { csrf: true });
-  const input = normalizeFolderInput(await readJson(request));
+  const body = await readJson(request);
+  const input = normalizeFolderInput(body);
+  const pageId = await resolvePageId(env, body.pageId ? cleanText(body.pageId, '桌面页', { max: 90 }) : null);
+  await assertPageExists(env, pageId);
   const now = unixTime();
   const id = `folder-${crypto.randomUUID()}`;
   await env.DB.batch([
     env.DB.prepare(
-      'INSERT INTO folders (id, name, icon, color, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, input.name, input.icon, input.color, await nextTopLevelPosition(env), now, now),
+      'INSERT INTO folders (id, page_id, name, icon, color, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(id, pageId, input.name, input.icon, input.color, await nextTopLevelPosition(env, pageId), now, now),
     touchDesktop(env, now)
   ]);
   return adminMutationResponse(env);
@@ -375,7 +514,7 @@ async function updateFolder(request, env, id) {
 
 async function deleteFolder(request, env, id) {
   await requireAdmin(request, env, { csrf: true });
-  const folder = await env.DB.prepare('SELECT id FROM folders WHERE id = ?').bind(id).first();
+  const folder = await env.DB.prepare('SELECT id, page_id AS pageId FROM folders WHERE id = ?').bind(id).first();
   if (!folder) throw new HttpError(404, '文件夹不存在。', 'NOT_FOUND');
   const mode = new URL(request.url).searchParams.get('mode') || 'move';
   if (!['move', 'delete'].includes(mode)) throw new HttpError(400, '删除方式无效。', 'INVALID_DELETE_MODE');
@@ -384,7 +523,7 @@ async function deleteFolder(request, env, id) {
   if (mode === 'delete') {
     statements.push(env.DB.prepare('DELETE FROM links WHERE folder_id = ?').bind(id));
   } else {
-    const base = await nextTopLevelPosition(env);
+    const base = await nextTopLevelPosition(env, folder.pageId);
     children.forEach((link, index) => {
       statements.push(env.DB.prepare('UPDATE links SET folder_id = NULL, position = ?, updated_at = ? WHERE id = ?')
         .bind(base + index, unixTime(), link.id));
@@ -396,26 +535,33 @@ async function deleteFolder(request, env, id) {
   return adminMutationResponse(env);
 }
 
-async function assertFolderExists(env, folderId) {
-  if (!folderId) return;
-  const folder = await env.DB.prepare('SELECT id FROM folders WHERE id = ?').bind(folderId).first();
+async function assertFolderExists(env, folderId, pageId = null) {
+  if (!folderId) return null;
+  const folder = await env.DB.prepare('SELECT id, page_id AS pageId FROM folders WHERE id = ?').bind(folderId).first();
   if (!folder) throw new HttpError(400, '目标文件夹不存在。', 'INVALID_FOLDER');
+  if (pageId && folder.pageId !== pageId) {
+    throw new HttpError(400, '网址和文件夹必须属于同一个桌面页。', 'INVALID_FOLDER_PAGE');
+  }
+  return folder;
 }
 
 async function createLink(request, env) {
   await requireAdmin(request, env, { csrf: true });
-  const input = normalizeLinkInput(await readJson(request), {
-    icon: '', color: '#e8d9dc', openMode: 'auto', folderId: null
+  const body = await readJson(request);
+  const input = normalizeLinkInput(body, {
+    icon: '', color: '#e8d9dc', openMode: 'auto', pageId: null, folderId: null
   });
-  await assertFolderExists(env, input.folderId);
+  const pageId = await resolvePageId(env, input.pageId);
+  await assertPageExists(env, pageId);
+  await assertFolderExists(env, input.folderId, pageId);
   const now = unixTime();
   const id = `link-${crypto.randomUUID()}`;
-  const position = input.folderId ? await nextFolderPosition(env, input.folderId) : await nextTopLevelPosition(env);
+  const position = input.folderId ? await nextFolderPosition(env, input.folderId) : await nextTopLevelPosition(env, pageId);
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT INTO links (id, folder_id, title, url, icon, color, open_mode, position, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(id, input.folderId, input.title, input.url, input.icon, input.color, input.openMode, position, now, now),
+      `INSERT INTO links (id, page_id, folder_id, title, url, icon, color, open_mode, position, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, pageId, input.folderId, input.title, input.url, input.icon, input.color, input.openMode, position, now, now),
     touchDesktop(env, now)
   ]);
   return adminMutationResponse(env);
@@ -424,22 +570,25 @@ async function createLink(request, env) {
 async function updateLink(request, env, id) {
   await requireAdmin(request, env, { csrf: true });
   const current = await env.DB.prepare(
-    `SELECT id, folder_id AS folderId, title, url, icon, color, open_mode AS openMode, position
+    `SELECT id, page_id AS pageId, folder_id AS folderId, title, url, icon, color, open_mode AS openMode, position
        FROM links WHERE id = ?`
   ).bind(id).first();
   if (!current) throw new HttpError(404, '网址不存在。', 'NOT_FOUND');
   const input = normalizeLinkInput(await readJson(request), current);
-  await assertFolderExists(env, input.folderId);
+  const pageId = await resolvePageId(env, input.pageId || current.pageId);
+  await assertPageExists(env, pageId);
+  await assertFolderExists(env, input.folderId, pageId);
   const folderChanged = (current.folderId || null) !== (input.folderId || null);
-  const position = folderChanged
-    ? (input.folderId ? await nextFolderPosition(env, input.folderId) : await nextTopLevelPosition(env))
+  const pageChanged = current.pageId !== pageId;
+  const position = folderChanged || pageChanged
+    ? (input.folderId ? await nextFolderPosition(env, input.folderId) : await nextTopLevelPosition(env, pageId))
     : Number(current.position);
   const now = unixTime();
   await env.DB.batch([
     env.DB.prepare(
-      `UPDATE links SET folder_id = ?, title = ?, url = ?, icon = ?, color = ?, open_mode = ?, position = ?, updated_at = ?
+      `UPDATE links SET page_id = ?, folder_id = ?, title = ?, url = ?, icon = ?, color = ?, open_mode = ?, position = ?, updated_at = ?
         WHERE id = ?`
-    ).bind(input.folderId, input.title, input.url, input.icon, input.color, input.openMode, position, now, id),
+    ).bind(pageId, input.folderId, input.title, input.url, input.icon, input.color, input.openMode, position, now, id),
     touchDesktop(env, now)
   ]);
   return adminMutationResponse(env);
@@ -567,13 +716,15 @@ async function updateLayout(request, env) {
   await requireAdmin(request, env, { csrf: true });
   const body = await readJson(request, 65536);
   const expectedVersion = await requireCurrentDesktopVersion(env, body.version);
+  const pageId = String(body.pageId || '');
+  await assertPageExists(env, pageId);
   if (!Array.isArray(body.topLevel) || !body.folders || typeof body.folders !== 'object') {
     throw new HttpError(400, '桌面排序数据无效。', 'INVALID_LAYOUT');
   }
   if (body.topLevel.length > 300) throw new HttpError(400, '桌面项目数量过多。', 'INVALID_LAYOUT');
   const [folderResult, linkResult] = await Promise.all([
-    env.DB.prepare('SELECT id FROM folders').all(),
-    env.DB.prepare('SELECT id FROM links').all()
+    env.DB.prepare('SELECT id FROM folders WHERE page_id = ?').bind(pageId).all(),
+    env.DB.prepare('SELECT id FROM links WHERE page_id = ?').bind(pageId).all()
   ]);
   const allFolders = new Set((folderResult.results || []).map((item) => item.id));
   const allLinks = new Set((linkResult.results || []).map((item) => item.id));
@@ -586,16 +737,16 @@ async function updateLayout(request, env) {
       seenFolders.add(id);
       statements.push(env.DB.prepare(
         `UPDATE folders SET position = ?, updated_at = ?
-          WHERE id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
-      ).bind(position, unixTime(), id, expectedVersion));
+          WHERE id = ? AND page_id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
+      ).bind(position, unixTime(), id, pageId, expectedVersion));
       return;
     }
     if (item?.type === 'link' && allLinks.has(id) && !seenLinks.has(id)) {
       seenLinks.add(id);
       statements.push(env.DB.prepare(
         `UPDATE links SET folder_id = NULL, position = ?, updated_at = ?
-          WHERE id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
-      ).bind(position, unixTime(), id, expectedVersion));
+          WHERE id = ? AND page_id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
+      ).bind(position, unixTime(), id, pageId, expectedVersion));
       return;
     }
     throw new HttpError(400, '桌面排序包含重复或不存在的项目。', 'INVALID_LAYOUT');
@@ -611,8 +762,8 @@ async function updateLayout(request, env) {
       seenLinks.add(linkId);
       statements.push(env.DB.prepare(
         `UPDATE links SET folder_id = ?, position = ?, updated_at = ?
-          WHERE id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
-      ).bind(folderId, position, unixTime(), linkId, expectedVersion));
+          WHERE id = ? AND page_id = ? AND EXISTS (SELECT 1 FROM desktop_meta WHERE id = 1 AND version = ?)`
+      ).bind(folderId, position, unixTime(), linkId, pageId, expectedVersion));
     });
   }
   if (!sameSet(seenFolders, allFolders) || !sameSet(seenLinks, allLinks)) {
@@ -641,6 +792,10 @@ async function routeRequest(request, env) {
   if (path === '/api/v1/auth/session') return sessionStatus(request, env);
   if (path === '/api/v1/auth/logout') return logout(request, env);
   if (path === '/api/v1/auth/password') return changePassword(request, env);
+  if (path === '/api/v1/admin/pages/layout') {
+    assertMethod(request, ['PUT']);
+    return updatePageLayout(request, env);
+  }
   if (path === '/api/v1/admin/layout') {
     assertMethod(request, ['PUT']);
     return updateLayout(request, env);
@@ -648,6 +803,17 @@ async function routeRequest(request, env) {
   if (path === '/api/v1/admin/music/layout') {
     assertMethod(request, ['PUT']);
     return updateMusicLayout(request, env);
+  }
+  const pageMatch = path.match(/^\/api\/v1\/admin\/pages(?:\/([^/]+))?$/);
+  if (pageMatch) {
+    const id = pageMatch[1] ? decodeURIComponent(pageMatch[1]) : null;
+    if (!id) {
+      assertMethod(request, ['POST']);
+      return createPage(request, env);
+    }
+    if (request.method === 'PATCH') return updatePage(request, env, id);
+    if (request.method === 'DELETE') return deletePage(request, env, id);
+    throw new HttpError(405, '请求方法不受支持。', 'METHOD_NOT_ALLOWED');
   }
   const folderMatch = path.match(/^\/api\/v1\/admin\/folders(?:\/([^/]+))?$/);
   if (folderMatch) {

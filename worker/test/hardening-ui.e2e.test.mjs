@@ -17,6 +17,36 @@ function makeDesktop(items, version = 1) {
   };
 }
 
+function makePagedDesktop() {
+  const page = (id, name, items, position) => ({
+    id,
+    name,
+    position,
+    items: items.map((item, itemPosition) => ({ ...item, pageId: id, position: itemPosition }))
+  });
+  return {
+    version: 7,
+    updatedAt: Date.now(),
+    pages: [
+      page('desktop-page-home', '主页', [
+        { id: 'link-page-home', type: 'link', title: '主页链接', url: '/dynamic/', icon: '首', color: '#e8d9dc', openMode: 'same' }
+      ], 0),
+      page('desktop-page-work', '工作', [
+        {
+          id: 'folder-page-work', type: 'folder', title: '工作资料', icon: '▰', color: '#f4c84a',
+          links: [
+            { id: 'link-page-work-child', type: 'link', pageId: 'desktop-page-work', title: '工作文档', url: '/about.html', icon: '文', color: '#e8d9dc', openMode: 'same', position: 0 }
+          ]
+        },
+        { id: 'link-page-work', type: 'link', title: '工作链接', url: '/about.html', icon: '工', color: '#e8d9dc', openMode: 'same' }
+      ], 1),
+      page('desktop-page-life', '生活', [
+        { id: 'link-page-life', type: 'link', title: '生活链接', url: '/dynamic/', icon: '生', color: '#e8d9dc', openMode: 'same' }
+      ], 2)
+    ]
+  };
+}
+
 function json(payload, status = 200) {
   return { status, body: JSON.stringify(payload), type: 'application/json; charset=utf-8' };
 }
@@ -40,7 +70,8 @@ function contentType(filePath) {
 async function startServer(state) {
   const server = createServer(async (request, response) => {
     try {
-      const pathname = new URL(request.url, 'http://127.0.0.1').pathname;
+      const requestUrl = new URL(request.url, 'http://127.0.0.1');
+      const pathname = requestUrl.pathname;
       let result = null;
       if (pathname === '/api/v1/auth/session') {
         result = json(state.authenticated
@@ -69,6 +100,86 @@ async function startServer(state) {
               body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#f4c84a"/></svg>',
               type: 'image/svg+xml; charset=utf-8'
             };
+      } else if (pathname === '/api/v1/admin/pages/layout' && request.method === 'PUT') {
+        const body = await readBody(request);
+        state.pageRequests.push({ action: 'layout', body });
+        if (body.version !== state.desktop.version) {
+          result = json({ code: 'DESKTOP_VERSION_CONFLICT', message: '桌面数据已更新。' }, 409);
+        } else {
+          const pagesById = new Map(state.desktop.pages.map((page) => [page.id, page]));
+          state.desktop = {
+            ...state.desktop,
+            version: state.desktop.version + 1,
+            updatedAt: Date.now(),
+            pages: body.ids.map((id, position) => ({ ...pagesById.get(id), position }))
+          };
+          result = json({ ok: true, desktop: state.desktop });
+        }
+      } else if (pathname === '/api/v1/admin/pages' && request.method === 'POST') {
+        const body = await readBody(request);
+        const page = {
+          id: `desktop-page-admin-${state.nextPageId++}`,
+          name: String(body.name || '').trim(),
+          position: state.desktop.pages.length,
+          items: []
+        };
+        state.pageRequests.push({ action: 'create', body });
+        state.desktop = {
+          ...state.desktop,
+          version: state.desktop.version + 1,
+          updatedAt: Date.now(),
+          pages: [...state.desktop.pages, page]
+        };
+        result = json({ ok: true, desktop: state.desktop });
+      } else if (/^\/api\/v1\/admin\/pages\/[^/]+$/.test(pathname) && request.method === 'PATCH') {
+        const body = await readBody(request);
+        const pageId = decodeURIComponent(pathname.split('/').at(-1));
+        state.pageRequests.push({ action: 'rename', pageId, body });
+        state.desktop = {
+          ...state.desktop,
+          version: state.desktop.version + 1,
+          updatedAt: Date.now(),
+          pages: state.desktop.pages.map((page) => page.id === pageId ? { ...page, name: String(body.name || '').trim() } : page)
+        };
+        result = json({ ok: true, desktop: state.desktop });
+      } else if (/^\/api\/v1\/admin\/pages\/[^/]+$/.test(pathname) && request.method === 'DELETE') {
+        const pageId = decodeURIComponent(pathname.split('/').at(-1));
+        const targetPageId = requestUrl.searchParams.get('targetPageId');
+        const source = state.desktop.pages.find((page) => page.id === pageId);
+        state.pageRequests.push({ action: 'delete', pageId, targetPageId });
+        state.desktop = {
+          ...state.desktop,
+          version: state.desktop.version + 1,
+          updatedAt: Date.now(),
+          pages: state.desktop.pages
+            .filter((page) => page.id !== pageId)
+            .map((page, position) => page.id === targetPageId
+              ? { ...page, position, items: [...page.items, ...(source?.items || [])] }
+              : { ...page, position })
+        };
+        result = json({ ok: true, desktop: state.desktop });
+      } else if (pathname === '/api/v1/admin/folders' && request.method === 'POST') {
+        const body = await readBody(request);
+        const folder = {
+          id: `folder-admin-${state.nextFolderId++}`,
+          type: 'folder',
+          pageId: body.pageId,
+          title: String(body.name || '').trim(),
+          icon: body.icon || '▰',
+          color: body.color || '#f4c84a',
+          position: 0,
+          links: []
+        };
+        state.pageRequests.push({ action: 'create-folder', body });
+        state.desktop = {
+          ...state.desktop,
+          version: state.desktop.version + 1,
+          updatedAt: Date.now(),
+          pages: state.desktop.pages.map((page) => page.id === body.pageId
+            ? { ...page, items: [...page.items, { ...folder, position: page.items.length }] }
+            : page)
+        };
+        result = json({ ok: true, desktop: state.desktop });
       } else if (pathname === '/api/v1/admin/layout' && request.method === 'PUT') {
         const body = await readBody(request);
         state.activeLayoutRequests += 1;
@@ -124,6 +235,9 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
     activeLayoutRequests: 0,
     maxActiveLayoutRequests: 0,
     layoutRequests: [],
+    pageRequests: [],
+    nextPageId: 1,
+    nextFolderId: 1,
     activeFaviconRequests: 0,
     maxActiveFaviconRequests: 0,
     faviconRequests: [],
@@ -196,6 +310,93 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('#desktopIcons').evaluate((element) => element.classList.contains('uses-cached-navigation')), false);
       assert.deepEqual(errors, []);
       await context.close();
+    });
+
+    await t.test('desktop pages switch by sidebar, wheel and mobile swipe without leaking overlays', async () => {
+      state.desktop = makePagedDesktop();
+
+      const desktopContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const desktopPage = await desktopContext.newPage();
+      const desktopErrors = [];
+      desktopPage.on('pageerror', (error) => desktopErrors.push(error.message));
+      await desktopPage.goto(`${origin}/os/`, { waitUntil: 'load' });
+      await desktopPage.waitForFunction(() => document.querySelectorAll('#desktopPageSidebarList [data-page-index]').length === 3);
+      assert.deepEqual(
+        await desktopPage.locator('#desktopPageSidebarList [data-page-index]').allTextContents(),
+        ['01主页', '02工作', '03生活']
+      );
+      assert.notEqual(await desktopPage.locator('#desktopPageSidebar').evaluate((element) => getComputedStyle(element).display), 'none');
+
+      await desktopPage.locator('[data-page-index="1"]').click();
+      await desktopPage.waitForFunction(() => document.body.dataset.page === '1');
+      assert.equal(await desktopPage.locator('[data-navigation-id="link-page-work"]').isVisible(), true);
+      assert.equal(await desktopPage.locator('[data-page-id="desktop-page-home"]').getAttribute('aria-hidden'), 'true');
+      assert.equal(await desktopPage.locator('[data-page-id="desktop-page-home"]').evaluate((element) => element.inert), true);
+
+      await desktopPage.locator('[data-navigation-id="folder-page-work"]').click();
+      await desktopPage.waitForSelector('#navigationFolder:not([hidden])');
+      assert.equal(await desktopPage.locator('#navigationFolderTitle').textContent(), '工作资料');
+      assert.match(await desktopPage.locator('#navigationFolderGrid').textContent(), /工作文档/);
+      await desktopPage.locator('#closeNavigationFolder').click();
+
+      await desktopPage.locator('[data-page-id="desktop-page-work"] .terminal-icon').click();
+      await desktopPage.waitForSelector('#terminalWindow:not([hidden])');
+      const overlayPlacement = await desktopPage.evaluate(() => ({
+        windowInViewport: document.querySelector('#terminalWindow').parentElement === document.querySelector('#pageViewport'),
+        windowInTrack: document.querySelector('#pageTrack').contains(document.querySelector('#terminalWindow')),
+        folderInViewport: document.querySelector('#navigationFolder').parentElement === document.querySelector('#pageViewport')
+      }));
+      assert.deepEqual(overlayPlacement, { windowInViewport: true, windowInTrack: false, folderInViewport: true });
+      await desktopPage.locator('#terminalWindow .close-button').click();
+
+      await desktopPage.mouse.move(640, 400);
+      await desktopPage.mouse.wheel(0, 420);
+      await desktopPage.waitForFunction(() => document.body.dataset.page === '2');
+      assert.equal(await desktopPage.locator('#desktopPageSidebarList [data-page-index="2"]').getAttribute('aria-current'), 'true');
+      await desktopPage.waitForTimeout(650);
+      await desktopPage.mouse.wheel(0, -420);
+      await desktopPage.waitForFunction(() => document.body.dataset.page === '1');
+      assert.deepEqual(desktopErrors, []);
+      await desktopContext.close();
+
+      const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+      const mobilePage = await mobileContext.newPage();
+      const mobileErrors = [];
+      mobilePage.on('pageerror', (error) => mobileErrors.push(error.message));
+      await mobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
+      await mobilePage.waitForFunction(() => document.querySelectorAll('#pageTrack > .site-page').length === 3);
+      assert.equal(await mobilePage.locator('#desktopPageSidebar').evaluate((element) => getComputedStyle(element).display), 'none');
+
+      const swipe = (fromX, fromY, toX, toY, pointerId) => mobilePage.evaluate(
+        ({ fromX, fromY, toX, toY, pointerId }) => {
+          const viewport = document.querySelector('#pageViewport');
+          const dispatch = (type, clientX, clientY) => viewport.dispatchEvent(new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            pointerId,
+            pointerType: 'touch',
+            isPrimary: true,
+            clientX,
+            clientY
+          }));
+          dispatch('pointerdown', fromX, fromY);
+          dispatch('pointermove', toX, toY);
+          dispatch('pointerup', toX, toY);
+        },
+        { fromX, fromY, toX, toY, pointerId }
+      );
+
+      await swipe(370, 300, 80, 304, 41);
+      await mobilePage.waitForFunction(() => document.body.dataset.page === '1');
+      assert.equal(await mobilePage.locator('[data-navigation-id="link-page-work"]').isVisible(), true);
+      await swipe(6, 520, 8, 250, 42);
+      await mobilePage.waitForTimeout(100);
+      assert.equal(await mobilePage.evaluate(() => document.body.dataset.page), '1');
+      await swipe(370, 320, 80, 322, 43);
+      await mobilePage.waitForFunction(() => document.body.dataset.page === '2');
+      assert.equal(await mobilePage.locator('[data-navigation-id="link-page-life"]').isVisible(), true);
+      assert.deepEqual(mobileErrors, []);
+      await mobileContext.close();
     });
 
     await t.test('mobile home removes status and intro without changing the desktop header', async () => {
@@ -562,7 +763,85 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await context.close();
     });
 
+    await t.test('admin creates, renames, reorders and migration-deletes desktop pages', async () => {
+      state.authenticated = true;
+      state.failDesktop = false;
+      state.desktop = makePagedDesktop();
+      state.pageRequests = [];
+      const context = await browser.newContext({ viewport: { width: 1360, height: 860 } });
+      const page = await context.newPage();
+      const errors = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      await page.goto(`${origin}/admin/`);
+      await page.waitForFunction(() => document.querySelectorAll('#desktopPageManagerList [data-page-id]').length === 3);
+
+      await page.locator('[data-page-id="desktop-page-work"] [data-action="select-page"]').click();
+      await page.waitForSelector('[data-manager-id="folder-page-work"]');
+      assert.match(await page.locator('#desktopContentTitle').textContent(), /工作/);
+      assert.equal(await page.locator('[data-manager-id="link-page-home"]').count(), 0);
+
+      await page.locator('#addDesktopPageButton').click();
+      await page.locator('#pageName').fill('临时页面');
+      await page.locator('#pageForm [type="submit"]').click();
+      await page.waitForFunction(() => [...document.querySelectorAll('#desktopPageManagerList [data-page-id]')]
+        .some((element) => element.textContent.includes('临时页面')));
+      const temporaryPageId = state.desktop.pages.find((entry) => entry.name === '临时页面')?.id;
+      assert.ok(temporaryPageId);
+      assert.equal(await page.locator(`[data-page-id="${temporaryPageId}"]`).evaluate((element) => element.classList.contains('is-selected')), true);
+
+      await page.locator('#addFolderButton').click();
+      await page.locator('#itemName').fill('待迁移文件夹');
+      await page.locator('#itemForm [type="submit"]').click();
+      await page.waitForFunction(() => [...document.querySelectorAll('[data-manager-id]')]
+        .some((element) => element.textContent.includes('待迁移文件夹')));
+      const folderRequest = state.pageRequests.find((request) => request.action === 'create-folder');
+      assert.equal(folderRequest?.body.pageId, temporaryPageId);
+
+      await page.locator(`[data-page-id="${temporaryPageId}"] [data-action="rename-page"]`).click();
+      await page.locator('#pageName').fill('迁移测试页');
+      await page.locator('#pageForm [type="submit"]').click();
+      await page.waitForFunction(() => [...document.querySelectorAll('#desktopPageManagerList [data-page-id]')]
+        .some((element) => element.textContent.includes('迁移测试页')));
+
+      await page.locator(`[data-page-id="${temporaryPageId}"] [data-action="move-page-up"]`).click();
+      await page.waitForFunction(() => document.querySelector('#saveStatus')?.textContent.startsWith('已保存'));
+      assert.equal(state.pageRequests.some((request) => request.action === 'layout'), true);
+
+      await page.locator(`[data-page-id="${temporaryPageId}"] [data-action="delete-page"]`).click();
+      await page.locator('#deletePageTarget').selectOption('desktop-page-home');
+      await page.locator('#deletePageForm [type="submit"]').click();
+      await page.waitForFunction((pageId) => !document.querySelector(`[data-page-id="${pageId}"]`), temporaryPageId);
+      assert.equal(state.desktop.pages.some((entry) => entry.id === temporaryPageId), false);
+      assert.equal(
+        state.desktop.pages.find((entry) => entry.id === 'desktop-page-home').items.some((item) => item.title === '待迁移文件夹'),
+        true
+      );
+      assert.deepEqual(state.pageRequests.at(-1), {
+        action: 'delete',
+        pageId: temporaryPageId,
+        targetPageId: 'desktop-page-home'
+      });
+      assert.deepEqual(errors, []);
+      await context.close();
+
+      const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const mobilePage = await mobileContext.newPage();
+      await mobilePage.goto(`${origin}/admin/`);
+      await mobilePage.waitForFunction(() => document.querySelectorAll('#desktopPageManagerList [data-page-id]').length === 3);
+      const mobileLayout = await mobilePage.evaluate(() => ({
+        columns: getComputedStyle(document.querySelector('#desktopPageManagerList')).gridTemplateColumns.split(' ').length,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth
+      }));
+      assert.equal(mobileLayout.columns, 1);
+      assert.ok(mobileLayout.documentWidth <= mobileLayout.viewportWidth);
+      await mobileContext.close();
+    });
+
     await t.test('post-login load errors stay visible and retryable', async () => {
+      state.desktop = makeDesktop([
+        { id: 'link-a', type: 'link', title: '第一项', url: 'https://a.example', icon: 'A', color: '#e8d9dc', openMode: 'new' }
+      ]);
       state.authenticated = false;
       state.failDesktop = true;
       const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });

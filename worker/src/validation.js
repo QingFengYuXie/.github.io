@@ -89,6 +89,9 @@ export function normalizeLinkInput(body, current = {}) {
     icon: body.icon === undefined && current.icon !== undefined ? current.icon : cleanOptionalText(body.icon, '网址图标', 24),
     color: body.color === undefined && current.color !== undefined ? current.color : normalizeColor(body.color),
     openMode: body.openMode === undefined && current.openMode !== undefined ? current.openMode : normalizeOpenMode(body.openMode),
+    pageId: body.pageId === undefined && current.pageId !== undefined
+      ? current.pageId
+      : (body.pageId ? cleanText(body.pageId, '桌面页', { max: 90 }) : null),
     folderId: body.folderId === undefined && current.folderId !== undefined
       ? current.folderId
       : (body.folderId ? cleanText(body.folderId, '文件夹', { max: 80 }) : null)
@@ -103,5 +106,13 @@ export function normalizeMusicInput(body, current = {}) {
     url: body.url === undefined && current.url !== undefined
       ? current.url
       : normalizeMusicUrl(body.url)
+  };
+}
+
+export function normalizePageInput(body, current = {}) {
+  return {
+    name: body.name === undefined && current.name !== undefined
+      ? current.name
+      : cleanText(body.name, '桌面页名称', { max: 40 })
   };
 }

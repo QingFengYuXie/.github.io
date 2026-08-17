@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HttpError, normalizeColor, normalizeMusicInput, normalizeMusicUrl, normalizeOpenMode, normalizeUrl } from '../src/validation.js';
+import { HttpError, normalizeColor, normalizeMusicInput, normalizeMusicUrl, normalizeOpenMode, normalizePageInput, normalizeUrl } from '../src/validation.js';
 import { normalizeFolderInput, normalizeLinkInput } from '../src/validation.js';
 
 test('accepts internal, https and mail links', () => {
@@ -26,6 +26,13 @@ test('requires names and URLs when creating records', () => {
   assert.throws(() => normalizeFolderInput({}), HttpError);
   assert.throws(() => normalizeLinkInput({ color: '#e8d9dc' }), HttpError);
   assert.throws(() => normalizeMusicInput({}), HttpError);
+});
+
+test('accepts desktop page names and rejects empty or oversized values', () => {
+  assert.deepEqual(normalizePageInput({ name: ' 工作 ' }), { name: '工作' });
+  assert.deepEqual(normalizePageInput({}, { name: '主页' }), { name: '主页' });
+  assert.throws(() => normalizePageInput({ name: '' }), HttpError);
+  assert.throws(() => normalizePageInput({ name: '页'.repeat(41) }), HttpError);
 });
 
 test('accepts safe music URLs and rejects non-media protocols', () => {

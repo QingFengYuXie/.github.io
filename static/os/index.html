@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260815-31" />
+    <link rel="stylesheet" href="./styles.css?v=20260815-32" />
     <link rel="stylesheet" href="../site-nav.css?v=20260817-18" />
     <script data-cfasync="false" src="../site-nav.js?v=20260815-33" defer></script>
   </head>
@@ -34,8 +34,12 @@
     </div>
 
     <div class="site-viewport" id="pageViewport" tabindex="0">
+      <aside class="desktop-page-sidebar" id="desktopPageSidebar" aria-label="桌面页面导航" hidden>
+        <span class="desktop-page-sidebar-kicker">DESKTOP PAGES</span>
+        <nav id="desktopPageSidebarList" aria-label="桌面页列表"></nav>
+      </aside>
       <div class="site-track" id="pageTrack">
-    <main class="desktop site-page home-page" id="desktop" data-page-name="主页" aria-label="主页">
+    <main class="desktop site-page home-page" id="desktop" data-page-id="desktop-page-home" data-page-name="主页" aria-label="主页">
       <div class="stars stars-a"></div><div class="stars stars-b"></div><div class="stars stars-c"></div>
       <div class="aurora aurora-a"></div><div class="aurora aurora-b"></div>
       <div class="desktop-topbar">
@@ -140,6 +144,6 @@
     </main>
       </div>
     </div>
-    <script data-cfasync="false" src="./script.js?v=20260815-29" defer></script>
+    <script data-cfasync="false" src="./script.js?v=20260815-31" defer></script>
   </body>
 </html>
