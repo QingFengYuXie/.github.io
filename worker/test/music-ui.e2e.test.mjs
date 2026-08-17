@@ -357,6 +357,8 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               themePosition: getComputedStyle(theme).position,
               statsWhiteSpace: getComputedStyle(stats).whiteSpace,
               statsFits: stats.scrollWidth <= stats.clientWidth,
+              bodyPaddingTop: getComputedStyle(document.body).paddingTop,
+              statsHeaderGap: rect(header).top - rect(stats).bottom,
               themeCount: document.querySelectorAll('.title-right a[onclick*="modeSwitch"]').length,
               viewportWidth: window.innerWidth,
               documentWidth: document.documentElement.scrollWidth,
@@ -396,7 +398,13 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
           assert.equal(layout.statsFits, true);
           assert.equal(layout.firstElementIsStats, true);
           const maximumStatsTop = viewport.width <= 600 ? 4.5 : 8.5;
+          const expectedBodyPaddingTop = viewport.width <= 600 ? '8px' : '12px';
+          const minimumStatsHeaderGap = viewport.width <= 600 ? 9 : 5;
+          const maximumStatsHeaderGap = viewport.width <= 600 ? 12 : 8;
           assert.ok(layout.stats.top <= maximumStatsTop, `${route} ${viewport.width}px stats top ${layout.stats.top}`);
+          assert.equal(layout.bodyPaddingTop, expectedBodyPaddingTop, `${route} ${viewport.width}px body top padding`);
+          assert.ok(layout.statsHeaderGap >= minimumStatsHeaderGap, `${route} ${viewport.width}px stats/header gap ${layout.statsHeaderGap}`);
+          assert.ok(layout.statsHeaderGap <= maximumStatsHeaderGap, `${route} ${viewport.width}px excessive stats/header gap ${layout.statsHeaderGap}`);
           assert.ok(layout.stats.bottom <= layout.header.top, `${route} ${viewport.width}px stats overlap header`);
           assert.ok(layout.actions.left >= -0.5 && layout.actions.right <= layout.viewportWidth + 0.5, `${route} ${viewport.width}px actions overflow`);
           assert.ok(layout.player.left > layout.theme.left, `${route} ${viewport.width}px player order`);
