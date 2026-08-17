@@ -76,6 +76,9 @@ function titleActionsFixture(pathname) {
   if (pathname === '/dynamic/') {
     return `<div class="title-left"><span class="mobile-page-mark" aria-hidden="true"></span><strong>轻风雨斜 OS</strong></div><div class="title-right"><a href="/search.html" id="buttonSearch" class="btn btn-invisible circle" title="搜索"><svg width="16" height="16"></svg></a><a href="/about.html" class="btn btn-invisible circle" title="关于" style="display:none"><svg width="16" height="16"></svg></a><a href="/rss.xml" id="buttonRSS" class="btn btn-invisible circle" title="RSS"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
   }
+  if (pathname.startsWith('/dynamic/post/')) {
+    return `<h1 class="postTitle">测试动态</h1><div class="title-right"><a href="/" id="buttonHome" class="btn btn-invisible circle" title="首页"><svg width="16" height="16"></svg></a><a href="https://github.com/example/issues/3" class="btn btn-invisible circle" title="Issue"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
+  }
   if (pathname === '/about.html') {
     return `<h1 class="postTitle">关于</h1><div class="title-right"><a href="/" id="buttonHome" class="btn btn-invisible circle" title="首页"><svg width="16" height="16"></svg></a><a href="https://github.com/example/issues/3" class="btn btn-invisible circle" title="Issue"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
   }
@@ -278,11 +281,9 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('.site-music-player').evaluate((element) => element.parentElement?.classList.contains('title-right')), true);
       assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').count(), 1);
 
-      for (const route of ['/search.html', '/dynamic/post/test.html']) {
-        await page.goto(`${origin}${route}`);
-        await waitForTrack(page, 'track-b');
-        assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).left), '72px');
-      }
+      await page.goto(`${origin}/search.html`);
+      await waitForTrack(page, 'track-b');
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).left), '72px');
 
       await page.locator('[data-music-action="mode"]').click();
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'shuffle');
@@ -299,7 +300,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
 
       for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 667 }, { width: 1280, height: 800 }]) {
         await page.setViewportSize(viewport);
-        for (const route of ['/dynamic/', '/about.html']) {
+        for (const route of ['/dynamic/', '/dynamic/post/------%2020.html', '/about.html']) {
           await page.goto(`${origin}${route}`);
           await waitForTrack(page, 'track-b');
           await page.waitForFunction(() => document.querySelector('.site-visit-count')?.textContent === '12345');
