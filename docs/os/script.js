@@ -567,7 +567,8 @@ let currentPageIndex = 0;
 let pageGridElements = [];
 let desktopIconZ = 30;
 let desktopIcons = [];
-let iconGrid = document.querySelector('#desktopIcons');
+const homeIconGrid = document.querySelector('#desktopIcons');
+let iconGrid = homeIconGrid;
 const pageSidebar = document.querySelector('#desktopPageSidebar');
 const pageSidebarList = document.querySelector('#desktopPageSidebarList');
 const navigationFolder = document.querySelector('#navigationFolder');
@@ -998,32 +999,14 @@ function makeTerminalIcon() {
 }
 
 function createAdditionalPage(page) {
-  const main = document.createElement('main');
-  main.className = 'desktop site-page home-page';
-  main.dataset.generatedPage = 'true';
-  main.dataset.pageId = page.id;
-  main.dataset.pageName = page.name;
-  main.setAttribute('aria-label', page.name);
-  main.innerHTML = '<div class="stars stars-a"></div><div class="stars stars-b"></div><div class="stars stars-c"></div><div class="aurora aurora-a"></div><div class="aurora aurora-b"></div>';
-
-  const topbar = document.createElement('div');
-  topbar.className = 'desktop-topbar generated-page-topbar';
-  const brand = document.createElement('div');
-  brand.className = 'os-brand';
-  brand.textContent = '轻风雨斜 OS';
-  const pageLabel = document.createElement('span');
-  pageLabel.className = 'generated-page-label';
-  pageLabel.textContent = page.name;
-  topbar.append(brand, pageLabel);
-
   const grid = document.createElement('section');
   grid.className = 'desktop-icons';
+  grid.dataset.generatedPage = 'true';
   grid.dataset.pageId = page.id;
   grid.setAttribute('aria-label', `${page.name}桌面网址导航`);
   grid.setAttribute('aria-busy', 'true');
   grid.append(makeTerminalIcon());
-  main.append(topbar, grid);
-  return main;
+  return grid;
 }
 
 function renderPageSidebar() {
@@ -1076,7 +1059,7 @@ function renderPageNavigation(page, grid, isCurrent) {
 
 function activatePage(index) {
   const page = desktopPages[index];
-  const grid = pageGridElements[index]?.querySelector('.desktop-icons');
+  const grid = pageGridElements[index];
   if (!page || !grid) return;
   currentPageIndex = index;
   desktopNavigation = page;
@@ -1093,14 +1076,14 @@ function goToPage(index, source = 'programmatic') {
   pageTrack.style.transform = `translate3d(${-nextIndex * 100}%, 0, 0)`;
   pageTrack.dataset.pageIndex = String(nextIndex);
   document.body.dataset.page = String(nextIndex);
-  pageGridElements.forEach((pageElement, pageIndex) => {
+  pageGridElements.forEach((grid, pageIndex) => {
     const inactive = pageIndex !== nextIndex;
-    pageElement.setAttribute('aria-hidden', String(inactive));
-    pageElement.inert = inactive;
+    grid.setAttribute('aria-hidden', String(inactive));
+    grid.inert = inactive;
   });
   renderPageSidebar();
   activatePage(nextIndex);
-  if (source !== 'programmatic') pageViewport.focus({ preventScroll: true });
+
 }
 
 function renderDesktopPages(data) {
@@ -1110,15 +1093,14 @@ function renderDesktopPages(data) {
   desktop.dataset.pageName = firstPage.name;
   desktop.setAttribute('aria-label', firstPage.name);
   pageTrack.querySelectorAll('[data-generated-page]').forEach((element) => element.remove());
-  pageGridElements = [desktop];
+  pageGridElements = [homeIconGrid];
   desktopPages.slice(1).forEach((page) => {
-    const pageElement = createAdditionalPage(page);
-    pageTrack.append(pageElement);
-    pageGridElements.push(pageElement);
+    const grid = createAdditionalPage(page);
+    pageTrack.append(grid);
+    pageGridElements.push(grid);
   });
-  pageGridElements.forEach((pageElement, index) => {
-    const page = desktopPages[index];
-    renderPageNavigation(page, pageElement.querySelector('.desktop-icons'), index === 0);
+  pageGridElements.forEach((grid, index) => {
+    renderPageNavigation(desktopPages[index], grid, index === 0);
   });
   renderPageSidebar();
   goToPage(Math.min(currentPageIndex, desktopPages.length - 1));
@@ -1140,6 +1122,9 @@ function bindPageNavigation() {
       return;
     }
     event.preventDefault();
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
     wheelLockedUntil = now + 620;
     goToPage(currentPageIndex + (event.deltaY > 0 ? 1 : -1), 'wheel');
   }, { passive: false });

@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260818-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260818-2" />
     <link rel="stylesheet" href="../site-nav.css?v=20260817-18" />
     <script data-cfasync="false" src="../site-nav.js?v=20260815-33" defer></script>
   </head>
@@ -37,8 +37,7 @@
       <aside class="desktop-page-sidebar" id="desktopPageSidebar" aria-label="页面导航" hidden>
         <nav id="desktopPageSidebarList" aria-label="页面列表"></nav>
       </aside>
-      <div class="site-track" id="pageTrack">
-    <main class="desktop site-page home-page" id="desktop" data-page-id="desktop-page-home" data-page-name="主页" aria-label="主页">
+      <main class="desktop home-page" id="desktop" data-page-id="desktop-page-home" data-page-name="主页" aria-label="主页">
       <div class="stars stars-a"></div><div class="stars stars-b"></div><div class="stars stars-c"></div>
       <div class="aurora aurora-a"></div><div class="aurora aurora-b"></div>
       <div class="desktop-topbar">
@@ -76,9 +75,13 @@
         <p class="status-card-runtime">UPTIME <span id="siteUptime">—</span></p>
       </aside>
 
-      <section class="desktop-icons" id="desktopIcons" aria-label="桌面网址导航" aria-busy="true">
-        <button class="desktop-icon terminal-icon" data-open="terminalWindow" data-navigation-id="system-terminal" style="--x: 0; --y: 0" title="打开命令工具"><span class="icon app-icon">$_</span><span>终端</span></button>
-        <p class="navigation-loading" id="navigationLoading">正在加载桌面网址…</p>
+      <section class="desktop-icon-viewport" id="desktopIconViewport" aria-label="桌面图标分页">
+        <div class="site-track" id="pageTrack">
+          <section class="desktop-icons" id="desktopIcons" data-page-id="desktop-page-home" aria-label="桌面网址导航" aria-busy="true">
+            <button class="desktop-icon terminal-icon" data-open="terminalWindow" data-navigation-id="system-terminal" style="--x: 0; --y: 0" title="打开命令工具"><span class="icon app-icon">$_</span><span>终端</span></button>
+            <p class="navigation-loading" id="navigationLoading">正在加载桌面网址…</p>
+          </section>
+        </div>
       </section>
 
       <section class="app-window" id="aboutWindow" data-window="about" hidden>
@@ -141,8 +144,7 @@
       </section>
 
     </main>
-      </div>
     </div>
-    <script data-cfasync="false" src="./script.js?v=20260818-1" defer></script>
+    <script data-cfasync="false" src="./script.js?v=20260818-2" defer></script>
   </body>
 </html>

@@ -321,6 +321,8 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       desktopPage.on('pageerror', (error) => desktopErrors.push(error.message));
       await desktopPage.goto(`${origin}/os/`, { waitUntil: 'load' });
       await desktopPage.waitForFunction(() => document.querySelectorAll('#desktopPageSidebarList [data-page-index]').length === 3);
+      await desktopPage.waitForFunction(() => document.body.classList.contains('is-launched'));
+      await desktopPage.waitForTimeout(600);
       assert.deepEqual(
         await desktopPage.locator('#desktopPageSidebarList [data-page-index]').allTextContents(),
         ['', '', '']
@@ -331,11 +333,26 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       );
       assert.notEqual(await desktopPage.locator('#desktopPageSidebar').evaluate((element) => getComputedStyle(element).display), 'none');
 
+      const shellBeforeSwitch = await desktopPage.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+        };
+        return {
+          pageCount: document.querySelectorAll('#pageTrack > .desktop-icons').length,
+          trackInIconViewport: document.querySelector('#pageTrack').parentElement === document.querySelector('#desktopIconViewport'),
+          search: rect('.desktop-web-search'),
+          clock: rect('#clock'),
+          pet: rect('#desktopPet')
+        };
+      });
+      assert.equal(shellBeforeSwitch.pageCount, 3);
+      assert.equal(shellBeforeSwitch.trackInIconViewport, true);
+
       await desktopPage.locator('[data-page-index="1"]').click();
       await desktopPage.waitForFunction(() => document.body.dataset.page === '1');
       assert.equal(await desktopPage.locator('[data-navigation-id="link-page-work"]').isVisible(), true);
-      assert.equal(await desktopPage.locator('[data-page-id="desktop-page-home"]').getAttribute('aria-hidden'), 'true');
-      assert.equal(await desktopPage.locator('[data-page-id="desktop-page-home"]').evaluate((element) => element.inert), true);
+      assert.equal(await desktopPage.locator('#desktopIcons').getAttribute('aria-hidden'), 'true');
 
       await desktopPage.locator('[data-navigation-id="folder-page-work"]').click();
       await desktopPage.waitForSelector('#navigationFolder:not([hidden])');
@@ -343,7 +360,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.match(await desktopPage.locator('#navigationFolderGrid').textContent(), /工作文档/);
       await desktopPage.locator('#closeNavigationFolder').click();
 
-      await desktopPage.locator('[data-page-id="desktop-page-work"] .terminal-icon').click();
+      await desktopPage.locator('#pageTrack [data-page-id="desktop-page-work"] .terminal-icon').click();
       await desktopPage.waitForSelector('#terminalWindow:not([hidden])');
       const overlayPlacement = await desktopPage.evaluate(() => ({
         windowInViewport: document.querySelector('#terminalWindow').parentElement === document.querySelector('#pageViewport'),
@@ -360,6 +377,18 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await desktopPage.waitForTimeout(650);
       await desktopPage.mouse.wheel(0, -420);
       await desktopPage.waitForFunction(() => document.body.dataset.page === '1');
+      const shellAfterSwitch = await desktopPage.evaluate(() => {
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+        };
+        return { search: rect('.desktop-web-search'), clock: rect('#clock'), pet: rect('#desktopPet') };
+      });
+      assert.deepEqual(shellAfterSwitch, {
+        search: shellBeforeSwitch.search,
+        clock: shellBeforeSwitch.clock,
+        pet: shellBeforeSwitch.pet
+      });
       assert.deepEqual(desktopErrors, []);
       await desktopContext.close();
 
@@ -368,7 +397,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       const mobileErrors = [];
       mobilePage.on('pageerror', (error) => mobileErrors.push(error.message));
       await mobilePage.goto(`${origin}/os/`, { waitUntil: 'load' });
-      await mobilePage.waitForFunction(() => document.querySelectorAll('#pageTrack > .site-page').length === 3);
+      await mobilePage.waitForFunction(() => document.querySelectorAll('#pageTrack > .desktop-icons').length === 3);
       assert.equal(await mobilePage.locator('#desktopPageSidebar').evaluate((element) => getComputedStyle(element).display), 'none');
 
       const swipe = (fromX, fromY, toX, toY, pointerId) => mobilePage.evaluate(
