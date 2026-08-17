@@ -1032,7 +1032,7 @@ body.os-page {
 @media (min-width: 801px) {
   .desktop-web-search {
     position: fixed;
-    top: 9px;
+    top: 26px;
   }
   .desktop-pet {
     position: fixed;

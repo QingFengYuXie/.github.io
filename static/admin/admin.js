@@ -187,7 +187,7 @@ function makeManagerItem(item, parentFolderId = '') {
   actions.append(
     button('↑', 'move-up', '上移'),
     button('↓', 'move-down', '下移'),
-    button('编辑', 'edit'),
+    button('编辑 / 移动', 'edit'),
     button('删除', 'delete')
   );
   row.append(handle, identity, actions);

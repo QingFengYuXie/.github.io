@@ -201,6 +201,43 @@ test('desktop pages isolate content and migrate it when a page is deleted', asyn
     assert.deepEqual(isolatedWorkspace.items.find((item) => item.id === projectFolder.id).links.map((link) => link.title), ['项目文档']);
     assert.equal(isolatedHome.items.some((item) => item.id === projectFolder.id), false);
 
+    const movableLink = await adminRequest(miniflare, authHeaders, '/admin/links', 'POST', {
+      title: '待移动网址',
+      url: '/dynamic/about.html',
+      icon: '移',
+      color: '#e8d9dc',
+      openMode: 'same',
+      pageId: workspace.id,
+      folderId: projectFolder.id
+    });
+    assert.equal(movableLink.response.status, 200);
+    const movableLinkId = movableLink.payload.desktop.pages
+      .find((page) => page.id === workspace.id).items
+      .find((item) => item.id === projectFolder.id).links
+      .find((link) => link.title === '待移动网址').id;
+    const movedLink = await adminRequest(
+      miniflare,
+      authHeaders,
+      `/admin/links/${encodeURIComponent(movableLinkId)}`,
+      'PATCH',
+      {
+        pageId: homePage.id,
+        folderId: null,
+        title: '待移动网址',
+        url: '/dynamic/about.html',
+        icon: '移',
+        color: '#e8d9dc',
+        openMode: 'same'
+      }
+    );
+    assert.equal(movedLink.response.status, 200);
+    const homeAfterLinkMove = movedLink.payload.desktop.pages.find((page) => page.id === homePage.id);
+    const workspaceAfterLinkMove = movedLink.payload.desktop.pages.find((page) => page.id === workspace.id);
+    const movedLinkInHome = homeAfterLinkMove.items.find((item) => item.id === movableLinkId);
+    assert.ok(movedLinkInHome);
+    assert.equal(movedLinkInHome.pageId, homePage.id);
+    assert.equal(workspaceAfterLinkMove.items.find((item) => item.id === projectFolder.id).links.some((link) => link.id === movableLinkId), false);
+
     const crossPageLink = await adminRequest(miniflare, authHeaders, '/admin/links', 'POST', {
       title: '跨页网址',
       url: '/about.html',
