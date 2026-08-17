@@ -323,7 +323,11 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await desktopPage.waitForFunction(() => document.querySelectorAll('#desktopPageSidebarList [data-page-index]').length === 3);
       assert.deepEqual(
         await desktopPage.locator('#desktopPageSidebarList [data-page-index]').allTextContents(),
-        ['01主页', '02工作', '03生活']
+        ['', '', '']
+      );
+      assert.deepEqual(
+        await desktopPage.locator('#desktopPageSidebarList [data-page-index]').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))),
+        ['切换到主页', '切换到工作', '切换到生活']
       );
       assert.notEqual(await desktopPage.locator('#desktopPageSidebar').evaluate((element) => getComputedStyle(element).display), 'none');
 

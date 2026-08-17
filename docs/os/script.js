@@ -1036,13 +1036,7 @@ function renderPageSidebar() {
     button.dataset.pageIndex = String(index);
     button.setAttribute('aria-label', `切换到${page.name}`);
     button.setAttribute('aria-current', String(index === currentPageIndex));
-    const number = document.createElement('span');
-    number.className = 'desktop-page-sidebar-number';
-    number.textContent = String(index + 1).padStart(2, '0');
-    const name = document.createElement('span');
-    name.className = 'desktop-page-sidebar-name';
-    name.textContent = page.name;
-    button.append(number, name);
+    button.dataset.pageName = page.name;
     pageSidebarList.append(button);
   });
   if (pageSidebar) pageSidebar.hidden = desktopPages.length === 0;

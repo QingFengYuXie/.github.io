@@ -212,6 +212,21 @@ test('desktop pages isolate content and migrate it when a page is deleted', asyn
     assert.equal(crossPageLink.response.status, 400);
     assert.equal(crossPageLink.payload.code, 'INVALID_FOLDER_PAGE');
 
+    const crossPageFolder = await adminRequest(miniflare, authHeaders, `/admin/folders/${encodeURIComponent(projectFolder.id)}`, 'PATCH', {
+      name: '项目',
+      icon: '▰',
+      color: '#f4c84a',
+      pageId: homePage.id
+    });
+    assert.equal(crossPageFolder.response.status, 200);
+    desktop = crossPageFolder.payload.desktop;
+    const movedFolder = desktop.pages.find((page) => page.id === homePage.id).items
+      .find((item) => item.id === projectFolder.id);
+    assert.ok(movedFolder);
+    assert.equal(movedFolder.pageId, homePage.id);
+    assert.deepEqual(movedFolder.links.map((link) => [link.title, link.pageId]), [['项目文档', homePage.id]]);
+    assert.equal(desktop.pages.find((page) => page.id === workspace.id).items.some((item) => item.id === projectFolder.id), false);
+
     const renamed = await adminRequest(
       miniflare,
       authHeaders,

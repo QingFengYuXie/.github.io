@@ -949,6 +949,50 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   .terminal-input-row { padding-bottom: calc(11px + env(safe-area-inset-bottom)); }
 }
 
-@media (max-width: 340px) {
-  .navigation-folder-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Narrow full-height page controls: page names remain available to assistive technology only. */
+.desktop-page-sidebar {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: 18px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid rgba(255, 91, 111, .22);
+  border-radius: 0;
+  background: rgba(17, 9, 12, .48);
+  box-shadow: -8px 0 28px rgba(0, 0, 0, .18);
+  transform: none;
 }
+.desktop-page-sidebar-kicker { display: none; }
+.desktop-page-sidebar nav { display: flex; flex-direction: column; height: 100%; gap: 0; }
+.desktop-page-sidebar-item {
+  position: relative;
+  display: block;
+  flex: 1 1 0;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 0;
+  background: transparent;
+  color: transparent;
+  transform: none;
+}
+.desktop-page-sidebar-item::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  left: 5px;
+  height: 3px;
+  border-radius: 99px;
+  background: rgba(255, 91, 111, .32);
+  transform: translateY(-50%);
+  transition: height .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.desktop-page-sidebar-item:hover,
+.desktop-page-sidebar-item[aria-current="true"] { background: rgba(164, 24, 45, .25); }
+.desktop-page-sidebar-item[aria-current="true"]::after { height: 9px; background: #e34559; box-shadow: 0 0 12px rgba(255, 66, 89, .75); }
+.desktop-page-sidebar-item:focus-visible { outline: 2px solid #ff6879; outline-offset: -2px; }
+.desktop-page-sidebar-item::before { content: none; }

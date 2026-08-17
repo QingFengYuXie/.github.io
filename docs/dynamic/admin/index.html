@@ -8,7 +8,7 @@
     <title>轻风雨斜 OS · 管理后台</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./admin.css?v=20260817-1" />
-    <script data-cfasync="false" src="./admin.js?v=20260817-1" defer></script>
+    <script data-cfasync="false" src="./admin.js?v=20260818-1" defer></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -184,7 +184,13 @@
           <label class="link-field wide-field"><span>网址</span><input id="itemUrl" type="text" maxlength="2048" placeholder="https://example.com 或 /dynamic/" /></label>
           <label><span>图标 / Emoji</span><input id="itemIcon" maxlength="24" placeholder="留空自动获取" /></label>
           <label><span>主题颜色</span><input id="itemColor" type="color" value="#e8d9dc" /></label>
-          <label class="link-field"><span>所在文件夹</span><select id="itemFolder"><option value="">当前页面</option></select></label>
+          <label class="wide-field">
+            <span>所在页面</span>
+            <select id="itemPage" required></select>
+          </label>
+          <label class="link-field">
+            <span>所在文件夹</span><select id="itemFolder"><option value="">当前页面</option></select>
+          </label>
           <label class="link-field"><span>打开方式</span><select id="itemOpenMode"><option value="auto">自动判断</option><option value="same">当前页面</option><option value="new">新标签页</option></select></label>
         </div>
         <p class="form-message" id="itemMessage" role="status"></p>

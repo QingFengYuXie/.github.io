@@ -517,8 +517,21 @@ async function saveMusicResult(promise, successMessage) {
   }
 }
 
+function foldersForPage(pageId) {
+  return desktopPages().find((page) => page.id === pageId)?.items
+    .filter((item) => item.type === 'folder') || [];
+}
+
+function populateItemFolderOptions(pageId, selectedFolderId = '') {
+  const folderSelect = document.querySelector('#itemFolder');
+  folderSelect.replaceChildren(new Option('当前页面', ''));
+  foldersForPage(pageId).forEach((folder) => folderSelect.add(new Option(folder.title, folder.id)));
+  folderSelect.value = selectedFolderId;
+}
+
 function openItemDialog(type, item = null, parentFolderId = '') {
   const isFolder = type === 'folder';
+  const pageId = item?.pageId || state.selectedPageId;
   document.querySelector('#itemDialogTitle').textContent = item ? `编辑${isFolder ? '文件夹' : '网址'}` : `新增${isFolder ? '文件夹' : '网址'}`;
   document.querySelector('#nameLabel').textContent = isFolder ? '文件夹名称' : '网址名称';
   document.querySelector('#itemId').value = item?.id || '';
@@ -529,10 +542,10 @@ function openItemDialog(type, item = null, parentFolderId = '') {
   document.querySelector('#itemColor').value = item?.color || (isFolder ? '#f4c84a' : '#e8d9dc');
   document.querySelector('#itemOpenMode').value = item?.openMode || 'auto';
   document.querySelectorAll('.link-field').forEach((field) => { field.hidden = isFolder; });
-  const folderSelect = document.querySelector('#itemFolder');
-  folderSelect.replaceChildren(new Option('当前页面', ''));
-  allFolders().forEach((folder) => folderSelect.add(new Option(folder.title, folder.id)));
-  folderSelect.value = parentFolderId;
+  const pageSelect = document.querySelector('#itemPage');
+  pageSelect.replaceChildren(...desktopPages().map((page) => new Option(page.name, page.id)));
+  pageSelect.value = pageId;
+  populateItemFolderOptions(pageId, parentFolderId);
   document.querySelector('#itemMessage').textContent = '';
   itemDialog.showModal();
   document.querySelector('#itemName').focus();
@@ -993,22 +1006,27 @@ deletePageForm.addEventListener('submit', async (event) => {
   }
 });
 
+document.querySelector('#itemPage').addEventListener('change', (event) => {
+  populateItemFolderOptions(event.target.value);
+});
+
 itemForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submit = itemForm.querySelector('[type="submit"]');
   const type = document.querySelector('#itemType').value;
   const id = document.querySelector('#itemId').value;
+  const pageId = document.querySelector('#itemPage').value;
   const body = type === 'folder' ? {
     name: document.querySelector('#itemName').value,
     icon: document.querySelector('#itemIcon').value,
     color: document.querySelector('#itemColor').value,
-    ...(!id ? { pageId: state.selectedPageId } : {})
+    pageId
   } : {
     title: document.querySelector('#itemName').value,
     url: document.querySelector('#itemUrl').value,
     icon: document.querySelector('#itemIcon').value,
     color: document.querySelector('#itemColor').value,
-    pageId: state.selectedPageId,
+    pageId,
     folderId: document.querySelector('#itemFolder').value || null,
     openMode: document.querySelector('#itemOpenMode').value
   };

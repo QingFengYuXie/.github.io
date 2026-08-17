@@ -500,15 +500,28 @@ async function createFolder(request, env) {
 
 async function updateFolder(request, env, id) {
   await requireAdmin(request, env, { csrf: true });
-  const current = await env.DB.prepare('SELECT id, name, icon, color FROM folders WHERE id = ?').bind(id).first();
+  const current = await env.DB.prepare(
+    'SELECT id, page_id AS pageId, name, icon, color, position FROM folders WHERE id = ?'
+  ).bind(id).first();
   if (!current) throw new HttpError(404, '文件夹不存在。', 'NOT_FOUND');
-  const input = normalizeFolderInput(await readJson(request), current);
+  const body = await readJson(request);
+  const input = normalizeFolderInput(body, current);
+  const pageId = await resolvePageId(env, body.pageId ? cleanText(body.pageId, '页面', { max: 90 }) : current.pageId);
+  await assertPageExists(env, pageId);
+  const pageChanged = current.pageId !== pageId;
+  const position = pageChanged ? await nextTopLevelPosition(env, pageId) : Number(current.position);
   const now = unixTime();
-  await env.DB.batch([
-    env.DB.prepare('UPDATE folders SET name = ?, icon = ?, color = ?, updated_at = ? WHERE id = ?')
-      .bind(input.name, input.icon, input.color, now, id),
-    touchDesktop(env, now)
-  ]);
+  const statements = [
+    env.DB.prepare(
+      'UPDATE folders SET page_id = ?, name = ?, icon = ?, color = ?, position = ?, updated_at = ? WHERE id = ?'
+    ).bind(pageId, input.name, input.icon, input.color, position, now, id)
+  ];
+  if (pageChanged) {
+    statements.push(env.DB.prepare('UPDATE links SET page_id = ?, updated_at = ? WHERE folder_id = ?')
+      .bind(pageId, now, id));
+  }
+  statements.push(touchDesktop(env, now));
+  await env.DB.batch(statements);
   return adminMutationResponse(env);
 }
 
