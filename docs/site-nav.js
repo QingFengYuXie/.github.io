@@ -21,7 +21,7 @@
   }
 
   function getChromePageType(path = getCurrentPath()) {
-    if (path === '/dynamic' || path === '/dynamic/index.html' || /^\/dynamic\/page\d+\.html$/.test(path)) {
+    if (path === '/dynamic' || path === '/dynamic/index.html' || /^\/dynamic\/page\d+\.html$/.test(path) || /^\/dynamic\/post\/.+\.html$/.test(path)) {
       return 'dynamic';
     }
     return path === '/about.html' ? 'about' : '';
