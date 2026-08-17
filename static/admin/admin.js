@@ -316,7 +316,7 @@ function render() {
   emptyState.hidden = items.length > 0;
   document.querySelector('#addFolderButton').disabled = !page;
   document.querySelector('#addLinkButton').disabled = !page;
-  if (desktopContentTitle) desktopContentTitle.textContent = page ? `${page.name} · 桌面内容` : '桌面内容';
+  if (desktopContentTitle) desktopContentTitle.textContent = page ? `${page.name} · 页面内容` : '页面内容';
   document.querySelector('#folderCount').textContent = String(desktopPages().flatMap((entry) => entry.items).filter((item) => item.type === 'folder').length);
   document.querySelector('#linkCount').textContent = String(desktopPages().flatMap((entry) => entry.items).flatMap((item) => item.type === 'folder' ? item.links : [item]).length);
   document.querySelector('#versionCount').textContent = String(state.desktop.version || 1);
@@ -439,7 +439,7 @@ async function toggleMusicPreview(track) {
 }
 
 async function loadDesktop() {
-  setSaveStatus('正在读取桌面数据…', 'saving');
+  setSaveStatus('正在读取页面数据…', 'saving');
   try {
     const desktop = await api('/desktop');
     state.desktop = normalizeDesktopData(desktop);
@@ -447,7 +447,7 @@ async function loadDesktop() {
     render();
     setSaveStatus('所有修改都会立即保存。');
   } catch (error) {
-    setSaveStatus(`桌面数据读取失败：${error.message}`, 'error');
+    setSaveStatus(`页面数据读取失败：${error.message}`, 'error');
     throw error;
   }
 }
@@ -493,7 +493,7 @@ async function saveResult(promise, successMessage) {
       syncSelectedPage();
     }
     render();
-    setSaveStatus('已保存，公开桌面刷新后立即生效。');
+    setSaveStatus('已保存，公开导航刷新后立即生效。');
     showToast(successMessage);
     return result;
   } catch (error) {
@@ -530,7 +530,7 @@ function openItemDialog(type, item = null, parentFolderId = '') {
   document.querySelector('#itemOpenMode').value = item?.openMode || 'auto';
   document.querySelectorAll('.link-field').forEach((field) => { field.hidden = isFolder; });
   const folderSelect = document.querySelector('#itemFolder');
-  folderSelect.replaceChildren(new Option('桌面', ''));
+  folderSelect.replaceChildren(new Option('当前页面', ''));
   allFolders().forEach((folder) => folderSelect.add(new Option(folder.title, folder.id)));
   folderSelect.value = parentFolderId;
   document.querySelector('#itemMessage').textContent = '';
@@ -626,7 +626,7 @@ function createLatestSaveQueue({ payload, save, apply, renderView, setStatus, su
 }
 
 function applyDesktopLayoutResult(result, preserveLocalOrder) {
-  if (!result.desktop) throw new Error('服务器没有返回桌面数据。');
+  if (!result.desktop) throw new Error('服务器没有返回页面数据。');
   const desktop = normalizeDesktopData(result.desktop);
   if (!preserveLocalOrder) {
     if (!state.desktop || desktop.version >= state.desktop.version) state.desktop = desktop;
@@ -642,7 +642,7 @@ const enqueueDesktopLayoutSave = createLatestSaveQueue({
   apply: applyDesktopLayoutResult,
   renderView: render,
   setStatus: setSaveStatus,
-  successMessage: '桌面排序已保存',
+  successMessage: '页面内容排序已保存',
   reload: loadDesktop
 });
 
@@ -672,7 +672,7 @@ function persistPageLayout() {
 }
 
 function openPageDialog(page = null) {
-  document.querySelector('#pageDialogTitle').textContent = page ? '重命名桌面页' : '新增桌面页';
+  document.querySelector('#pageDialogTitle').textContent = page ? '重命名页面' : '新增页面';
   document.querySelector('#pageId').value = page?.id || '';
   document.querySelector('#pageName').value = page?.name || '';
   document.querySelector('#pageMessage').textContent = '';
@@ -683,7 +683,7 @@ function openPageDialog(page = null) {
 function openDeletePageDialog(page) {
   const targets = desktopPages().filter((candidate) => candidate.id !== page.id);
   if (!targets.length) {
-    showToast('至少需要保留一个桌面页。');
+    showToast('至少需要保留一个页面。');
     return;
   }
   state.pendingPageDelete = page.id;
@@ -957,7 +957,7 @@ pageForm.addEventListener('submit', async (event) => {
         method: id ? 'PATCH' : 'POST',
         body: { name }
       }),
-      id ? '页面名称已更新' : '桌面页已添加'
+      id ? '页面名称已更新' : '页面已添加'
     );
     const savedPage = result.desktop?.pages?.find((page) => id ? page.id === id : page.name === name.trim());
     if (savedPage) state.selectedPageId = savedPage.id;
@@ -982,7 +982,7 @@ deletePageForm.addEventListener('submit', async (event) => {
     state.selectedPageId = targetPageId;
     await saveResult(
       api(`/admin/pages/${encodeURIComponent(pageId)}?targetPageId=${encodeURIComponent(targetPageId)}`, { method: 'DELETE' }),
-      '页面内容已迁移，桌面页已删除'
+      '页面内容已迁移，页面已删除'
     );
     state.pendingPageDelete = null;
     deletePageDialog.close();

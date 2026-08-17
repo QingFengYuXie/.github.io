@@ -91,7 +91,7 @@ export function normalizeLinkInput(body, current = {}) {
     openMode: body.openMode === undefined && current.openMode !== undefined ? current.openMode : normalizeOpenMode(body.openMode),
     pageId: body.pageId === undefined && current.pageId !== undefined
       ? current.pageId
-      : (body.pageId ? cleanText(body.pageId, '桌面页', { max: 90 }) : null),
+      : (body.pageId ? cleanText(body.pageId, '页面', { max: 90 }) : null),
     folderId: body.folderId === undefined && current.folderId !== undefined
       ? current.folderId
       : (body.folderId ? cleanText(body.folderId, '文件夹', { max: 80 }) : null)
@@ -113,6 +113,6 @@ export function normalizePageInput(body, current = {}) {
   return {
     name: body.name === undefined && current.name !== undefined
       ? current.name
-      : cleanText(body.name, '桌面页名称', { max: 40 })
+      : cleanText(body.name, '页面名称', { max: 40 })
   };
 }

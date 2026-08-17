@@ -311,9 +311,9 @@ async function changePassword(request, env) {
 }
 
 async function assertPageExists(env, pageId) {
-  if (!pageId) throw new HttpError(400, '桌面页不能为空。', 'INVALID_PAGE');
+  if (!pageId) throw new HttpError(400, '页面不能为空。', 'INVALID_PAGE');
   const page = await env.DB.prepare('SELECT id, name, position FROM desktop_pages WHERE id = ?').bind(pageId).first();
-  if (!page) throw new HttpError(400, '目标桌面页不存在。', 'INVALID_PAGE');
+  if (!page) throw new HttpError(400, '目标页面不存在。', 'INVALID_PAGE');
   return page;
 }
 
@@ -375,7 +375,7 @@ async function adminMusicMutationResponse(env) {
 
 async function defaultPageId(env) {
   const page = await env.DB.prepare('SELECT id FROM desktop_pages ORDER BY position, id LIMIT 1').first();
-  if (!page) throw new HttpError(503, '尚未配置桌面页。', 'DESKTOP_NOT_INITIALIZED');
+  if (!page) throw new HttpError(503, '尚未配置页面。', 'DESKTOP_NOT_INITIALIZED');
   return page.id;
 }
 
@@ -387,7 +387,7 @@ async function assertUniquePageName(env, name, id = null) {
   const page = id
     ? await env.DB.prepare('SELECT id FROM desktop_pages WHERE name = ? AND id != ?').bind(name, id).first()
     : await env.DB.prepare('SELECT id FROM desktop_pages WHERE name = ?').bind(name).first();
-  if (page) throw new HttpError(409, '桌面页名称已存在。', 'DUPLICATE_PAGE_NAME');
+  if (page) throw new HttpError(409, '页面名称已存在。', 'DUPLICATE_PAGE_NAME');
 }
 
 async function createPage(request, env) {
@@ -424,14 +424,14 @@ async function updatePageLayout(request, env) {
   const body = await readJson(request, 32768);
   const expectedVersion = await requireCurrentDesktopVersion(env, body.version);
   if (!Array.isArray(body.ids) || body.ids.length < 1 || body.ids.length > 100) {
-    throw new HttpError(400, '桌面页排序数据无效。', 'INVALID_PAGE_LAYOUT');
+    throw new HttpError(400, '页面排序数据无效。', 'INVALID_PAGE_LAYOUT');
   }
   const pageResult = await env.DB.prepare('SELECT id FROM desktop_pages').all();
   const allPages = new Set((pageResult.results || []).map((page) => page.id));
   const orderedIds = body.ids.map((value) => String(value || ''));
   const suppliedPages = new Set(orderedIds);
   if (orderedIds.length !== suppliedPages.size || !sameSet(suppliedPages, allPages)) {
-    throw new HttpError(400, '桌面页排序必须包含全部且不重复的页面。', 'INVALID_PAGE_LAYOUT');
+    throw new HttpError(400, '页面排序必须包含全部且不重复的页面。', 'INVALID_PAGE_LAYOUT');
   }
   const now = unixTime();
   const statements = orderedIds.map((pageId, position) => (
@@ -451,11 +451,11 @@ async function deletePage(request, env, id) {
   const source = await assertPageExists(env, id);
   const pageCount = await env.DB.prepare('SELECT COUNT(*) AS total FROM desktop_pages').first();
   if (Number(pageCount?.total || 0) <= 1) {
-    throw new HttpError(400, '至少需要保留一个桌面页。', 'LAST_DESKTOP_PAGE');
+    throw new HttpError(400, '至少需要保留一个页面。', 'LAST_DESKTOP_PAGE');
   }
   const targetId = new URL(request.url).searchParams.get('targetPageId');
   if (!targetId || targetId === id) {
-    throw new HttpError(400, '请选择一个不同的目标桌面页。', 'INVALID_TARGET_PAGE');
+    throw new HttpError(400, '请选择一个不同的目标页面。', 'INVALID_TARGET_PAGE');
   }
   await assertPageExists(env, targetId);
   const sourceItems = (await env.DB.prepare(
@@ -485,7 +485,7 @@ async function createFolder(request, env) {
   await requireAdmin(request, env, { csrf: true });
   const body = await readJson(request);
   const input = normalizeFolderInput(body);
-  const pageId = await resolvePageId(env, body.pageId ? cleanText(body.pageId, '桌面页', { max: 90 }) : null);
+  const pageId = await resolvePageId(env, body.pageId ? cleanText(body.pageId, '页面', { max: 90 }) : null);
   await assertPageExists(env, pageId);
   const now = unixTime();
   const id = `folder-${crypto.randomUUID()}`;
@@ -540,7 +540,7 @@ async function assertFolderExists(env, folderId, pageId = null) {
   const folder = await env.DB.prepare('SELECT id, page_id AS pageId FROM folders WHERE id = ?').bind(folderId).first();
   if (!folder) throw new HttpError(400, '目标文件夹不存在。', 'INVALID_FOLDER');
   if (pageId && folder.pageId !== pageId) {
-    throw new HttpError(400, '网址和文件夹必须属于同一个桌面页。', 'INVALID_FOLDER_PAGE');
+    throw new HttpError(400, '网址和文件夹必须属于同一个页面。', 'INVALID_FOLDER_PAGE');
   }
   return folder;
 }

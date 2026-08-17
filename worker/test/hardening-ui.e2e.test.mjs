@@ -763,7 +763,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await context.close();
     });
 
-    await t.test('admin creates, renames, reorders and migration-deletes desktop pages', async () => {
+    await t.test('admin creates, renames, reorders and migration-deletes pages', async () => {
       state.authenticated = true;
       state.failDesktop = false;
       state.desktop = makePagedDesktop();
@@ -774,6 +774,8 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       page.on('pageerror', (error) => errors.push(error.message));
       await page.goto(`${origin}/admin/`);
       await page.waitForFunction(() => document.querySelectorAll('#desktopPageManagerList [data-page-id]').length === 3);
+      assert.equal((await page.locator('.desktop-pages-panel h2').textContent()).trim(), '页面');
+      assert.equal((await page.locator('#addDesktopPageButton').textContent()).trim(), '＋ 新增页面');
 
       await page.locator('[data-page-id="desktop-page-work"] [data-action="select-page"]').click();
       await page.waitForSelector('[data-manager-id="folder-page-work"]');
@@ -781,6 +783,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('[data-manager-id="link-page-home"]').count(), 0);
 
       await page.locator('#addDesktopPageButton').click();
+      assert.equal((await page.locator('#pageDialogTitle').textContent()).trim(), '新增页面');
       await page.locator('#pageName').fill('临时页面');
       await page.locator('#pageForm [type="submit"]').click();
       await page.waitForFunction(() => [...document.querySelectorAll('#desktopPageManagerList [data-page-id]')]

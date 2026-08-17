@@ -12,6 +12,7 @@
     "credential": "node scripts/create-credential.mjs"
   },
   "devDependencies": {
+    "playwright-core": "^1.62.1",
     "wrangler": "^4.0.0"
   }
 }
