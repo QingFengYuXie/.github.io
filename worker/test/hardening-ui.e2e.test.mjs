@@ -884,6 +884,10 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.match(await page.locator('#desktopContentTitle').textContent(), /生活/);
       assert.ok(state.desktop.pages.find((entry) => entry.id === 'desktop-page-life').items
         .some((item) => item.id === 'link-page-work'));
+      assert.equal(state.desktop.pages.flatMap((page) => page.items)
+        .filter((item) => item.id === 'link-page-work').length, 1);
+      assert.equal(state.desktop.pages.find((entry) => entry.id === 'desktop-page-work').items
+        .some((item) => item.id === 'link-page-work'), false);
       assert.equal(state.pageRequests.at(-1).body.folderId, null);
 
       await page.locator('[data-page-id="desktop-page-work"] [data-action="select-page"]').click();
@@ -896,6 +900,8 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
         .find((item) => item.id === 'folder-page-work');
       assert.ok(folderMovedHome);
       assert.ok(folderMovedHome.links.every((link) => link.pageId === 'desktop-page-home'));
+      assert.equal(state.desktop.pages.find((entry) => entry.id === 'desktop-page-work').items
+        .some((item) => item.id === 'folder-page-work'), false);
 
       await page.locator('#addDesktopPageButton').click();
       assert.equal((await page.locator('#pageDialogTitle').textContent()).trim(), '新增页面');

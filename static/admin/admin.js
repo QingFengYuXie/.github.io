@@ -714,6 +714,25 @@ function openDeletePageDialog(page) {
   select.focus();
 }
 
+function findDesktopItem(desktop, itemId) {
+  for (const page of desktop.pages || []) {
+    for (const item of page.items || []) {
+      if (item.id === itemId) return item;
+      if (item.type === 'folder') {
+        const child = item.links.find((link) => link.id === itemId);
+        if (child) return child;
+      }
+    }
+  }
+  return null;
+}
+
+function itemBelongsToPage(desktop, itemId, pageId) {
+  const page = (desktop.pages || []).find((entry) => entry.id === pageId);
+  if (!page) return false;
+  return Boolean(findDesktopItem({ pages: [page] }, itemId));
+}
+
 async function moveItemToPage(item, targetPageId) {
   if (!item || item.pageId === targetPageId) return;
   const isFolder = item.type === 'folder';
@@ -734,7 +753,15 @@ async function moveItemToPage(item, targetPageId) {
   const collection = isFolder ? 'folders' : 'links';
   setSaveStatus('正在移动到目标页面…', 'saving');
   const result = await api(`/admin/${collection}/${encodeURIComponent(item.id)}`, { method: 'PATCH', body });
-  state.desktop = normalizeDesktopData(result.desktop);
+  const returnedDesktop = normalizeDesktopData(result.desktop);
+  if (!itemBelongsToPage(returnedDesktop, item.id, targetPageId)) {
+    throw new Error('服务器没有确认项目已移动，请刷新后重试。');
+  }
+  const persistedDesktop = normalizeDesktopData(await api('/desktop', { cache: 'no-store' }));
+  if (!itemBelongsToPage(persistedDesktop, item.id, targetPageId)) {
+    throw new Error('项目移动没有持久化，请刷新后重试。');
+  }
+  state.desktop = persistedDesktop;
   state.selectedPageId = targetPageId;
   syncSelectedPage(targetPageId);
   render();
