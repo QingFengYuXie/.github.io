@@ -493,7 +493,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   .desktop-web-search input { font-size: 10px; }
 }
 .desktop-clock { position: fixed; z-index: 18; right: 24px; bottom: 18px; margin: 0 !important; padding: 7px 11px; color: #d8c8ca; border: 1px solid rgba(255,70,88,.16); border-radius: 5px; background: rgba(8,4,5,.68); box-shadow: 0 6px 20px rgba(0,0,0,.28); backdrop-filter: blur(10px); font-size: 11px !important; letter-spacing: .3px; }
-.desktop-icons { --cell-w: 112px; --cell-h: 82px; top: 68px; right: 22px; bottom: 92px; left: 22px; display: block; width: auto; }
+.desktop-icons { --cell-w: 112px; --cell-h: 96px; top: 68px; right: 22px; bottom: 52px; left: 22px; display: block; width: auto; }
 .desktop-icons::before { content: ''; position: absolute; inset: -8px; opacity: 0; pointer-events: none; background-image: linear-gradient(rgba(255,64,82,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,64,82,.055) 1px, transparent 1px); background-size: var(--cell-w) var(--cell-h); transition: opacity .18s ease; }
 .desktop-icons.is-arranging::before { opacity: 1; }
 .desktop-icon { position: absolute; left: calc(var(--x) * var(--cell-w) + 12px); top: calc(var(--y) * var(--cell-h) + 6px); width: 88px; min-height: 82px; transition: left .2s ease, top .2s ease, transform .12s ease, filter .12s ease; }
@@ -964,7 +964,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   z-index: 6;
   top: 68px;
   right: 22px;
-  bottom: 92px;
+  bottom: 52px;
   left: 22px;
   overflow: hidden;
 }
