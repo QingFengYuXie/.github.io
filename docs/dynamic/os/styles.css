@@ -1043,6 +1043,10 @@ body.os-page {
   }
   .desktop-status-card {
     z-index: 20;
+    display: none;
+  }
+  .desktop-page-sidebar {
+    top: 52px;
   }
 }
 
