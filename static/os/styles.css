@@ -1033,6 +1033,7 @@ body.os-page {
   .desktop-web-search {
     position: fixed;
     top: 26px;
+    transform: translateX(-50%);
   }
   .desktop-pet {
     position: fixed;
