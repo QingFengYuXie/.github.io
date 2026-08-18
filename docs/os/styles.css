@@ -1030,6 +1030,23 @@ body.os-page {
   height: 100%;
 }
 @media (min-width: 801px) {
+  .desktop-icon-viewport {
+    top: 92px;
+    z-index: 30;
+    pointer-events: none;
+  }
+  .desktop-icon-viewport .desktop-icons {
+    pointer-events: auto;
+  }
+  .desktop-icon-viewport .desktop-icons[aria-hidden="true"] {
+    pointer-events: none;
+  }
+  .desktop-status-card {
+    z-index: 20;
+  }
+}
+
+@media (min-width: 801px) {
   .desktop-web-search {
     position: fixed;
     top: 26px;
