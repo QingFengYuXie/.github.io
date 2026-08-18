@@ -159,6 +159,7 @@ function makeManagerItem(item, parentFolderId = '') {
   const article = document.createElement('article');
   article.className = 'manager-item';
   article.draggable = true;
+  article.title = '拖动可排序，也可拖到左侧页面进行移动';
   article.dataset.managerId = item.id;
   article.dataset.managerType = item.type;
   article.dataset.parentFolder = parentFolderId;
@@ -297,6 +298,12 @@ function renderPreview() {
   [terminal, ...selectedItems()].slice(0, 11).forEach((item) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'preview-item';
+    if (item.id) {
+      wrapper.draggable = true;
+      wrapper.dataset.managerId = item.id;
+      wrapper.dataset.managerType = item.type;
+      wrapper.title = '拖到左侧页面可跨页面移动';
+    }
     wrapper.append(makeIcon(item, 'preview-item-icon'));
     const label = document.createElement('span');
     label.textContent = item.title;
@@ -707,6 +714,43 @@ function openDeletePageDialog(page) {
   select.focus();
 }
 
+async function moveItemToPage(item, targetPageId) {
+  if (!item || item.pageId === targetPageId) return;
+  const isFolder = item.type === 'folder';
+  const body = isFolder ? {
+    name: item.title,
+    icon: item.icon,
+    color: item.color,
+    pageId: targetPageId
+  } : {
+    title: item.title,
+    url: item.url,
+    icon: item.icon,
+    color: item.color,
+    openMode: item.openMode,
+    pageId: targetPageId,
+    folderId: null
+  };
+  const collection = isFolder ? 'folders' : 'links';
+  setSaveStatus('正在移动到目标页面…', 'saving');
+  const result = await api(`/admin/${collection}/${encodeURIComponent(item.id)}`, { method: 'PATCH', body });
+  state.desktop = normalizeDesktopData(result.desktop);
+  state.selectedPageId = targetPageId;
+  syncSelectedPage(targetPageId);
+  render();
+  setSaveStatus('已移动，目标页面已切换为当前预览。');
+  showToast(`“${item.title}”已移动到当前预览页面`);
+}
+
+function draggedItem() {
+  return state.dragItem ? findItem(state.dragItem.id)?.item || null : null;
+}
+
+function clearPageDropTargets() {
+  desktopPageManagerList.querySelectorAll('.is-item-drop-target')
+    .forEach((item) => item.classList.remove('is-item-drop-target'));
+}
+
 desktopPageManagerList.addEventListener('click', (event) => {
   const actionButton = event.target.closest('[data-action]');
   const item = event.target.closest('[data-page-id]');
@@ -749,17 +793,46 @@ desktopPageManagerList.addEventListener('dragstart', (event) => {
 desktopPageManagerList.addEventListener('dragend', (event) => {
   event.target.closest('[data-page-id]')?.classList.remove('is-dragging');
   desktopPageManagerList.classList.remove('drag-over');
+  clearPageDropTargets();
   state.dragPageId = null;
 });
 
 desktopPageManagerList.addEventListener('dragover', (event) => {
+  if (state.dragItem) {
+    const target = event.target.closest('[data-page-id]');
+    const moving = draggedItem();
+    if (!target || !moving || moving.pageId === target.dataset.pageId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    clearPageDropTargets();
+    target.classList.add('is-item-drop-target');
+    return;
+  }
   if (!state.dragPageId) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
   desktopPageManagerList.classList.add('drag-over');
 });
 
-desktopPageManagerList.addEventListener('drop', (event) => {
+desktopPageManagerList.addEventListener('dragleave', (event) => {
+  if (!desktopPageManagerList.contains(event.relatedTarget)) clearPageDropTargets();
+});
+
+desktopPageManagerList.addEventListener('drop', async (event) => {
+  if (state.dragItem) {
+    const target = event.target.closest('[data-page-id]');
+    const moving = draggedItem();
+    if (!target || !moving || moving.pageId === target.dataset.pageId) return;
+    event.preventDefault();
+    clearPageDropTargets();
+    try {
+      await moveItemToPage(moving, target.dataset.pageId);
+    } catch (error) {
+      setSaveStatus(error.message, 'error');
+      showToast(error.message);
+    }
+    return;
+  }
   if (!state.dragPageId) return;
   event.preventDefault();
   desktopPageManagerList.classList.remove('drag-over');
@@ -774,20 +847,26 @@ desktopPageManagerList.addEventListener('drop', (event) => {
   persistPageLayout();
 });
 
-desktopList.addEventListener('dragstart', (event) => {
+function startItemDrag(event) {
   const item = event.target.closest('[data-manager-id]');
   if (!item) return;
   state.dragItem = { id: item.dataset.managerId, type: item.dataset.managerType };
   item.classList.add('is-dragging');
   event.dataTransfer.effectAllowed = 'move';
   event.dataTransfer.setData('text/plain', item.dataset.managerId);
-});
+}
 
-desktopList.addEventListener('dragend', (event) => {
+function endItemDrag(event) {
   event.target.closest('[data-manager-id]')?.classList.remove('is-dragging');
   document.querySelectorAll('.drag-over').forEach((element) => element.classList.remove('drag-over'));
+  clearPageDropTargets();
   state.dragItem = null;
-});
+}
+
+desktopList.addEventListener('dragstart', startItemDrag);
+desktopList.addEventListener('dragend', endItemDrag);
+previewIcons.addEventListener('dragstart', startItemDrag);
+previewIcons.addEventListener('dragend', endItemDrag);
 
 desktopList.addEventListener('dragover', (event) => {
   const list = event.target.closest('[data-drop-list]');

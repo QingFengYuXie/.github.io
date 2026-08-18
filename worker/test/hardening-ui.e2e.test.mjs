@@ -180,6 +180,54 @@ async function startServer(state) {
             : page)
         };
         result = json({ ok: true, desktop: state.desktop });
+      } else if (/^\/api\/v1\/admin\/(folders|links)\/[^/]+$/.test(pathname) && request.method === 'PATCH') {
+        const body = await readBody(request);
+        const [, collection, encodedId] = pathname.match(/^\/api\/v1\/admin\/(folders|links)\/([^/]+)$/);
+        const id = decodeURIComponent(encodedId);
+        let moving = null;
+        const pagesWithoutItem = state.desktop.pages.map((page) => ({
+          ...page,
+          items: page.items.flatMap((item) => {
+            if (item.id === id) {
+              moving = item;
+              return [];
+            }
+            if (collection === 'links' && item.type === 'folder') {
+              const child = item.links.find((link) => link.id === id);
+              if (child) moving = child;
+              return [{ ...item, links: item.links.filter((link) => link.id !== id) }];
+            }
+            return [item];
+          })
+        }));
+        const updated = collection === 'folders'
+          ? {
+              ...moving,
+              pageId: body.pageId,
+              title: String(body.name || '').trim(),
+              icon: body.icon,
+              color: body.color,
+              links: moving.links.map((link) => ({ ...link, pageId: body.pageId }))
+            }
+          : {
+              ...moving,
+              pageId: body.pageId,
+              title: body.title,
+              url: body.url,
+              icon: body.icon,
+              color: body.color,
+              openMode: body.openMode
+            };
+        state.pageRequests.push({ action: 'move-item', collection, id, body });
+        state.desktop = {
+          ...state.desktop,
+          version: state.desktop.version + 1,
+          updatedAt: Date.now(),
+          pages: pagesWithoutItem.map((page) => page.id === body.pageId
+            ? { ...page, items: [...page.items, { ...updated, position: page.items.length }] }
+            : page)
+        };
+        result = json({ ok: true, desktop: state.desktop });
       } else if (pathname === '/api/v1/admin/layout' && request.method === 'PUT') {
         const body = await readBody(request);
         state.activeLayoutRequests += 1;
@@ -809,11 +857,45 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await page.waitForFunction(() => document.querySelectorAll('#desktopPageManagerList [data-page-id]').length === 3);
       assert.equal((await page.locator('.desktop-pages-panel h2').textContent()).trim(), '页面');
       assert.equal((await page.locator('#addDesktopPageButton').textContent()).trim(), '＋ 新增页面');
+      const pagePanelStyle = await page.locator('.desktop-pages-panel').evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { position: style.position, overflowY: style.overflowY };
+      });
+      assert.deepEqual(pagePanelStyle, { position: 'sticky', overflowY: 'auto' });
 
       await page.locator('[data-page-id="desktop-page-work"] [data-action="select-page"]').click();
       await page.waitForSelector('[data-manager-id="folder-page-work"]');
       assert.match(await page.locator('#desktopContentTitle').textContent(), /工作/);
       assert.equal(await page.locator('[data-manager-id="link-page-home"]').count(), 0);
+
+      const dragItemToPage = async (source, target) => {
+        const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+        await source.dispatchEvent('dragstart', { dataTransfer });
+        await target.dispatchEvent('dragover', { dataTransfer });
+        await target.dispatchEvent('drop', { dataTransfer });
+        await source.dispatchEvent('dragend', { dataTransfer });
+        await dataTransfer.dispose();
+      };
+      await dragItemToPage(
+        page.locator('#previewIcons [data-manager-id="link-page-work"]'),
+        page.locator('[data-page-id="desktop-page-life"]')
+      );
+      await page.waitForFunction(() => document.querySelector('[data-page-id="desktop-page-life"]')?.classList.contains('is-selected'));
+      assert.match(await page.locator('#desktopContentTitle').textContent(), /生活/);
+      assert.ok(state.desktop.pages.find((entry) => entry.id === 'desktop-page-life').items
+        .some((item) => item.id === 'link-page-work'));
+      assert.equal(state.pageRequests.at(-1).body.folderId, null);
+
+      await page.locator('[data-page-id="desktop-page-work"] [data-action="select-page"]').click();
+      await dragItemToPage(
+        page.locator('#desktopList > [data-manager-id="folder-page-work"]'),
+        page.locator('[data-page-id="desktop-page-home"]')
+      );
+      await page.waitForFunction(() => document.querySelector('[data-page-id="desktop-page-home"]')?.classList.contains('is-selected'));
+      const folderMovedHome = state.desktop.pages.find((entry) => entry.id === 'desktop-page-home').items
+        .find((item) => item.id === 'folder-page-work');
+      assert.ok(folderMovedHome);
+      assert.ok(folderMovedHome.links.every((link) => link.pageId === 'desktop-page-home'));
 
       await page.locator('#addDesktopPageButton').click();
       assert.equal((await page.locator('#pageDialogTitle').textContent()).trim(), '新增页面');

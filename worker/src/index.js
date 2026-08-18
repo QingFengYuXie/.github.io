@@ -516,10 +516,8 @@ async function updateFolder(request, env, id) {
       'UPDATE folders SET page_id = ?, name = ?, icon = ?, color = ?, position = ?, updated_at = ? WHERE id = ?'
     ).bind(pageId, input.name, input.icon, input.color, position, now, id)
   ];
-  if (pageChanged) {
-    statements.push(env.DB.prepare('UPDATE links SET page_id = ?, updated_at = ? WHERE folder_id = ?')
-      .bind(pageId, now, id));
-  }
+  statements.push(env.DB.prepare('UPDATE links SET page_id = ?, updated_at = ? WHERE folder_id = ?')
+    .bind(pageId, now, id));
   statements.push(touchDesktop(env, now));
   await env.DB.batch(statements);
   return adminMutationResponse(env);

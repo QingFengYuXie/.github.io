@@ -264,6 +264,23 @@ test('desktop pages isolate content and migrate it when a page is deleted', asyn
     assert.deepEqual(movedFolder.links.map((link) => [link.title, link.pageId]), [['项目文档', homePage.id]]);
     assert.equal(desktop.pages.find((page) => page.id === workspace.id).items.some((item) => item.id === projectFolder.id), false);
 
+    const database = await miniflare.getD1Database('DB');
+    await database.prepare('UPDATE links SET page_id = ? WHERE id = ?')
+      .bind(workspace.id, createdLink.payload.desktop.pages
+        .find((page) => page.id === workspace.id).items
+        .find((item) => item.id === projectFolder.id).links[0].id)
+      .run();
+    const repairedFolder = await adminRequest(miniflare, authHeaders, `/admin/folders/${encodeURIComponent(projectFolder.id)}`, 'PATCH', {
+      name: '项目',
+      icon: '▰',
+      color: '#f4c84a',
+      pageId: homePage.id
+    });
+    assert.equal(repairedFolder.response.status, 200);
+    const repairedChild = repairedFolder.payload.desktop.pages.find((page) => page.id === homePage.id).items
+      .find((item) => item.id === projectFolder.id).links[0];
+    assert.equal(repairedChild.pageId, homePage.id);
+
     const renamed = await adminRequest(
       miniflare,
       authHeaders,
