@@ -109,7 +109,7 @@ export function normalizeMusicInput(body, current = {}) {
   };
 }
 
-export const WALLPAPER_MAX_BYTES = 8 * 1024 * 1024;
+export const WALLPAPER_MAX_BYTES = 30 * 1024 * 1024;
 export const WALLPAPER_TYPES = Object.freeze({
   'image/jpeg': 'jpg',
   'image/png': 'png',

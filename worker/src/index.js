@@ -224,7 +224,7 @@ async function adminWallpaper(request, env) {
   if (request.method === 'POST') {
     const declaredLength = Number(request.headers.get('content-length') || 0);
     if (declaredLength > WALLPAPER_MAX_BYTES + 65536) {
-      throw new HttpError(413, '壁纸文件不能超过 8 MB。', 'WALLPAPER_TOO_LARGE');
+      throw new HttpError(413, '壁纸文件不能超过 30 MB。', 'WALLPAPER_TOO_LARGE');
     }
     let form;
     try {
@@ -235,7 +235,7 @@ async function adminWallpaper(request, env) {
     const file = form.get('wallpaper');
     if (!(file instanceof File)) throw new HttpError(400, '请选择壁纸图片。', 'WALLPAPER_REQUIRED');
     if (file.size < 1 || file.size > WALLPAPER_MAX_BYTES) {
-      throw new HttpError(413, '壁纸文件不能超过 8 MB。', 'WALLPAPER_TOO_LARGE');
+      throw new HttpError(413, '壁纸文件不能超过 30 MB。', 'WALLPAPER_TOO_LARGE');
     }
     const contentType = assertWallpaperType(file.type.toLowerCase());
     const extension = wallpaperExtension(contentType);

@@ -1,4 +1,5 @@
 const API_ROOT = '/api/v1';
+const MAX_WALLPAPER_BYTES = 30 * 1024 * 1024;
 const state = {
   csrfToken: '',
   desktop: null,
@@ -509,6 +510,10 @@ async function submitWallpaperUpload(event) {
   const file = wallpaperFile.files?.[0];
   if (!file) {
     wallpaperMessage.textContent = '请选择一张图片。';
+    return;
+  }
+  if (file.size < 1 || file.size > MAX_WALLPAPER_BYTES) {
+    wallpaperMessage.textContent = '壁纸文件不能超过 30 MB。';
     return;
   }
   const submit = uploadWallpaperButton;
