@@ -534,6 +534,34 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.ok(playerBox.x + playerBox.width < brandBox.x);
       assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
       assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
+      assert.deepEqual(await page.evaluate(() => {
+        const surface = (selector) => {
+          const style = getComputedStyle(document.querySelector(selector));
+          return {
+            backgroundColor: style.backgroundColor,
+            backgroundImage: style.backgroundImage,
+            backdropFilter: style.backdropFilter,
+            borderRightColor: style.borderRightColor
+          };
+        };
+        return {
+          player: surface('.site-music-player'),
+          sidebar: surface('#desktopPageSidebar')
+        };
+      }), {
+        player: {
+          backgroundColor: 'rgba(255, 255, 255, 0.28)',
+          backgroundImage: 'linear-gradient(110deg, rgba(255, 255, 255, 0.58), rgba(255, 245, 247, 0.3) 58%, rgba(255, 255, 255, 0.44)), none',
+          backdropFilter: 'blur(20px) saturate(1.2)',
+          borderRightColor: 'rgba(255, 113, 121, 0.48)'
+        },
+        sidebar: {
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 245, 247, 0.2)), none',
+          backdropFilter: 'blur(20px) saturate(1.15)',
+          borderRightColor: 'rgba(255, 255, 255, 0.68)'
+        }
+      });
       assert.equal(await page.locator('.os-brand-music').count(), 0);
       assert.equal(await page.getByText('轻风雨@universe ~ echo "welcome to my little system"', { exact: true }).count(), 0);
       assert.equal(await page.locator('#desktopPet').count(), 1);
