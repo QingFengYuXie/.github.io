@@ -21,10 +21,22 @@
   }
 
   function getChromePageType(path = getCurrentPath()) {
-    if (path === '/dynamic' || path === '/dynamic/index.html' || /^\/dynamic\/page\d+\.html$/.test(path) || /^\/dynamic\/post\/.+\.html$/.test(path)) {
+    const normalizedPath = path.replace(/\/+$/, '') || '/';
+    if (normalizedPath === '/about.html' || normalizedPath === '/dynamic/about.html') return 'about';
+    if (
+      normalizedPath === '/dynamic'
+      || normalizedPath === '/dynamic/index.html'
+      || /^\/dynamic\/page\d+\.html$/.test(normalizedPath)
+      || /^\/(?:dynamic\/)?post\/.+\.html$/.test(normalizedPath)
+    ) {
       return 'dynamic';
     }
-    return path === '/about.html' ? 'about' : '';
+    return '';
+  }
+
+  function getNavigationCurrent(path = getCurrentPath()) {
+    if (path === '/os' || path === '/os/index.html') return 'os';
+    return getChromePageType(path) === 'about' ? 'about' : 'feed';
   }
 
   function mountTitleActions() {
@@ -53,7 +65,7 @@
     if (document.querySelector('.site-global-nav')) return;
 
     const path = getCurrentPath();
-    const current = path === '/os' ? 'os' : path === '/about.html' ? 'about' : 'feed';
+    const current = getNavigationCurrent(path);
     const items = [
       { id: 'feed', label: '动态', href: '/dynamic/' },
       { id: 'os', label: '我的 OS', href: '/os/' },
