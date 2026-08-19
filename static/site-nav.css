@@ -376,7 +376,7 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
 
 .os-page .desktop-clock-controls {
   position: fixed;
-  z-index: 18;
+  z-index: 25;
   right: 24px;
   bottom: 18px;
   display: flex;
@@ -434,6 +434,16 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
   .os-page .site-music-control { color: #62585c; }
   .os-page .site-music-control:hover:not(:disabled) { color: #271d21; background: rgba(255, 255, 255, .18); }
   .os-page .site-music-mode[data-music-mode="shuffle"] { color: #c52d45; background: rgba(255, 255, 255, .11); }
+  .os-page .site-music-play {
+    color: #fff;
+    border-color: rgba(255, 255, 255, .36);
+    background: rgba(255, 255, 255, .24);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 5px 14px rgba(0, 0, 0, .2);
+  }
+  .os-page .site-music-play:hover:not(:disabled) {
+    color: #fff;
+    background: rgba(255, 255, 255, .36);
+  }
 
   .os-page .desktop-page-sidebar {
     color: #65595e;
@@ -452,16 +462,24 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
     background: rgba(255, 255, 255, .11);
   }
   .os-page .desktop-page-sidebar-item::after {
-    background: rgba(228, 69, 89, .56);
+    background: rgba(255, 255, 255, .58);
   }
   .os-page .desktop-page-sidebar-item[aria-current="true"]::after {
-    background: #e34559;
-    box-shadow: 0 0 12px rgba(255, 66, 89, .75);
+    background: #fff;
+    box-shadow: 0 0 12px rgba(255, 255, 255, .72);
   }
 }
 
 .os-page .desktop-clock {
   position: static;
+  padding: 7px 11px;
+  color: #f2e7e9;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(255, 249, 250, .11), rgba(83, 37, 45, .08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(13px) saturate(1.15);
+  -webkit-backdrop-filter: blur(13px) saturate(1.15);
 }
 
 .site-background-audio {

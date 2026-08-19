@@ -563,15 +563,30 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
             backdropFilter: style.backdropFilter
           };
         };
+        const indicator = document.querySelector('#desktopPageSidebar .desktop-page-sidebar-item[aria-current="true"]');
+        const indicatorStyle = getComputedStyle(indicator, '::after');
         return {
           search: surface('.desktop-web-search'),
           player: surface('.site-music-player'),
-          sidebar: surface('#desktopPageSidebar')
+          playButton: surface('.site-music-play'),
+          sidebar: surface('#desktopPageSidebar'),
+          clock: surface('.desktop-clock'),
+          speech: surface('#petSpeech'),
+          indicator: {
+            backgroundColor: indicatorStyle.backgroundColor,
+            boxShadow: indicatorStyle.boxShadow
+          }
         };
       });
       assert.deepEqual(osSurfaces.player, osSurfaces.search);
       assert.deepEqual(osSurfaces.sidebar, osSurfaces.search);
+      assert.deepEqual(osSurfaces.clock, osSurfaces.search);
+      assert.deepEqual(osSurfaces.speech, osSurfaces.search);
       assert.equal(osSurfaces.player.backgroundImage.includes('linear-gradient'), true);
+      assert.equal(osSurfaces.playButton.backgroundColor.includes('255'), true);
+      assert.equal(osSurfaces.playButton.backgroundImage, 'none');
+      assert.equal(osSurfaces.indicator.backgroundColor.includes('255'), true);
+      assert.equal(osSurfaces.indicator.boxShadow.includes('255'), true);
       assert.equal(await page.locator('.os-brand-music').count(), 0);
       assert.equal(await page.getByText('轻风雨@universe ~ echo "welcome to my little system"', { exact: true }).count(), 0);
       assert.equal(await page.locator('#desktopPet').count(), 1);
