@@ -1092,3 +1092,74 @@ body.os-page {
     z-index: 35;
   }
 }
+
+/* The three top-left shortcuts and their content windows use a light surface. */
+.os-page .top-links button {
+  color: #f7f9fc;
+  text-shadow: none;
+}
+.os-page .top-links button:hover,
+.os-page .top-links button:focus-visible {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, .28);
+}
+
+.os-page .app-window:not(.terminal-window) {
+  color: #30465d;
+  border-color: rgba(255, 255, 255, .82);
+  background: rgba(248, 251, 255, .97);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .35), 0 0 0 1px rgba(255, 255, 255, .34);
+}
+.os-page .app-window:not(.terminal-window).focused {
+  box-shadow: 0 28px 75px rgba(0, 0, 0, .42), 0 0 0 1px rgba(255, 255, 255, .7);
+}
+.os-page .app-window:not(.terminal-window) .window-header {
+  color: #718094;
+  border-bottom-color: #d9e3ee;
+  background: rgba(232, 240, 249, .96);
+}
+.os-page .app-window:not(.terminal-window) .window-header button { color: #8b98a8; }
+.os-page .app-window:not(.terminal-window) .window-header button:hover { color: #1c3654; }
+.os-page .app-window:not(.terminal-window) .window-content h1,
+.os-page .app-window:not(.terminal-window) .window-content h2 { color: #173355; }
+.os-page .app-window:not(.terminal-window) .window-content p,
+.os-page .app-window:not(.terminal-window) .project-grid p,
+.os-page .app-window:not(.terminal-window) .os-list div,
+.os-page .app-window:not(.terminal-window) .contact-content .quote { color: #64758a; }
+.os-page .app-window:not(.terminal-window) .eyebrow,
+.os-page .app-window:not(.terminal-window) .green-link,
+.os-page .app-window:not(.terminal-window) .contact-content a,
+.os-page .app-window:not(.terminal-window) .notes b { color: #408dce; }
+.os-page .app-window:not(.terminal-window) .muted { color: #97a4b2 !important; }
+.os-page .app-window:not(.terminal-window) .window-avatar { border-color: #c0d5e8; background: #eaf2fa; }
+.os-page .app-window:not(.terminal-window) .project-grid article { border-color: #d8e3ee; background: #f8fbff; }
+.os-page .app-window:not(.terminal-window) .project-grid h3,
+.os-page .app-window:not(.terminal-window) .notes strong { color: #28577c; }
+.os-page .app-window:not(.terminal-window) .project-status,
+.os-page .app-window:not(.terminal-window) .online { color: #55a35e; }
+.os-page .app-window:not(.terminal-window) .project-status.pending,
+.os-page .app-window:not(.terminal-window) .os-list b { color: #c1a056; }
+.os-page .app-window:not(.terminal-window) .notes,
+.os-page .app-window:not(.terminal-window) .notes a { border-color: #dbe4ee; }
+.os-page .app-window:not(.terminal-window) .notes time,
+.os-page .app-window:not(.terminal-window) .note-tag { color: #8b9bad; }
+.os-page .app-window:not(.terminal-window) .tags span { color: #477699; border-color: #c8dbea; background: #fff; }
+.os-page .app-window:not(.terminal-window) .meter > div { background: #dbe7f0; }
+.os-page .app-window:not(.terminal-window) .meter i { background: #67b9df; }
+
+@media (max-width: 800px) {
+  .os-page .app-window:not(.terminal-window) {
+    background: #f8fbff;
+  }
+  .os-page .app-window:not(.terminal-window) .window-header {
+    color: #53697d;
+    border-bottom-color: #d9e3ee;
+    background: rgba(232, 240, 249, .98);
+  }
+  .os-page .app-window:not(.terminal-window) .window-header .close-button {
+    background: rgba(23, 51, 85, .08);
+  }
+  .os-page .app-window:not(.terminal-window) .window-header .close-button::before {
+    color: #2c4f6b;
+  }
+}
