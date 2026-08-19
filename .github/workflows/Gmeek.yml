@@ -52,6 +52,18 @@ jobs:
         run: |
           cp -r ./* /opt/Gmeek/
           cd /opt/Gmeek/
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          config_path = Path('/opt/Gmeek/config.json')
+          base_path = Path('/opt/Gmeek/blogBase.json')
+          config = json.loads(config_path.read_text(encoding='utf-8'))
+          base = json.loads(base_path.read_text(encoding='utf-8')) if base_path.exists() else {}
+          if config.get('allHead') != base.get('allHead'):
+              base['allHead'] = config.get('allHead', '')
+              base_path.write_text(json.dumps(base, ensure_ascii=False), encoding='utf-8')
+          PY
           mkdir -p backup
           python Gmeek.py ${{ secrets.GITHUB_TOKEN }} ${{ github.repository }} --issue_number '${{ github.event.issue.number }}'
           rm -rf /tmp/Gmeek-dynamic /opt/Gmeek/docs/dynamic
@@ -69,8 +81,25 @@ jobs:
           primer_path = docs_dir / 'primer.css'
           shutil.copy2('/opt/Gmeek/static/primer.css', primer_path)
 
+          config = json.loads(Path('/opt/Gmeek/config.json').read_text(encoding='utf-8'))
+          all_head = config.get('allHead', '')
+          site_nav_css = re.search(r"https://qfyx\\.top/site-nav\\.css\\?v=[^'\\\" ]+", all_head)
+          site_nav_js = re.search(r"https://qfyx\\.top/site-nav\\.js\\?v=[^'\\\" ]+", all_head)
+
           for page in docs_dir.rglob('*.html'):
               content = page.read_text(encoding='utf-8')
+              if site_nav_css:
+                  content = re.sub(
+                      r"https://qfyx\\.top/site-nav\\.css\\?v=[^'\\\" ]+",
+                      site_nav_css.group(0),
+                      content,
+                  )
+              if site_nav_js:
+                  content = re.sub(
+                      r"https://qfyx\\.top/site-nav\\.js\\?v=[^'\\\" ]+",
+                      site_nav_js.group(0),
+                      content,
+                  )
               content = content.replace(
                   "href='https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/Primer/21.0.7/primer.css'",
                   "href='/primer.css'",

@@ -73,7 +73,7 @@ async function apiResponse(request, pathname) {
 }
 
 function titleActionsFixture(pathname) {
-  if (pathname === '/dynamic/') {
+  if (pathname === '/dynamic' || pathname === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)\.html$/.test(pathname)) {
     return `<div class="title-left"><span class="mobile-page-mark" aria-hidden="true"></span><strong>轻风雨斜 OS</strong></div><div class="title-right"><a href="/search.html" id="buttonSearch" class="btn btn-invisible circle" title="搜索"><svg width="16" height="16"></svg></a><a href="/about.html" class="btn btn-invisible circle" title="关于" style="display:none"><svg width="16" height="16"></svg></a><a href="/rss.xml" id="buttonRSS" class="btn btn-invisible circle" title="RSS"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
   }
   if (/^\/(?:dynamic\/)?post\//.test(pathname)) {
@@ -109,7 +109,7 @@ async function startServer() {
         return;
       }
 
-      if (pathname === '/dynamic/' || pathname === '/about' || pathname === '/about.html' || pathname === '/dynamic/about' || pathname === '/dynamic/about.html' || pathname === '/search.html' || /^\/(?:dynamic\/)?post\//.test(pathname)) {
+      if (pathname === '/dynamic' || pathname === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)\.html$/.test(pathname) || pathname === '/about' || pathname === '/about.html' || pathname === '/dynamic/about' || pathname === '/dynamic/about.html' || /^\/(?:dynamic\/)?post\//.test(pathname)) {
         response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         response.end(pageFixture(pathname));
         return;
@@ -283,7 +283,8 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
 
       await page.goto(`${origin}/search.html`);
       await waitForTrack(page, 'track-b');
-      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).left), '72px');
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).position), 'static');
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => element.parentElement?.classList.contains('title-right')), true);
 
       await page.locator('[data-music-action="mode"]').click();
       assert.equal(await page.locator('.site-music-player').getAttribute('data-playback-mode'), 'shuffle');
@@ -300,7 +301,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
 
       for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 667 }, { width: 1280, height: 800 }]) {
         await page.setViewportSize(viewport);
-        for (const route of ['/dynamic/', '/dynamic/post/------%2020.html', '/dynamic/post/------%2020', '/post/------%2020.html', '/post/------%2020', '/about.html', '/about', '/dynamic/about.html', '/dynamic/about']) {
+        for (const route of ['/dynamic', '/dynamic/', '/dynamic/page2.html', '/dynamic/page3.html', '/page2.html', '/page3.html', '/tag.html', '/dynamic/tag.html', '/search.html', '/dynamic/post/------%2020.html', '/dynamic/post/------%2020', '/post/------%2020.html', '/post/------%2020', '/about.html', '/about', '/dynamic/about.html', '/dynamic/about']) {
           await page.goto(`${origin}${route}`);
           await waitForTrack(page, 'track-b');
           await page.waitForFunction(() => document.querySelector('.site-visit-count')?.textContent === '12345');
@@ -374,7 +375,8 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               })
             };
           });
-          const expectedOrder = route === '/dynamic/'
+          const isFeedRoute = route === '/dynamic' || route === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)\.html$/.test(route);
+          const expectedOrder = isFeedRoute
             ? ['search', 'rss', 'theme', 'music']
             : ['home', 'issue', 'theme', 'music'];
           assert.deepEqual(layout.order, expectedOrder, `${route} ${viewport.width}px action order`);
