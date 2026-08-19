@@ -76,10 +76,10 @@ function titleActionsFixture(pathname) {
   if (pathname === '/dynamic/') {
     return `<div class="title-left"><span class="mobile-page-mark" aria-hidden="true"></span><strong>轻风雨斜 OS</strong></div><div class="title-right"><a href="/search.html" id="buttonSearch" class="btn btn-invisible circle" title="搜索"><svg width="16" height="16"></svg></a><a href="/about.html" class="btn btn-invisible circle" title="关于" style="display:none"><svg width="16" height="16"></svg></a><a href="/rss.xml" id="buttonRSS" class="btn btn-invisible circle" title="RSS"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
   }
-  if (pathname.startsWith('/dynamic/post/')) {
+  if (/^\/(?:dynamic\/)?post\//.test(pathname)) {
     return `<h1 class="postTitle">测试动态</h1><div class="title-right"><a href="/" id="buttonHome" class="btn btn-invisible circle" title="首页"><svg width="16" height="16"></svg></a><a href="https://github.com/example/issues/3" class="btn btn-invisible circle" title="Issue"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
   }
-  if (pathname === '/about.html') {
+  if (pathname === '/about.html' || pathname === '/dynamic/about.html') {
     return `<h1 class="postTitle">关于</h1><div class="title-right"><a href="/" id="buttonHome" class="btn btn-invisible circle" title="首页"><svg width="16" height="16"></svg></a><a href="https://github.com/example/issues/3" class="btn btn-invisible circle" title="Issue"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
   }
   return `<div class="title-right"><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
@@ -109,7 +109,7 @@ async function startServer() {
         return;
       }
 
-      if (pathname === '/dynamic/' || pathname === '/about.html' || pathname === '/search.html' || pathname.startsWith('/dynamic/post/')) {
+      if (pathname === '/dynamic/' || pathname === '/about.html' || pathname === '/dynamic/about.html' || pathname === '/search.html' || /^\/(?:dynamic\/)?post\//.test(pathname)) {
         response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         response.end(pageFixture(pathname));
         return;
@@ -300,7 +300,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
 
       for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 667 }, { width: 1280, height: 800 }]) {
         await page.setViewportSize(viewport);
-        for (const route of ['/dynamic/', '/dynamic/post/------%2020.html', '/about.html']) {
+        for (const route of ['/dynamic/', '/dynamic/post/------%2020.html', '/post/------%2020.html', '/about.html', '/dynamic/about.html']) {
           await page.goto(`${origin}${route}`);
           await waitForTrack(page, 'track-b');
           await page.waitForFunction(() => document.querySelector('.site-visit-count')?.textContent === '12345');
@@ -360,6 +360,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               bodyPaddingTop: getComputedStyle(document.body).paddingTop,
               statsHeaderGap: rect(header).top - rect(stats).bottom,
               themeCount: document.querySelectorAll('.title-right a[onclick*="modeSwitch"]').length,
+              activeNavigationHref: document.querySelector('.site-global-nav [aria-current="page"]')?.getAttribute('href'),
               viewportWidth: window.innerWidth,
               documentWidth: document.documentElement.scrollWidth,
               order: [...actions.children].filter((element) => getComputedStyle(element).display !== 'none').map((element) => {
@@ -377,6 +378,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
             ? ['search', 'rss', 'theme', 'music']
             : ['home', 'issue', 'theme', 'music'];
           assert.deepEqual(layout.order, expectedOrder, `${route} ${viewport.width}px action order`);
+          assert.equal(layout.activeNavigationHref, route.endsWith('about.html') ? '/about.html' : '/dynamic/');
           assert.equal(layout.themeCount, 1);
           assert.equal(layout.playerParentIsActions, true);
           assert.equal(layout.playerPosition, 'static');
