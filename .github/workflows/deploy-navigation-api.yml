@@ -34,6 +34,9 @@ jobs:
       - name: Cloudflare deployment not configured
         if: ${{ env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == '' }}
         run: echo "::notice title=Cloudflare deployment skipped::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository secrets, then run this workflow again."
+      - name: Ensure wallpaper storage bucket
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: npx wrangler r2 bucket create lightwind-blog-wallpapers || true
       - name: Apply D1 migrations
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: npx wrangler d1 migrations apply lightwind-navigation --remote

@@ -17,7 +17,10 @@ import {
   normalizeLinkInput,
   normalizeMusicInput,
   normalizePageInput,
-  readJson
+  readJson,
+  assertWallpaperType,
+  wallpaperExtension,
+  WALLPAPER_MAX_BYTES
 } from './validation.js';
 import { publicFavicon } from './favicon.js';
 
@@ -160,6 +163,109 @@ async function getMusicData(env) {
     updatedAt: Number(meta?.updatedAt || unixTime()),
     tracks: (trackResult.results || []).map(mapTrack)
   };
+}
+
+async function getWallpaperConfig(env) {
+  return env.DB.prepare(
+    'SELECT object_key AS objectKey, content_type AS contentType, size_bytes AS sizeBytes, version, updated_at AS updatedAt FROM wallpaper_config WHERE id = 1'
+  ).first();
+}
+
+function wallpaperPayload(config) {
+  return {
+    configured: Boolean(config?.objectKey),
+    contentType: config?.contentType || null,
+    sizeBytes: Number(config?.sizeBytes || 0),
+    version: Number(config?.version || 1),
+    updatedAt: Number(config?.updatedAt || 0),
+    url: config?.objectKey ? `/api/v1/wallpaper/image?v=${Number(config.version || 1)}` : null
+  };
+}
+
+async function publicWallpaperMeta(request, env) {
+  assertMethod(request, ['GET', 'HEAD']);
+  const wallpaper = wallpaperPayload(await getWallpaperConfig(env));
+  const etag = `"lightwind-wallpaper-v${wallpaper.version}"`;
+  if (request.headers.get('if-none-match') === etag) {
+    return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
+  }
+  if (request.method === 'HEAD') return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag } });
+  return json(wallpaper, 200, { etag, 'cache-control': 'no-cache' });
+}
+
+async function publicWallpaperImage(request, env) {
+  assertMethod(request, ['GET', 'HEAD']);
+  const config = await getWallpaperConfig(env);
+  if (!config?.objectKey || !env.WALLPAPER_BUCKET) {
+    throw new HttpError(404, '当前没有配置壁纸。', 'WALLPAPER_NOT_FOUND');
+  }
+  const requestedVersion = new URL(request.url).searchParams.get('v');
+  if (requestedVersion && requestedVersion !== String(config.version)) {
+    throw new HttpError(404, '壁纸版本已更新。', 'WALLPAPER_NOT_FOUND');
+  }
+  const object = await env.WALLPAPER_BUCKET.get(config.objectKey);
+  if (!object) throw new HttpError(404, '当前没有配置壁纸。', 'WALLPAPER_NOT_FOUND');
+  const headers = new Headers({
+    'cache-control': 'public, max-age=300, stale-while-revalidate=86400',
+    'content-type': config.contentType || object.httpMetadata?.contentType || 'application/octet-stream',
+    etag: object.httpEtag || `"lightwind-wallpaper-v${config.version}"`,
+    'x-content-type-options': 'nosniff'
+  });
+  if (request.method === 'HEAD') return new Response(null, { status: 200, headers });
+  return new Response(object.body, { status: 200, headers });
+}
+
+async function adminWallpaper(request, env) {
+  await requireAdmin(request, env, { csrf: request.method !== 'GET' });
+  if (request.method === 'GET') {
+    return json({ ok: true, wallpaper: wallpaperPayload(await getWallpaperConfig(env)) }, 200, { 'cache-control': 'no-store' });
+  }
+  if (!env.WALLPAPER_BUCKET) throw new HttpError(503, '壁纸存储尚未配置。', 'WALLPAPER_STORAGE_UNAVAILABLE');
+  if (request.method === 'POST') {
+    const declaredLength = Number(request.headers.get('content-length') || 0);
+    if (declaredLength > WALLPAPER_MAX_BYTES + 65536) {
+      throw new HttpError(413, '壁纸文件不能超过 8 MB。', 'WALLPAPER_TOO_LARGE');
+    }
+    let form;
+    try {
+      form = await request.formData();
+    } catch {
+      throw new HttpError(400, '上传表单格式无效。', 'INVALID_WALLPAPER_FORM');
+    }
+    const file = form.get('wallpaper');
+    if (!(file instanceof File)) throw new HttpError(400, '请选择壁纸图片。', 'WALLPAPER_REQUIRED');
+    if (file.size < 1 || file.size > WALLPAPER_MAX_BYTES) {
+      throw new HttpError(413, '壁纸文件不能超过 8 MB。', 'WALLPAPER_TOO_LARGE');
+    }
+    const contentType = assertWallpaperType(file.type.toLowerCase());
+    const extension = wallpaperExtension(contentType);
+    const key = `wallpaper/${crypto.randomUUID()}.${extension}`;
+    const oldConfig = await getWallpaperConfig(env);
+    await env.WALLPAPER_BUCKET.put(key, file.stream(), {
+      httpMetadata: { contentType, cacheControl: 'public, max-age=300, stale-while-revalidate=86400' }
+    });
+    const now = unixTime();
+    const result = await env.DB.prepare(
+      `UPDATE wallpaper_config
+          SET object_key = ?, content_type = ?, size_bytes = ?, version = version + 1, updated_at = ?
+        WHERE id = 1`
+    ).bind(key, contentType, file.size, now).run();
+    if (Number(result.meta?.changes || 0) !== 1) {
+      await env.WALLPAPER_BUCKET.delete(key);
+      throw new HttpError(503, '壁纸配置尚未初始化，请先执行数据库迁移。', 'WALLPAPER_NOT_INITIALIZED');
+    }
+    if (oldConfig?.objectKey && oldConfig.objectKey !== key) await env.WALLPAPER_BUCKET.delete(oldConfig.objectKey);
+    return json({ ok: true, wallpaper: wallpaperPayload(await getWallpaperConfig(env)) }, 200, { 'cache-control': 'no-store' });
+  }
+  if (request.method === 'DELETE') {
+    const current = await getWallpaperConfig(env);
+    if (current?.objectKey && env.WALLPAPER_BUCKET) await env.WALLPAPER_BUCKET.delete(current.objectKey);
+    await env.DB.prepare(
+      `UPDATE wallpaper_config SET object_key = NULL, content_type = NULL, size_bytes = 0, version = version + 1, updated_at = ? WHERE id = 1`
+    ).bind(unixTime()).run();
+    return json({ ok: true, wallpaper: wallpaperPayload(await getWallpaperConfig(env)) }, 200, { 'cache-control': 'no-store' });
+  }
+  throw new HttpError(405, '请求方法不受支持。', 'METHOD_NOT_ALLOWED');
 }
 
 async function getDesktopData(env) {
@@ -799,6 +905,12 @@ async function routeRequest(request, env) {
   if (faviconMatch) return publicFavicon(request, env, faviconMatch[1]);
   if (path === '/api/v1/desktop') return publicDesktop(request, env);
   if (path === '/api/v1/music') return publicMusic(request, env);
+  if (path === '/api/v1/wallpaper/meta') return publicWallpaperMeta(request, env);
+  if (path === '/api/v1/wallpaper/image') return publicWallpaperImage(request, env);
+  if (path === '/api/v1/admin/wallpaper') {
+    assertMethod(request, ['GET', 'POST', 'DELETE']);
+    return adminWallpaper(request, env);
+  }
   if (path === '/api/v1/auth/login') return login(request, env);
   if (path === '/api/v1/auth/session') return sessionStatus(request, env);
   if (path === '/api/v1/auth/logout') return logout(request, env);

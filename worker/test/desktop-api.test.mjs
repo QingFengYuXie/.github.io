@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Miniflare } from 'miniflare';
 import { hashPassword } from '../src/security.js';
+import { WALLPAPER_MAX_BYTES } from '../src/validation.js';
 
 const workerRoot = fileURLToPath(new URL('..', import.meta.url));
 const origin = 'http://localhost';
@@ -54,13 +55,17 @@ async function createDesktopRuntime(databaseId) {
           DB: { type: 'd1', id: databaseId },
           ADMIN_USERNAME: { type: 'text', value: 'qingfengyu' },
           ALLOWED_ORIGIN: { type: 'text', value: origin },
-          INITIAL_ADMIN_CREDENTIAL: { type: 'text', value: credential }
+          INITIAL_ADMIN_CREDENTIAL: { type: 'text', value: credential },
+          WALLPAPER_BUCKET: {
+            type: 'r2',
+            name: `lightwind-${databaseId}-wallpapers`
+          }
         }
       }
     }]
   });
   const database = await miniflare.getD1Database('DB');
-  for (const migrationPath of ['0001_initial.sql', '0003_desktop_pages.sql']) {
+  for (const migrationPath of ['0001_initial.sql', '0003_desktop_pages.sql', '0004_wallpaper.sql']) {
     const sql = await readFile(`${workerRoot}/migrations/${migrationPath}`, 'utf8');
     for (const statement of sql.split(';').map((part) => part.trim()).filter(Boolean)) {
       await database.prepare(statement).run();
@@ -90,6 +95,17 @@ async function adminRequest(miniflare, authHeaders, path, method, body) {
     headers: authHeaders,
     body: body === undefined ? undefined : JSON.stringify(body)
   }));
+}
+
+async function formRequest(miniflare, path, method, headers, body) {
+  const requestHeaders = new Headers(headers);
+  requestHeaders.delete('content-type');
+  const request = new Request(`${origin}/api/v1${path}`, { method, headers: requestHeaders, body });
+  return miniflare.dispatchFetch(request.url, {
+    method,
+    headers: request.headers,
+    body: await request.arrayBuffer()
+  });
 }
 
 test('desktop layout rejects stale versions without overwriting the latest order', async () => {
@@ -332,11 +348,88 @@ test('desktop pages isolate content and migrate it when a page is deleted', asyn
     const lastPage = await adminRequest(
       miniflare,
       authHeaders,
-      `/admin/pages/${encodeURIComponent(homePage.id)}?targetPageId=missing-page`,
+      `/admin/pages/${encodeURIComponent(homePage.id)}`,
       'DELETE'
     );
     assert.equal(lastPage.response.status, 400);
     assert.equal(lastPage.payload.code, 'LAST_DESKTOP_PAGE');
+  } finally {
+    await miniflare.dispose();
+  }
+});
+
+test('wallpaper API protects uploads and serves replacement lifecycle', async () => {
+  const miniflare = await createDesktopRuntime('test-wallpaper-db');
+
+  try {
+    const initialMeta = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/wallpaper/meta`));
+    assert.equal(initialMeta.response.status, 200);
+    assert.equal(initialMeta.payload.configured, false);
+    assert.equal(initialMeta.payload.url, null);
+
+    const unauthenticated = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/admin/wallpaper`, {
+      method: 'POST',
+      headers: { origin }
+    }));
+    assert.equal(unauthenticated.response.status, 401);
+    assert.equal(unauthenticated.payload.code, 'UNAUTHENTICATED');
+
+    const authHeaders = await authenticate(miniflare);
+    const missingCsrf = await responseJson(await formRequest(
+      miniflare,
+      '/admin/wallpaper',
+      'POST',
+      { origin, cookie: authHeaders.cookie },
+      new FormData()
+    ));
+    assert.equal(missingCsrf.response.status, 403);
+    assert.equal(missingCsrf.payload.code, 'CSRF_REJECTED');
+
+    const invalidType = new FormData();
+    invalidType.append('wallpaper', new File(['not an image'], 'wallpaper.svg', { type: 'image/svg+xml' }));
+    const invalid = await formRequest(miniflare, '/admin/wallpaper', 'POST', authHeaders, invalidType);
+    assert.equal(invalid.status, 400);
+    assert.equal((await invalid.json()).code, 'INVALID_WALLPAPER_TYPE');
+
+    const oversized = new FormData();
+    oversized.append('wallpaper', new File([
+      new Uint8Array(WALLPAPER_MAX_BYTES + 1)
+    ], 'oversized.png', { type: 'image/png' }));
+    const tooLarge = await formRequest(miniflare, '/admin/wallpaper', 'POST', authHeaders, oversized);
+    assert.equal(tooLarge.status, 413);
+    assert.equal((await tooLarge.json()).code, 'WALLPAPER_TOO_LARGE');
+
+    const firstUpload = new FormData();
+    firstUpload.append('wallpaper', new File([new Uint8Array([1, 2, 3])], 'first.png', { type: 'image/png' }));
+    const uploaded = await responseJson(await formRequest(miniflare, '/admin/wallpaper', 'POST', authHeaders, firstUpload));
+    assert.equal(uploaded.response.status, 200);
+    assert.equal(uploaded.payload.wallpaper.configured, true);
+    assert.equal(uploaded.payload.wallpaper.contentType, 'image/png');
+    const firstUrl = uploaded.payload.wallpaper.url;
+
+    const image = await miniflare.dispatchFetch(`${origin}${firstUrl}`);
+    assert.equal(image.status, 200);
+    assert.equal(image.headers.get('content-type'), 'image/png');
+    assert.deepEqual([...new Uint8Array(await image.arrayBuffer())], [1, 2, 3]);
+
+    const secondUpload = new FormData();
+    secondUpload.append('wallpaper', new File([new Uint8Array([4, 5])], 'second.webp', { type: 'image/webp' }));
+    const replaced = await responseJson(await formRequest(miniflare, '/admin/wallpaper', 'POST', authHeaders, secondUpload));
+    assert.equal(replaced.response.status, 200);
+    assert.equal(replaced.payload.wallpaper.contentType, 'image/webp');
+    assert.notEqual(replaced.payload.wallpaper.version, uploaded.payload.wallpaper.version);
+
+    const oldImage = await miniflare.dispatchFetch(`${origin}${firstUrl}`);
+    assert.equal(oldImage.status, 404);
+
+    const deleted = await responseJson(await miniflare.dispatchFetch(`${origin}/api/v1/admin/wallpaper`, {
+      method: 'DELETE',
+      headers: authHeaders
+    }));
+    assert.equal(deleted.response.status, 200);
+    assert.equal(deleted.payload.wallpaper.configured, false);
+    const missingImage = await miniflare.dispatchFetch(`${origin}/api/v1/wallpaper/image`);
+    assert.equal(missingImage.status, 404);
   } finally {
     await miniflare.dispose();
   }

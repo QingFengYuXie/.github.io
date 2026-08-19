@@ -1,8 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HttpError, normalizeColor, normalizeMusicInput, normalizeMusicUrl, normalizeOpenMode, normalizePageInput, normalizeUrl } from '../src/validation.js';
+import { HttpError, assertWallpaperType, normalizeColor, normalizeMusicInput, normalizeMusicUrl, normalizeOpenMode, normalizePageInput, normalizeUrl, wallpaperExtension, WALLPAPER_MAX_BYTES } from '../src/validation.js';
 import { normalizeFolderInput, normalizeLinkInput } from '../src/validation.js';
 
+test('accepts supported wallpaper formats and rejects unsafe uploads', () => {
+  assert.equal(assertWallpaperType('image/jpeg'), 'image/jpeg');
+  assert.equal(wallpaperExtension('image/webp'), 'webp');
+  assert.equal(WALLPAPER_MAX_BYTES, 8 * 1024 * 1024);
+  assert.throws(() => assertWallpaperType('image/svg+xml'), HttpError);
+  assert.throws(() => assertWallpaperType('application/octet-stream'), HttpError);
+});
 test('accepts internal, https and mail links', () => {
   assert.equal(normalizeUrl('/dynamic/'), '/dynamic/');
   assert.equal(normalizeUrl('https://example.com/path'), 'https://example.com/path');

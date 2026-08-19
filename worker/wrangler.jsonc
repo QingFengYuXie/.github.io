@@ -1,29 +1,35 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "lightwind-navigation-api",
-	"main": "src/index.js",
-	"compatibility_date": "2026-08-14",
-	"routes": [
-		{
-			"pattern": "qfyx.top/api/*",
-			"zone_name": "qfyx.top"
-		}
-	],
-	"vars": {
-		"ADMIN_USERNAME": "qingfengyu",
-		"ALLOWED_ORIGIN": "https://qfyx.top"
-	},
-	"secrets": {
-		"required": [
-			"INITIAL_ADMIN_CREDENTIAL"
-		]
-	},
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "lightwind-navigation",
-			"database_id": "0034dfc9-ec7e-4073-ab39-ea21ec591b56",
-			"migrations_dir": "migrations"
-		}
-	]
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lightwind-navigation-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-14",
+  "routes": [
+    {
+      "pattern": "qfyx.top/api/*",
+      "zone_name": "qfyx.top"
+    }
+  ],
+  "vars": {
+    "ADMIN_USERNAME": "qingfengyu",
+    "ALLOWED_ORIGIN": "https://qfyx.top"
+  },
+  "secrets": {
+    "required": [
+      "INITIAL_ADMIN_CREDENTIAL"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lightwind-navigation",
+      "database_id": "0034dfc9-ec7e-4073-ab39-ea21ec591b56",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "WALLPAPER_BUCKET",
+      "bucket_name": "lightwind-blog-wallpapers"
+    }
+  ]
 }

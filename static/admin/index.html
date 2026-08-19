@@ -7,8 +7,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; media-src 'self' https:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'" />
     <title>轻风雨斜 OS · 管理后台</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./admin.css?v=20260818-9" />
-    <script data-cfasync="false" src="./admin.js?v=20260818-4" defer></script>
+    <link rel="stylesheet" href="./admin.css?v=20260818-10" />
+    <script data-cfasync="false" src="./admin.js?v=20260818-5" defer></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -67,7 +67,39 @@
         <nav class="admin-section-tabs" aria-label="后台管理区域">
           <button type="button" data-admin-tab="desktop" aria-selected="true">页面管理</button>
           <button type="button" data-admin-tab="music" aria-selected="false">音乐库</button>
+          <button type="button" data-admin-tab="wallpaper" aria-selected="false">桌面壁纸</button>
         </nav>
+
+        <div class="workspace-grid wallpaper-workspace" id="wallpaperManagerView" data-admin-section="wallpaper" hidden>
+          <section class="manager-panel wallpaper-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow"><i></i> DESKTOP WALLPAPER</p><h2>修改壁纸</h2></div>
+            </div>
+            <p class="manager-help">上传 JPG、PNG 或 WebP 图片，最大 8 MB。保存后 OS 页面刷新即可看到新壁纸。</p>
+            <form class="wallpaper-form" id="wallpaperForm">
+              <label class="wallpaper-file-field">
+                <span>选择图片</span>
+                <input id="wallpaperFile" type="file" accept="image/jpeg,image/png,image/webp" required />
+              </label>
+              <div class="wallpaper-upload-actions">
+                <button class="primary-button" id="uploadWallpaperButton" type="submit">上传并应用</button>
+                <button class="danger-button" id="deleteWallpaperButton" type="button" hidden>删除当前壁纸</button>
+              </div>
+              <p class="form-message" id="wallpaperMessage" role="status"></p>
+            </form>
+          </section>
+          <aside class="preview-panel wallpaper-preview-panel">
+            <div class="panel-heading compact-heading">
+              <div><p class="eyebrow"><i></i> LIVE PREVIEW</p><h2>壁纸预览</h2></div>
+              <a class="open-desktop" href="/os/" target="_blank" rel="noopener">打开 OS ↗</a>
+            </div>
+            <div class="wallpaper-preview" id="wallpaperPreview">
+              <span id="wallpaperPreviewEmpty">尚未配置壁纸</span>
+              <img id="wallpaperPreviewImage" alt="当前桌面壁纸预览" hidden />
+            </div>
+            <p class="preview-note" id="wallpaperSaveStatus">所有修改都会立即保存。</p>
+          </aside>
+        </div>
 
         <div class="workspace-grid" id="desktopManagerView" data-admin-section="desktop">
           <section class="desktop-pages-panel">

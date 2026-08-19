@@ -109,6 +109,24 @@ export function normalizeMusicInput(body, current = {}) {
   };
 }
 
+export const WALLPAPER_MAX_BYTES = 8 * 1024 * 1024;
+export const WALLPAPER_TYPES = Object.freeze({
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp'
+});
+
+export function wallpaperExtension(contentType) {
+  return WALLPAPER_TYPES[contentType] || '';
+}
+
+export function assertWallpaperType(contentType) {
+  if (!wallpaperExtension(contentType)) {
+    throw new HttpError(400, '壁纸只支持 JPG、PNG 或 WebP 图片。', 'INVALID_WALLPAPER_TYPE');
+  }
+  return contentType;
+}
+
 export function normalizePageInput(body, current = {}) {
   return {
     name: body.name === undefined && current.name !== undefined
