@@ -31,8 +31,8 @@
     if (
       normalizedPath === '/dynamic'
       || normalizedPath === '/dynamic/index.html'
-      || /^\/(?:dynamic\/)?page\d+\.html$/.test(normalizedPath)
-      || /^\/(?:dynamic\/)?(?:tag|search)\.html$/.test(normalizedPath)
+      || /^\/(?:dynamic\/)?page\d+(?:\.html)?$/.test(normalizedPath)
+      || /^\/(?:dynamic\/)?(?:tag|search)(?:\.html)?$/.test(normalizedPath)
       || /^\/(?:dynamic\/)?post\/.+(?:\.html)?$/.test(normalizedPath)
     ) {
       return 'dynamic';
