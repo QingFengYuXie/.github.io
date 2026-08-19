@@ -474,7 +474,7 @@ if (desktopPet) {
     syncPetState();
   });
 
-  desktopPet.addEventListener('pointermove', (event) => {
+  function updatePetDrag(event) {
     if (event.pointerId !== petPointerId) return;
     const dx = event.clientX - petStartX;
     const dy = event.clientY - petStartY;
@@ -488,13 +488,13 @@ if (desktopPet) {
       desktopPet.dataset.petDragged = 'true';
       syncPetState();
     }
-    if (!petMoved) return;
+    if (!petMoved || !petBounds) return;
     const nextX = Math.max(8, Math.min(petBounds.maxX, petOriginX + dx));
     const nextY = Math.max(54, Math.min(petBounds.maxY, petOriginY + dy));
     queuePetPosition(nextX, nextY);
-  });
+  }
 
-  desktopPet.addEventListener('pointerup', (event) => {
+  function finishPetDrag(event, cancelled = false) {
     if (event.pointerId !== petPointerId) return;
     flushPetPosition();
     try {
@@ -504,7 +504,13 @@ if (desktopPet) {
     petPointerId = null;
     petBounds = null;
     petMoved = false;
-    petHovered = event.pointerType !== 'touch' && pointerIsInsidePet(event);
+    petHovered = !cancelled && event.pointerType !== 'touch' && pointerIsInsidePet(event);
+    if (cancelled) {
+      petInteracting = false;
+      desktopPet.dataset.petDragged = 'false';
+      syncPetState();
+      return;
+    }
     if (wasDragged) {
       petInteracting = false;
       syncPetState();
@@ -512,18 +518,14 @@ if (desktopPet) {
       return;
     }
     beginPetInteraction();
-  });
+  }
 
-  desktopPet.addEventListener('pointercancel', (event) => {
-    flushPetPosition();
-    petPointerId = null;
-    petBounds = null;
-    petMoved = false;
-    petInteracting = false;
-    petHovered = event.pointerType !== 'touch' && pointerIsInsidePet(event);
-    desktopPet.dataset.petDragged = 'false';
-    syncPetState();
-  });
+  desktopPet.addEventListener('pointermove', updatePetDrag);
+  desktopPet.addEventListener('pointerup', finishPetDrag);
+  desktopPet.addEventListener('pointercancel', (event) => finishPetDrag(event, true));
+  document.addEventListener('pointermove', updatePetDrag, { passive: true });
+  document.addEventListener('pointerup', finishPetDrag, { passive: true });
+  document.addEventListener('pointercancel', (event) => finishPetDrag(event, true), { passive: true });
 
   restoreDefaultPetPosition = () => {
     petUsesCustomPosition = false;
@@ -1073,7 +1075,7 @@ function goToPage(index, source = 'programmatic') {
   if (!desktopPages.length || !pageTrack) return;
   const nextIndex = Math.max(0, Math.min(desktopPages.length - 1, Number(index) || 0));
   currentPageIndex = nextIndex;
-  pageTrack.style.transform = `translate3d(${-nextIndex * 100}%, 0, 0)`;
+  pageTrack.style.transform = `translate3d(0, ${-nextIndex * 100}%, 0)`;
   pageTrack.dataset.pageIndex = String(nextIndex);
   document.body.dataset.page = String(nextIndex);
   pageGridElements.forEach((grid, pageIndex) => {
@@ -1138,36 +1140,36 @@ function bindPageNavigation() {
       startX: event.clientX,
       startY: event.clientY,
       startedAt: performance.now(),
-      horizontal: false
+      vertical: false
     };
   });
   pageViewport?.addEventListener('pointermove', (event) => {
     if (!gesture || event.pointerId !== gesture.pointerId) return;
     const dx = event.clientX - gesture.startX;
     const dy = event.clientY - gesture.startY;
-    if (!gesture.horizontal && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-      gesture.horizontal = true;
+    if (!gesture.vertical && Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx) * 1.2) {
+      gesture.vertical = true;
       try { pageViewport.setPointerCapture?.(event.pointerId); } catch { /* Synthetic events may not own a live pointer. */ }
     }
-    if (!gesture.horizontal) return;
+    if (!gesture.vertical) return;
     event.preventDefault();
     pageTrack.classList.add('is-dragging');
-    const offset = (dx / Math.max(1, pageViewport.clientWidth)) * 100;
-    pageTrack.style.transform = `translate3d(${-currentPageIndex * 100 + offset}%, 0, 0)`;
+    const offset = (dy / Math.max(1, pageViewport.clientHeight)) * 100;
+    pageTrack.style.transform = `translate3d(0, ${-currentPageIndex * 100 + offset}%, 0)`;
   }, { passive: false });
   const finishGesture = (event) => {
     if (!gesture || event.pointerId !== gesture.pointerId) return;
-    const dx = event.clientX - gesture.startX;
+    const dy = event.clientY - gesture.startY;
     const elapsed = Math.max(1, performance.now() - gesture.startedAt);
-    const velocity = Math.abs(dx) / elapsed;
-    const threshold = Math.max(48, pageViewport.clientWidth * .14);
-    const shouldSwitch = gesture.horizontal && (Math.abs(dx) >= threshold || (Math.abs(dx) >= 32 && velocity >= .45));
+    const velocity = Math.abs(dy) / elapsed;
+    const threshold = Math.max(48, pageViewport.clientHeight * .14);
+    const shouldSwitch = gesture.vertical && (Math.abs(dy) >= threshold || (Math.abs(dy) >= 32 && velocity >= .45));
     pageTrack.classList.remove('is-dragging');
     try {
       if (pageViewport.hasPointerCapture?.(event.pointerId)) pageViewport.releasePointerCapture(event.pointerId);
     } catch { /* The pointer may already have been released by the browser. */ }
     if (shouldSwitch) {
-      goToPage(currentPageIndex + (dx < 0 ? 1 : -1), 'swipe');
+      goToPage(currentPageIndex + (dy < 0 ? 1 : -1), 'swipe');
     } else {
       goToPage(currentPageIndex, 'programmatic');
     }

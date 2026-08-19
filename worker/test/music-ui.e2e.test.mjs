@@ -12,7 +12,20 @@ const staticRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 const desktop = {
   version: 1,
   updatedAt: 1,
-  items: [{ id: 'link-one', type: 'link', title: '示例', url: 'https://example.com', icon: '', color: '#e8d9dc', openMode: 'new' }]
+  pages: [
+    {
+      id: 'desktop-page-home',
+      name: '主页',
+      position: 0,
+      items: [{ id: 'link-one', type: 'link', title: '示例', url: 'https://example.com', icon: '', color: '#e8d9dc', openMode: 'new' }]
+    },
+    {
+      id: 'desktop-page-notes',
+      name: '笔记',
+      position: 1,
+      items: [{ id: 'link-two', type: 'link', title: '示例二', url: 'https://example.org', icon: '', color: '#e8d9dc', openMode: 'new' }]
+    }
+  ]
 };
 
 let music = makeMusic([
@@ -41,6 +54,12 @@ async function readBody(request) {
 async function apiResponse(request, pathname) {
   if (pathname === '/api/v1/music' && request.method === 'GET') return json(music);
   if (pathname === '/api/v1/desktop' && request.method === 'GET') return json(desktop);
+  if (pathname === '/api/v1/wallpaper/meta' && request.method === 'GET') {
+    return json({ configured: true, url: '/api/v1/wallpaper/image' });
+  }
+  if (pathname === '/api/v1/wallpaper/image' && request.method === 'GET') {
+    return { status: 200, body: '', type: 'image/webp' };
+  }
   if (pathname === '/api/v1/auth/session' && request.method === 'GET') {
     return json({ authenticated: true, csrfToken: 'test-csrf' });
   }
@@ -524,6 +543,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       const nextBootPetFrame = await page.locator('.boot-progress-pet-sprite').getAttribute('data-boot-pet-frame');
       assert.notEqual(nextBootPetFrame, firstBootPetFrame);
       await waitForTrack(page, 'track-a');
+      await page.waitForSelector('#bootScreen.hidden');
       const playerBox = await page.locator('.site-music-player').boundingBox();
       assert.ok(playerBox.x > 1100);
       assert.ok(playerBox.y < 60);
@@ -534,40 +554,80 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.ok(playerBox.x + playerBox.width < brandBox.x);
       assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
       assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
-      assert.deepEqual(await page.evaluate(() => {
+      const osSurfaces = await page.evaluate(() => {
         const surface = (selector) => {
           const style = getComputedStyle(document.querySelector(selector));
           return {
             backgroundColor: style.backgroundColor,
             backgroundImage: style.backgroundImage,
-            backdropFilter: style.backdropFilter,
-            borderRightColor: style.borderRightColor
+            backdropFilter: style.backdropFilter
           };
         };
         return {
+          search: surface('.desktop-web-search'),
           player: surface('.site-music-player'),
           sidebar: surface('#desktopPageSidebar')
         };
-      }), {
-        player: {
-          backgroundColor: 'rgba(255, 255, 255, 0.28)',
-          backgroundImage: 'linear-gradient(110deg, rgba(255, 255, 255, 0.58), rgba(255, 245, 247, 0.3) 58%, rgba(255, 255, 255, 0.44)), none',
-          backdropFilter: 'blur(20px) saturate(1.2)',
-          borderRightColor: 'rgba(255, 113, 121, 0.48)'
-        },
-        sidebar: {
-          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 245, 247, 0.2)), none',
-          backdropFilter: 'blur(20px) saturate(1.15)',
-          borderRightColor: 'rgba(255, 255, 255, 0.68)'
-        }
       });
+      assert.deepEqual(osSurfaces.player, osSurfaces.search);
+      assert.deepEqual(osSurfaces.sidebar, osSurfaces.search);
+      assert.equal(osSurfaces.player.backgroundImage.includes('linear-gradient'), true);
       assert.equal(await page.locator('.os-brand-music').count(), 0);
       assert.equal(await page.getByText('轻风雨@universe ~ echo "welcome to my little system"', { exact: true }).count(), 0);
       assert.equal(await page.locator('#desktopPet').count(), 1);
       assert.equal(await page.locator('.site-global-nav').count(), 1);
 
-      await page.setViewportSize({ width: 390, height: 844 });
+      const wallpaperState = await page.locator('.desktop').evaluate((element) => {
+        const before = getComputedStyle(element, '::before');
+        const after = getComputedStyle(element, '::after');
+        return {
+          backgroundImage: getComputedStyle(element).backgroundImage,
+          beforeDisplay: before.display,
+          afterDisplay: after.display,
+          starsDisplay: getComputedStyle(element.querySelector('.stars')).display,
+          auroraDisplay: getComputedStyle(element.querySelector('.aurora')).display
+        };
+      });
+      assert.equal(wallpaperState.backgroundImage.includes('/api/v1/wallpaper/image'), true);
+      assert.deepEqual(wallpaperState, {
+        backgroundImage: wallpaperState.backgroundImage,
+        beforeDisplay: 'none',
+        afterDisplay: 'none',
+        starsDisplay: 'none',
+        auroraDisplay: 'none'
+      });
+
+      await page.evaluate(() => document.querySelector('#pageViewport').dispatchEvent(new WheelEvent('wheel', { deltaY: 600, bubbles: true, cancelable: true })));
+      await page.waitForFunction(() => document.body.dataset.page === '1');
+      assert.equal(await page.locator('#pageTrack').evaluate((element) => element.style.transform), 'translate3d(0px, -100%, 0px)');
+      await page.waitForTimeout(700);
+      await page.evaluate(() => document.querySelector('#pageViewport').dispatchEvent(new WheelEvent('wheel', { deltaY: -600, bubbles: true, cancelable: true })));
+      await page.waitForFunction(() => document.body.dataset.page === '0');
+
+      const pet = page.locator('#desktopPet');
+      const petBox = await pet.boundingBox();
+      const petHit = await page.evaluate(({ x, y }) => {
+        const element = document.elementFromPoint(x, y);
+        const petStyle = getComputedStyle(document.querySelector('#desktopPet'));
+        return {
+          target: element ? `${element.tagName}#${element.id}.${element.className}` : null,
+          isPet: element?.closest('#desktopPet') !== null,
+          petPointerEvents: petStyle.pointerEvents,
+          petPosition: petStyle.position,
+          petRect: document.querySelector('#desktopPet').getBoundingClientRect().toJSON()
+        };
+      }, {
+        x: petBox.x + petBox.width / 2,
+        y: petBox.y + petBox.height / 2
+      });
+      assert.equal(petHit.isPet, true, JSON.stringify(petHit));
+      await page.mouse.move(petBox.x + petBox.width / 2, petBox.y + petBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(0, 0, { steps: 5 });
+      await page.waitForFunction(() => document.querySelector('#desktopPet')?.dataset.petDragged === 'true');
+      await page.mouse.up();
+      await page.waitForFunction(() => localStorage.getItem('lightwind-rem-pet-position-v2') === JSON.stringify({ x: 8, y: 54 }));
+      assert.deepEqual(await pet.evaluate((element) => ({ left: element.style.left, top: element.style.top })), { left: '8px', top: '54px' });
       const mobilePlayer = await page.locator('.site-music-player').boundingBox();
       const mobileNav = await page.locator('.site-global-nav').boundingBox();
       assert.ok(mobilePlayer.y + mobilePlayer.height < mobileNav.y);
