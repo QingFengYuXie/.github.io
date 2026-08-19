@@ -420,6 +420,45 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
 .os-page .site-music-mode[data-music-mode="shuffle"] { color: #ff6b7e; background: rgba(255, 82, 101, .1); }
 .os-page .site-music-play { color: #fff; border-color: rgba(255, 82, 101, .65); background: linear-gradient(145deg, #ed4b5f, #b81736); }
 
+@media (min-width: 801px) {
+  .os-page .site-music-player {
+    color: #5f5559;
+    border-color: rgba(255, 113, 121, .48);
+    background: linear-gradient(110deg, rgba(255, 255, 255, .58), rgba(255, 245, 247, .3) 58%, rgba(255, 255, 255, .44)), rgba(255, 255, 255, .28);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 0 12px 32px rgba(0, 0, 0, .2), 0 0 20px rgba(255, 226, 230, .12);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  }
+  .os-page .site-music-title { color: #352b2f; }
+  .os-page .site-music-status { color: #a3293d; }
+  .os-page .site-music-control { color: #62585c; }
+  .os-page .site-music-control:hover:not(:disabled) { color: #271d21; background: rgba(255, 255, 255, .42); }
+  .os-page .site-music-mode[data-music-mode="shuffle"] { color: #c52d45; background: rgba(255, 255, 255, .32); }
+
+  .os-page .desktop-page-sidebar {
+    color: #65595e;
+    border-right-color: rgba(255, 255, 255, .68);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .4), rgba(255, 245, 247, .2)), rgba(255, 255, 255, .2);
+    box-shadow: 8px 0 28px rgba(255, 255, 255, .1), 6px 0 22px rgba(0, 0, 0, .14);
+    backdrop-filter: blur(20px) saturate(1.15);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  }
+  .os-page .desktop-page-sidebar-item {
+    border-bottom-color: rgba(255, 255, 255, .36);
+  }
+  .os-page .desktop-page-sidebar-item:hover,
+  .os-page .desktop-page-sidebar-item[aria-current="true"] {
+    background: rgba(255, 255, 255, .32);
+  }
+  .os-page .desktop-page-sidebar-item::after {
+    background: rgba(228, 69, 89, .56);
+  }
+  .os-page .desktop-page-sidebar-item[aria-current="true"]::after {
+    background: #e34559;
+    box-shadow: 0 0 12px rgba(255, 66, 89, .75);
+  }
+}
+
 .os-page .desktop-clock {
   position: static;
 }
