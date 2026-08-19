@@ -22,12 +22,17 @@
 
   function getChromePageType(path = getCurrentPath()) {
     const normalizedPath = path.replace(/\/+$/, '') || '/';
-    if (normalizedPath === '/about.html' || normalizedPath === '/dynamic/about.html') return 'about';
+    if (
+      normalizedPath === '/about'
+      || normalizedPath === '/about.html'
+      || normalizedPath === '/dynamic/about'
+      || normalizedPath === '/dynamic/about.html'
+    ) return 'about';
     if (
       normalizedPath === '/dynamic'
       || normalizedPath === '/dynamic/index.html'
       || /^\/dynamic\/page\d+\.html$/.test(normalizedPath)
-      || /^\/(?:dynamic\/)?post\/.+\.html$/.test(normalizedPath)
+      || /^\/(?:dynamic\/)?post\/.+(?:\.html)?$/.test(normalizedPath)
     ) {
       return 'dynamic';
     }
