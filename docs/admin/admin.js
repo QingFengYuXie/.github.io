@@ -4,6 +4,7 @@ const state = {
   desktop: null,
   selectedPageId: '',
   music: null,
+  wallpaper: null,
   pendingFolderDelete: null,
   pendingPageDelete: null,
   dragItem: null,
@@ -39,6 +40,15 @@ const musicPreviewCard = document.querySelector('#musicPreviewCard');
 const musicPreviewTitle = document.querySelector('#musicPreviewTitle');
 const musicPreviewStatus = document.querySelector('#musicPreviewStatus');
 const stopMusicPreviewButton = document.querySelector('#stopMusicPreview');
+const wallpaperForm = document.querySelector('#wallpaperForm');
+const wallpaperFile = document.querySelector('#wallpaperFile');
+const uploadWallpaperButton = document.querySelector('#uploadWallpaperButton');
+const deleteWallpaperButton = document.querySelector('#deleteWallpaperButton');
+const wallpaperMessage = document.querySelector('#wallpaperMessage');
+const wallpaperPreview = document.querySelector('#wallpaperPreview');
+const wallpaperPreviewEmpty = document.querySelector('#wallpaperPreviewEmpty');
+const wallpaperPreviewImage = document.querySelector('#wallpaperPreviewImage');
+const wallpaperSaveStatus = document.querySelector('#wallpaperSaveStatus');
 const itemDialog = document.querySelector('#itemDialog');
 const itemForm = document.querySelector('#itemForm');
 const deleteFolderDialog = document.querySelector('#deleteFolderDialog');
@@ -55,7 +65,8 @@ function setBusy(button, busy) {
 async function api(path, options = {}) {
   const method = options.method || 'GET';
   const headers = { accept: 'application/json', ...(options.headers || {}) };
-  if (options.body !== undefined) headers['content-type'] = 'application/json';
+  const isFormData = options.body instanceof FormData;
+  if (options.body !== undefined && !isFormData) headers['content-type'] = 'application/json';
   if (!['GET', 'HEAD'].includes(method) && state.csrfToken && path !== '/auth/login') {
     headers['x-csrf-token'] = state.csrfToken;
   }
@@ -64,7 +75,7 @@ async function api(path, options = {}) {
     method,
     headers,
     credentials: 'same-origin',
-    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    body: options.body === undefined ? undefined : (isFormData ? options.body : JSON.stringify(options.body))
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -467,13 +478,95 @@ async function loadMusic() {
   setMusicSaveStatus('所有修改都会立即保存。');
 }
 
+async function loadWallpaper() {
+  setWallpaperStatus('正在读取壁纸配置…', 'saving');
+  const result = await api('/admin/wallpaper', { cache: 'no-store' });
+  state.wallpaper = result.wallpaper || null;
+  renderWallpaper();
+  setWallpaperStatus('所有修改都会立即保存。');
+}
+
+function setWallpaperStatus(message, kind = '') {
+  wallpaperSaveStatus.textContent = message;
+  wallpaperSaveStatus.className = `preview-note${kind ? ` is-${kind}` : ''}`;
+}
+
+function renderWallpaper() {
+  const wallpaper = state.wallpaper;
+  const configured = Boolean(wallpaper?.configured && wallpaper.url);
+  wallpaperPreviewEmpty.hidden = configured;
+  wallpaperPreviewImage.hidden = !configured;
+  deleteWallpaperButton.hidden = !configured;
+  if (configured) {
+    wallpaperPreviewImage.src = `${wallpaper.url}&preview=${Date.now()}`;
+  } else {
+    wallpaperPreviewImage.removeAttribute('src');
+  }
+}
+
+async function submitWallpaperUpload(event) {
+  event.preventDefault();
+  const file = wallpaperFile.files?.[0];
+  if (!file) {
+    wallpaperMessage.textContent = '请选择一张图片。';
+    return;
+  }
+  const submit = uploadWallpaperButton;
+  const formData = new FormData();
+  formData.append('wallpaper', file);
+  setBusy(submit, true);
+  wallpaperMessage.textContent = '';
+  setWallpaperStatus('正在上传壁纸…', 'saving');
+  try {
+    const result = await api('/admin/wallpaper', { method: 'POST', body: formData });
+    state.wallpaper = result.wallpaper || null;
+    renderWallpaper();
+    wallpaperForm.reset();
+    setWallpaperStatus('已保存，OS 页面刷新后立即生效。');
+    showToast('桌面壁纸已更新');
+  } catch (error) {
+    wallpaperMessage.textContent = error.message;
+    setWallpaperStatus(error.message, 'error');
+  } finally {
+    setBusy(submit, false);
+  }
+}
+
+async function deleteWallpaper() {
+  if (!state.wallpaper?.configured || !window.confirm('确定删除当前桌面壁纸吗？')) return;
+  setBusy(deleteWallpaperButton, true);
+  wallpaperMessage.textContent = '';
+  setWallpaperStatus('正在删除壁纸…', 'saving');
+  try {
+    const result = await api('/admin/wallpaper', { method: 'DELETE' });
+    state.wallpaper = result.wallpaper || null;
+    renderWallpaper();
+    setWallpaperStatus('已删除，OS 页面将恢复默认背景。');
+    showToast('桌面壁纸已删除');
+  } catch (error) {
+    wallpaperMessage.textContent = error.message;
+    setWallpaperStatus(error.message, 'error');
+  } finally {
+    setBusy(deleteWallpaperButton, false);
+  }
+}
+
 async function loadDashboardData() {
-  const [desktopResult, musicResult] = await Promise.allSettled([loadDesktop(), loadMusic()]);
+  const [desktopResult, musicResult, wallpaperResult] = await Promise.allSettled([
+    loadDesktop(),
+    loadMusic(),
+    loadWallpaper()
+  ]);
   if (desktopResult.status === 'rejected') throw desktopResult.reason;
   if (musicResult.status === 'rejected') {
     state.music = { version: 1, updatedAt: 0, tracks: [] };
     renderMusic();
     setMusicSaveStatus(`音乐库读取失败：${musicResult.reason.message}`, 'error');
+  }
+  if (wallpaperResult.status === 'rejected') {
+    state.wallpaper = null;
+    renderWallpaper();
+    setWallpaperStatus(`壁纸配置读取失败：${wallpaperResult.reason.message}`, 'error');
   }
 }
 
@@ -1195,6 +1288,8 @@ document.querySelector('#addDesktopPageButton').addEventListener('click', () => 
 document.querySelector('#addFolderButton').addEventListener('click', () => openItemDialog('folder'));
 document.querySelector('#addLinkButton').addEventListener('click', () => openItemDialog('link'));
 document.querySelector('#addMusicButton').addEventListener('click', () => openMusicDialog());
+wallpaperForm.addEventListener('submit', submitWallpaperUpload);
+deleteWallpaperButton.addEventListener('click', deleteWallpaper);
 stopMusicPreviewButton.addEventListener('click', () => stopMusicPreview());
 
 musicPreviewAudio.addEventListener('play', () => {
@@ -1261,6 +1356,7 @@ document.querySelector('#logoutButton').addEventListener('click', async () => {
   state.desktop = null;
   state.selectedPageId = '';
   state.music = null;
+  state.wallpaper = null;
   stopMusicPreview();
   document.querySelector('#musicCount').textContent = '0';
   showLogin('已经安全退出。');

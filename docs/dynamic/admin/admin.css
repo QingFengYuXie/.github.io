@@ -288,6 +288,25 @@ dialog::backdrop { background: rgba(0,0,0,.76); backdrop-filter: blur(8px); }
   .desktop-page-manager-list { grid-template-columns: minmax(0, 1fr); }
 }
 
+.wallpaper-workspace { grid-template-columns: minmax(0, 1fr) minmax(320px, .8fr); }
+.wallpaper-panel { min-height: 0; }
+.wallpaper-form { display: grid; gap: 16px; max-width: 620px; }
+.wallpaper-file-field input { min-height: 52px; padding: 12px; cursor: pointer; }
+.wallpaper-upload-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.wallpaper-preview { position: relative; display: grid; place-items: center; min-height: 300px; overflow: hidden; border: 1px solid rgba(239,63,87,.3); border-radius: 12px; color: #88777c; background: radial-gradient(circle at 70% 35%, rgba(210,18,51,.34), transparent 30%), linear-gradient(145deg, #080607, #1d0b10); }
+.wallpaper-preview::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, rgba(255,255,255,.08), transparent 35%, rgba(0,0,0,.3)); }
+.wallpaper-preview img { width: 100%; height: 100%; min-height: 300px; object-fit: cover; }
+.wallpaper-preview span { padding: 20px; text-align: center; }
+
+@media (max-width: 980px) {
+  .wallpaper-workspace { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 680px) {
+  .wallpaper-upload-actions { flex-direction: column; }
+  .wallpaper-upload-actions button { width: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .music-preview-card[data-preview-state="playing"] .music-preview-disc { animation: none; }
 }

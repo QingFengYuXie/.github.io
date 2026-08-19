@@ -1221,11 +1221,35 @@ async function loadDesktopNavigation() {
   }
 }
 
+async function loadDesktopWallpaper() {
+  try {
+    const response = await fetch('/api/v1/wallpaper/meta', { headers: { accept: 'application/json' }, cache: 'no-cache' });
+    if (!response.ok) throw new Error('wallpaper api unavailable');
+    const wallpaper = await response.json();
+    const rawUrl = String(wallpaper.url || '');
+    if (!wallpaper.configured || !rawUrl) {
+      desktop.classList.remove('has-custom-wallpaper');
+      desktop.style.removeProperty('--wallpaper-image');
+      return;
+    }
+    const imageUrl = new URL(rawUrl, window.location.origin);
+    if (imageUrl.origin !== window.location.origin || imageUrl.pathname !== '/api/v1/wallpaper/image') {
+      throw new Error('invalid wallpaper url');
+    }
+    desktop.style.setProperty('--wallpaper-image', `url("${imageUrl.href}")`);
+    desktop.classList.add('has-custom-wallpaper');
+  } catch {
+    desktop.classList.remove('has-custom-wallpaper');
+    desktop.style.removeProperty('--wallpaper-image');
+  }
+}
+
 document.querySelector('#closeNavigationFolder')?.addEventListener('click', closeNavigationFolder);
 navigationFolder?.addEventListener('pointerdown', (event) => { if (event.target === navigationFolder) closeNavigationFolder(); });
 
 bindPageNavigation();
 loadDesktopNavigation();
+loadDesktopWallpaper();
 
 const clockElement = document.querySelector('#clock');
 const weekdayFormatter = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' });
