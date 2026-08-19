@@ -73,7 +73,7 @@ async function apiResponse(request, pathname) {
 }
 
 function titleActionsFixture(pathname) {
-  if (pathname === '/dynamic' || pathname === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)\.html$/.test(pathname)) {
+  if (pathname === '/dynamic' || pathname === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)(?:\.html)?$/.test(pathname)) {
     return `<div class="title-left"><span class="mobile-page-mark" aria-hidden="true"></span><strong>轻风雨斜 OS</strong></div><div class="title-right"><a href="/search.html" id="buttonSearch" class="btn btn-invisible circle" title="搜索"><svg width="16" height="16"></svg></a><a href="/about.html" class="btn btn-invisible circle" title="关于" style="display:none"><svg width="16" height="16"></svg></a><a href="/rss.xml" id="buttonRSS" class="btn btn-invisible circle" title="RSS"><svg width="16" height="16"></svg></a><a class="btn btn-invisible circle" onclick="modeSwitch()" title="切换主题"><svg width="16" height="16"></svg></a></div>`;
   }
   if (/^\/(?:dynamic\/)?post\//.test(pathname)) {
@@ -86,7 +86,7 @@ function titleActionsFixture(pathname) {
 }
 
 function pageFixture(pathname) {
-  return `<!doctype html><html lang="zh-CN" data-color-mode="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pathname}</title><link rel="stylesheet" href="/site-nav.css"><style>body{box-sizing:border-box;min-width:200px;max-width:900px;margin:20px auto;padding:45px;font:16px/1.25 sans-serif}#header{display:flex;padding-bottom:8px;border-bottom:1px solid #d0d7de;margin-bottom:16px}.title-left{display:flex;align-items:center;gap:8px;white-space:nowrap}.mobile-page-mark{width:40px;height:40px;border-radius:50%;background:#d0d7de}.postTitle{margin:auto 0;font-size:40px}.title-right{display:flex;margin:auto 0 0 auto}.title-right .circle{box-sizing:border-box;padding:14px 16px;margin-right:8px}.title-right svg{display:block}.SideNav{min-width:360px}@media(max-width:600px){body{padding:8px}.title-left strong{display:none}.postTitle{font-size:24px}}</style></head><body><header id="header">${titleActionsFixture(pathname)}</header><main id="content"><h2>${pathname}</h2>${pathname === '/dynamic/' ? '<nav class="SideNav"></nav>' : ''}</main><span id="busuanzi_value_site_pv" hidden>12345</span><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
+  return `<!doctype html><html lang="zh-CN" data-color-mode="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pathname}</title><link rel="stylesheet" href="/site-nav.css"><style>body{box-sizing:border-box;min-width:200px;max-width:900px;margin:20px auto;padding:45px;font:16px/1.25 sans-serif}#header{display:flex;padding-bottom:8px;border-bottom:1px solid #d0d7de;margin-bottom:16px}.title-left{display:flex;align-items:center;gap:8px;white-space:nowrap}.mobile-page-mark{width:40px;height:40px;border-radius:50%;background:#d0d7de}.postTitle{margin:auto 0;font-size:40px}.title-right{display:flex;margin:auto 0 0 auto}.title-right .circle{box-sizing:border-box;padding:14px 16px;margin-right:8px}.title-right svg{display:block}.SideNav{min-width:360px}@media(max-width:600px){body{padding:8px}.title-left strong{display:none}.postTitle{font-size:24px}}</style></head><body><header id="header">${titleActionsFixture(pathname)}</header><main id="content"><h2>${pathname}</h2>${pathname === '/dynamic/' ? '<nav class="SideNav"></nav><div class="pagination"><a class="next_page" rel="next" href="/dynamic/page2.html">下一页</a></div>' : ''}</main><span id="busuanzi_value_site_pv" hidden>12345</span><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
 }
 
 function contentType(filePath) {
@@ -109,7 +109,13 @@ async function startServer() {
         return;
       }
 
-      if (pathname === '/dynamic' || pathname === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)\.html$/.test(pathname) || pathname === '/about' || pathname === '/about.html' || pathname === '/dynamic/about' || pathname === '/dynamic/about.html' || /^\/(?:dynamic\/)?post\//.test(pathname)) {
+      if (pathname === '/dynamic/page2.html') {
+        response.writeHead(308, { location: '/dynamic/page2', 'cache-control': 'no-store' });
+        response.end();
+        return;
+      }
+
+      if (pathname === '/dynamic' || pathname === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)(?:\.html)?$/.test(pathname) || pathname === '/about' || pathname === '/about.html' || pathname === '/dynamic/about' || pathname === '/dynamic/about.html' || /^\/(?:dynamic\/)?post\//.test(pathname)) {
         response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         response.end(pageFixture(pathname));
         return;
@@ -268,6 +274,13 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       await page.locator('[data-music-action="previous"]').click();
       await waitForTrack(page, 'track-b');
       await page.locator('.site-background-audio').evaluate((audio) => { audio.currentTime = 37.5; });
+      await page.locator('.pagination .next_page').click();
+      await page.waitForURL(`${origin}/dynamic/page2`);
+      assert.equal(new URL(page.url()).pathname, '/dynamic/page2');
+      await waitForTrack(page, 'track-b');
+      assert.equal(await page.locator('.site-music-player').evaluate((element) => element.parentElement?.classList.contains('title-right')), true);
+      assert.equal(await page.locator('.title-right a[onclick*="modeSwitch"]').count(), 1);
+
       await page.locator('.site-global-nav a[href="/about.html"]').click();
       await waitForTrack(page, 'track-b');
       await page.waitForFunction(() => Math.abs(document.querySelector('.site-background-audio').currentTime - 37.5) < 0.1);
@@ -301,7 +314,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
 
       for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 667 }, { width: 1280, height: 800 }]) {
         await page.setViewportSize(viewport);
-        for (const route of ['/dynamic', '/dynamic/', '/dynamic/page2.html', '/dynamic/page3.html', '/page2.html', '/page3.html', '/tag.html', '/dynamic/tag.html', '/search.html', '/dynamic/post/------%2020.html', '/dynamic/post/------%2020', '/post/------%2020.html', '/post/------%2020', '/about.html', '/about', '/dynamic/about.html', '/dynamic/about']) {
+        for (const route of ['/dynamic', '/dynamic/', '/dynamic/page2', '/dynamic/page2.html', '/dynamic/page3', '/dynamic/page3.html', '/page2', '/page2.html', '/page3', '/page3.html', '/tag', '/tag.html', '/dynamic/tag', '/dynamic/tag.html', '/search', '/search.html', '/dynamic/post/------%2020.html', '/dynamic/post/------%2020', '/post/------%2020.html', '/post/------%2020', '/about.html', '/about', '/dynamic/about.html', '/dynamic/about']) {
           await page.goto(`${origin}${route}`);
           await waitForTrack(page, 'track-b');
           await page.waitForFunction(() => document.querySelector('.site-visit-count')?.textContent === '12345');
@@ -375,7 +388,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               })
             };
           });
-          const isFeedRoute = route === '/dynamic' || route === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)\.html$/.test(route);
+          const isFeedRoute = route === '/dynamic' || route === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)(?:\.html)?$/.test(route);
           const expectedOrder = isFeedRoute
             ? ['search', 'rss', 'theme', 'music']
             : ['home', 'issue', 'theme', 'music'];
