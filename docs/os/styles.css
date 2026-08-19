@@ -63,9 +63,9 @@ a { color: inherit; text-decoration: none; }
 .desktop-icon { touch-action: none; user-select: none; }
 .desktop-icon-placeholder { display: block; visibility: hidden; pointer-events: none; }
 
-.site-viewport { position: fixed; z-index: 1; inset: 0; overflow: hidden; touch-action: pan-y; cursor: grab; }
+.site-viewport { position: fixed; z-index: 1; inset: 0; overflow: hidden; touch-action: none; cursor: grab; }
 .site-viewport:active { cursor: grabbing; }
-.site-track { width: 100%; height: 100%; display: flex; will-change: transform; transition: transform .62s cubic-bezier(.22,.76,.22,1); }
+.site-track { width: 100%; height: 100%; display: flex; flex-direction: column; will-change: transform; transition: transform .62s cubic-bezier(.22,.76,.22,1); }
 .site-track.is-dragging { transition: none; }
 .site-page { position: relative; flex: 0 0 100%; width: 100%; height: 100%; overflow: hidden; }
 .desktop-page-sidebar {
@@ -247,7 +247,18 @@ body { color: #f3eded; background: #070506; }
 .linux-boot-ready button:hover, .linux-boot-ready button:focus-visible { border-color: #ff4d5e; background: #bd2635; outline-color: #ff4d5e; }
 
 .desktop { background: radial-gradient(circle at 50% 48%, rgba(168,18,36,.18), transparent 33%), radial-gradient(circle at 80% 15%, rgba(95,8,20,.25), transparent 28%), linear-gradient(135deg, #030304, #16080b 55%, #070405); }
-.desktop.has-custom-wallpaper { background-image: linear-gradient(180deg, rgba(4, 2, 3, .28), rgba(4, 2, 3, .52)), var(--wallpaper-image); background-position: center; background-size: cover; background-repeat: no-repeat; }
+.desktop.has-custom-wallpaper {
+  background-image: var(--wallpaper-image);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.desktop.has-custom-wallpaper::before,
+.desktop.has-custom-wallpaper::after,
+.desktop.has-custom-wallpaper .stars,
+.desktop.has-custom-wallpaper .aurora {
+  display: none;
+}
 .desktop::before { opacity: .48; background-image: radial-gradient(circle, #fa3b50 0 1px, transparent 1.7px), radial-gradient(circle, rgba(255,225,228,.28) 0 1px, transparent 1.5px); }
 .desktop::after { opacity: .14; border-color: #d7253b; box-shadow: 0 0 0 50px rgba(137,12,29,.06), 0 0 0 100px rgba(137,12,29,.035); }
 .stars { background: #ff354b; filter: drop-shadow(0 0 7px rgba(255,38,61,.9)); }
@@ -1059,5 +1070,6 @@ body.os-page {
   }
   .desktop-pet {
     position: fixed;
+    z-index: 35;
   }
 }

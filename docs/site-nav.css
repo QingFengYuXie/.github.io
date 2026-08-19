@@ -423,32 +423,33 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
 @media (min-width: 801px) {
   .os-page .site-music-player {
     color: #5f5559;
-    border-color: rgba(255, 113, 121, .48);
-    background: linear-gradient(110deg, rgba(255, 255, 255, .58), rgba(255, 245, 247, .3) 58%, rgba(255, 255, 255, .44)), rgba(255, 255, 255, .28);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 0 12px 32px rgba(0, 0, 0, .2), 0 0 20px rgba(255, 226, 230, .12);
-    backdrop-filter: blur(20px) saturate(1.2);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border-color: rgba(255, 255, 255, .12);
+    background: linear-gradient(145deg, rgba(255, 249, 250, .11), rgba(83, 37, 45, .08));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
+    backdrop-filter: blur(13px) saturate(1.15);
+    -webkit-backdrop-filter: blur(13px) saturate(1.15);
   }
   .os-page .site-music-title { color: #352b2f; }
   .os-page .site-music-status { color: #a3293d; }
   .os-page .site-music-control { color: #62585c; }
-  .os-page .site-music-control:hover:not(:disabled) { color: #271d21; background: rgba(255, 255, 255, .42); }
-  .os-page .site-music-mode[data-music-mode="shuffle"] { color: #c52d45; background: rgba(255, 255, 255, .32); }
+  .os-page .site-music-control:hover:not(:disabled) { color: #271d21; background: rgba(255, 255, 255, .18); }
+  .os-page .site-music-mode[data-music-mode="shuffle"] { color: #c52d45; background: rgba(255, 255, 255, .11); }
 
   .os-page .desktop-page-sidebar {
     color: #65595e;
-    border-right-color: rgba(255, 255, 255, .68);
-    background: linear-gradient(180deg, rgba(255, 255, 255, .4), rgba(255, 245, 247, .2)), rgba(255, 255, 255, .2);
-    box-shadow: 8px 0 28px rgba(255, 255, 255, .1), 6px 0 22px rgba(0, 0, 0, .14);
-    backdrop-filter: blur(20px) saturate(1.15);
-    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    border-left-color: rgba(255, 255, 255, .12);
+    border-right-color: transparent;
+    background: linear-gradient(145deg, rgba(255, 249, 250, .11), rgba(83, 37, 45, .08));
+    box-shadow: -8px 0 25px rgba(0, 0, 0, .28);
+    backdrop-filter: blur(13px) saturate(1.15);
+    -webkit-backdrop-filter: blur(13px) saturate(1.15);
   }
   .os-page .desktop-page-sidebar-item {
-    border-bottom-color: rgba(255, 255, 255, .36);
+    border-bottom-color: rgba(255, 255, 255, .06);
   }
   .os-page .desktop-page-sidebar-item:hover,
   .os-page .desktop-page-sidebar-item[aria-current="true"] {
-    background: rgba(255, 255, 255, .32);
+    background: rgba(255, 255, 255, .11);
   }
   .os-page .desktop-page-sidebar-item::after {
     background: rgba(228, 69, 89, .56);
