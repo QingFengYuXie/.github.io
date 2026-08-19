@@ -1075,7 +1075,9 @@ function goToPage(index, source = 'programmatic') {
   if (!desktopPages.length || !pageTrack) return;
   const nextIndex = Math.max(0, Math.min(desktopPages.length - 1, Number(index) || 0));
   currentPageIndex = nextIndex;
-  pageTrack.style.transform = `translate3d(0, ${-nextIndex * 100}%, 0)`;
+  pageTrack.style.transform = mobileLayoutMedia.matches
+    ? `translate3d(${-nextIndex * 100}%, 0, 0)`
+    : `translate3d(0, ${-nextIndex * 100}%, 0)`;
   pageTrack.dataset.pageIndex = String(nextIndex);
   document.body.dataset.page = String(nextIndex);
   pageGridElements.forEach((grid, pageIndex) => {
@@ -1132,69 +1134,99 @@ function bindPageNavigation() {
   }, { passive: false });
 
   let gesture = null;
+  let suppressClick = false;
   pageViewport?.addEventListener('pointerdown', (event) => {
     if (!mobileLayoutMedia.matches || event.pointerType === 'mouse') return;
-    if (event.target.closest('.app-window, .desktop-icon, .desktop-pet, .navigation-folder, .desktop-context-menu, .command-palette, .site-global-nav, .site-music-player, a, button, input, select, textarea')) return;
+    const ignoredTarget = event.target.closest('.app-window, .desktop-pet, .navigation-folder, .desktop-context-menu, .command-palette, .site-global-nav, .site-music-player, a, input, select, textarea');
+    if (ignoredTarget && !ignoredTarget.closest('.desktop-icon')) return;
     gesture = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       startedAt: performance.now(),
-      vertical: false
+      horizontal: false
     };
   });
   pageViewport?.addEventListener('pointermove', (event) => {
     if (!gesture || event.pointerId !== gesture.pointerId) return;
     const dx = event.clientX - gesture.startX;
     const dy = event.clientY - gesture.startY;
-    if (!gesture.vertical && Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx) * 1.2) {
-      gesture.vertical = true;
+    if (!gesture.horizontal && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      gesture.horizontal = true;
       try { pageViewport.setPointerCapture?.(event.pointerId); } catch { /* Synthetic events may not own a live pointer. */ }
     }
-    if (!gesture.vertical) return;
+    if (!gesture.horizontal) return;
     event.preventDefault();
     pageTrack.classList.add('is-dragging');
-    const offset = (dy / Math.max(1, pageViewport.clientHeight)) * 100;
-    pageTrack.style.transform = `translate3d(0, ${-currentPageIndex * 100 + offset}%, 0)`;
+    const atEdge = (currentPageIndex === 0 && dx > 0)
+      || (currentPageIndex === desktopPages.length - 1 && dx < 0);
+    const offset = atEdge ? dx * .28 : dx;
+    pageTrack.style.transform = `translate3d(calc(${-currentPageIndex * 100}% + ${offset}px), 0, 0)`;
   }, { passive: false });
   const finishGesture = (event) => {
     if (!gesture || event.pointerId !== gesture.pointerId) return;
-    const dy = event.clientY - gesture.startY;
+    const dx = event.clientX - gesture.startX;
     const elapsed = Math.max(1, performance.now() - gesture.startedAt);
-    const velocity = Math.abs(dy) / elapsed;
-    const threshold = Math.max(48, pageViewport.clientHeight * .14);
-    const shouldSwitch = gesture.vertical && (Math.abs(dy) >= threshold || (Math.abs(dy) >= 32 && velocity >= .45));
+    const velocity = Math.abs(dx) / elapsed;
+    const threshold = Math.max(48, pageViewport.clientWidth * .14);
+    const shouldSwitch = gesture.horizontal && (Math.abs(dx) >= threshold || (Math.abs(dx) >= 32 && velocity >= .45));
+    const wasHorizontal = gesture.horizontal;
     pageTrack.classList.remove('is-dragging');
     try {
       if (pageViewport.hasPointerCapture?.(event.pointerId)) pageViewport.releasePointerCapture(event.pointerId);
     } catch { /* The pointer may already have been released by the browser. */ }
     if (shouldSwitch) {
-      goToPage(currentPageIndex + (dy < 0 ? 1 : -1), 'swipe');
+      goToPage(currentPageIndex + (dx < 0 ? 1 : -1), 'swipe');
     } else {
       goToPage(currentPageIndex, 'programmatic');
     }
     gesture = null;
+    if (wasHorizontal) {
+      suppressClick = true;
+      window.setTimeout(() => { suppressClick = false; }, 0);
+    }
   };
   pageViewport?.addEventListener('pointerup', finishGesture);
   pageViewport?.addEventListener('pointercancel', (event) => {
     if (gesture?.pointerId === event.pointerId) {
+      const wasHorizontal = gesture.horizontal;
       pageTrack.classList.remove('is-dragging');
       goToPage(currentPageIndex, 'programmatic');
       gesture = null;
+      if (wasHorizontal) {
+        suppressClick = true;
+        window.setTimeout(() => { suppressClick = false; }, 0);
+      }
     }
   });
+  pageViewport?.addEventListener('click', (event) => {
+    if (!suppressClick) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClick = false;
+  }, true);
 
   document.addEventListener('keydown', (event) => {
     if (!bootScreen.classList.contains('hidden') || event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
-    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'PageDown') {
       event.preventDefault();
       goToPage(currentPageIndex + 1, 'keyboard');
     }
-    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'PageUp') {
       event.preventDefault();
       goToPage(currentPageIndex - 1, 'keyboard');
     }
   });
+
+  let lastMobileLayout = mobileLayoutMedia.matches;
+  const syncPageAxis = () => {
+    if (lastMobileLayout === mobileLayoutMedia.matches) return;
+    lastMobileLayout = mobileLayoutMedia.matches;
+    pageTrack.classList.remove('is-dragging');
+    goToPage(currentPageIndex, 'responsive');
+  };
+  window.addEventListener('resize', syncPageAxis, { passive: true });
+  mobileLayoutMedia.addEventListener?.('change', syncPageAxis);
 }
 
 async function loadDesktopNavigation() {

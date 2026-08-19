@@ -15,6 +15,7 @@
   const legacyMusicPositionKey = 'lightwind-background-music-position-v1';
   const musicLibraryCacheKey = 'lightwind-music-library-cache-v1';
   const musicPlaybackModeKey = 'lightwind-background-music-mode-v1';
+  const avatarFallbackSources = ['/os/assets/avatar.webp', '/os/assets/avatar.jpg'];
 
   function getCurrentPath() {
     return window.location.pathname.replace(/\/+$/, '') || '/';
@@ -43,6 +44,17 @@
   function getNavigationCurrent(path = getCurrentPath()) {
     if (path === '/os' || path === '/os/index.html') return 'os';
     return getChromePageType(path) === 'about' ? 'about' : 'feed';
+  }
+
+  function mountAvatarFallback() {
+    document.querySelectorAll('#avatarImg, img.avatar').forEach((avatar) => {
+      avatar.addEventListener('error', () => {
+        const nextIndex = Number(avatar.dataset.avatarFallbackIndex || -1) + 1;
+        if (nextIndex >= avatarFallbackSources.length) return;
+        avatar.dataset.avatarFallbackIndex = String(nextIndex);
+        avatar.src = avatarFallbackSources[nextIndex];
+      });
+    });
   }
 
   function mountTitleActions() {
@@ -704,6 +716,7 @@
   }
 
   function initializeSiteChrome() {
+    mountAvatarFallback();
     const titleActions = mountTitleActions();
     mountGlobalNavigation();
     mountVisitStats();

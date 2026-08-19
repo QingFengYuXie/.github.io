@@ -1026,6 +1026,9 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
     bottom: calc(max(18px, env(safe-area-inset-bottom)) + 56px);
     left: max(12px, env(safe-area-inset-left));
   }
+  .desktop-icon-viewport > .site-track {
+    flex-direction: row;
+  }
   .desktop-icon-viewport .desktop-icons {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1038,6 +1041,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
     overscroll-behavior: contain;
     scrollbar-width: none;
     touch-action: pan-y;
+    min-width: 100%;
   }
   .desktop-icon-viewport .desktop-icons::-webkit-scrollbar { display: none; }
 }
