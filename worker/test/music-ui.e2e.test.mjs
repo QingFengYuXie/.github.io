@@ -230,6 +230,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.equal(await page.locator('.site-pagination-summary').textContent(), '第 1 页 / 共 3 页');
       assert.equal(await page.locator('.site-pagination-select option').count(), 3);
       assert.equal(await page.locator('.site-pagination-select').inputValue(), '/dynamic/');
+      assert.equal(await page.locator('.site-pagination-tools').evaluate((tools) => tools.previousElementSibling?.classList.contains('pagination')), true);
       await waitForTrack(page, 'track-a');
       await page.waitForSelector('.site-music-player[data-music-state="playing"]');
       assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).position), 'static');

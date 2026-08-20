@@ -287,7 +287,7 @@
     select.addEventListener('change', () => {
       if (select.value) window.location.assign(select.value);
     });
-    container.insertBefore(tools, pagination);
+    pagination.insertAdjacentElement('afterend', tools);
     pagination.dataset.lightwindEnhanced = 'true';
   }
 
