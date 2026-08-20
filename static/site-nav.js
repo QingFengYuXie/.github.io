@@ -232,6 +232,65 @@
     window.setTimeout(() => observer.disconnect(), 60000);
   }
 
+  function getDynamicListingPageNumber(path = getCurrentPath()) {
+    const match = path.match(/^\/dynamic\/page(\d+)(?:\.html)?$/);
+    return match ? Math.max(1, Number(match[1])) : 1;
+  }
+
+  function getDynamicListingPageHref(pageNumber) {
+    return pageNumber === 1 ? '/dynamic/' : `/dynamic/page${pageNumber}.html`;
+  }
+
+  function mountPaginationControls() {
+    const path = getCurrentPath();
+    const isDynamicListing = path === '/dynamic'
+      || path === '/dynamic/index.html'
+      || /^\/dynamic\/page\d+(?:\.html)?$/.test(path);
+    if (!isDynamicListing) return;
+
+    const container = document.querySelector('nav.paginate-container');
+    const pagination = container?.querySelector('.pagination');
+    if (!container || !pagination || pagination.dataset.lightwindEnhanced === 'true') return;
+
+    const currentPage = Number.parseInt(container.dataset.pageCurrent || '', 10)
+      || getDynamicListingPageNumber(path);
+    const linkedPages = [...pagination.querySelectorAll('a[href]')].map((link) => {
+      try {
+        const linkedPath = new URL(link.href, window.location.href).pathname.replace(/\/+$/, '');
+        const match = linkedPath.match(/^\/dynamic\/page(\d+)(?:\.html)?$/);
+        return match ? Number(match[1]) : 1;
+      } catch {
+        return 0;
+      }
+    }).filter((page) => page > 0);
+    const totalPages = Number.parseInt(container.dataset.pageTotal || '', 10)
+      || Math.max(currentPage, ...linkedPages, 1);
+
+    const tools = document.createElement('div');
+    tools.className = 'site-pagination-tools';
+    tools.setAttribute('aria-label', '动态分页工具');
+    tools.innerHTML = `
+      <span class="site-pagination-summary">第 <strong>${currentPage}</strong> 页 / 共 <strong>${totalPages}</strong> 页</span>
+      <label class="site-pagination-jump">
+        <span>跳转页面</span>
+        <select class="site-pagination-select" aria-label="跳转到第几页"></select>
+      </label>
+    `;
+    const select = tools.querySelector('.site-pagination-select');
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+      const option = document.createElement('option');
+      option.value = getDynamicListingPageHref(pageNumber);
+      option.textContent = `第 ${pageNumber} 页`;
+      option.selected = pageNumber === currentPage;
+      select.append(option);
+    }
+    select.addEventListener('change', () => {
+      if (select.value) window.location.assign(select.value);
+    });
+    container.insertBefore(tools, pagination);
+    pagination.dataset.lightwindEnhanced = 'true';
+  }
+
   function mountMusicControl(titleActions) {
     if (document.querySelector('.site-music-player')) return;
 
@@ -807,6 +866,7 @@
     mountUtterancesThemeSync();
     mountGlobalNavigation();
     mountVisitStats();
+    mountPaginationControls();
     mountMusicControl(titleActions);
   }
 
