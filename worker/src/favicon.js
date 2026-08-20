@@ -7,7 +7,7 @@ const REQUEST_TIMEOUT_MS = 2400;
 const MAX_REDIRECTS = 2;
 const MAX_ICON_BYTES = 128 * 1024;
 const MAX_HTML_BYTES = 256 * 1024;
-const FAVICON_CACHE_VERSION = 3;
+const FAVICON_CACHE_VERSION = 4;
 const PRIMARY_ICON_PATH = '/favicon.ico';
 const SECONDARY_ICON_PATHS = [
   '/favicon.svg',
