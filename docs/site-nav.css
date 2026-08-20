@@ -626,6 +626,223 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
   }
 }
 
+/* Lightwind visual tokens and the shared icon surface. */
+:root {
+  --lw-black: #080608;
+  --lw-ink: #f6edf0;
+  --lw-muted: #a9959c;
+  --lw-red: #dd304a;
+  --lw-gold: #f1c76d;
+  --lw-glass: rgba(22, 13, 17, .76);
+  --lw-glass-strong: rgba(12, 8, 11, .92);
+  --lw-line: rgba(255, 255, 255, .12);
+  --lw-radius-lg: 22px;
+  --lw-shadow: 0 22px 70px rgba(0, 0, 0, .34);
+}
+
+.lightwind-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  overflow: visible;
+  stroke: currentColor;
+  pointer-events: none;
+}
+
+[data-icon], .lightwind-icon-host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--lw-red) 72%, #fff);
+  outline-offset: 3px;
+}
+
+/* The OS player is a compact glass control cluster. Every control uses the
+   same white Lucide stroke, including shuffle and transport controls. */
+.os-page .site-music-player {
+  width: 130px;
+  min-height: 42px;
+  padding: 6px 7px;
+  gap: 0;
+  border-color: rgba(255, 255, 255, .22);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .045)), rgba(17, 10, 14, .66);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 12px 32px rgba(0, 0, 0, .3);
+  backdrop-filter: blur(18px) saturate(1.16);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
+}
+
+.os-page .site-music-player .site-music-controls {
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.os-page .site-music-player .site-music-control {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .055);
+}
+
+.os-page .site-music-player .site-music-control svg {
+  width: 14px;
+  height: 14px;
+}
+
+.os-page .site-music-player .site-music-control:hover:not(:disabled),
+.os-page .site-music-player .site-music-mode[data-music-mode="shuffle"] {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .28);
+  background: rgba(255, 255, 255, .16);
+}
+
+.os-page .site-music-player .site-music-play {
+  width: 27px;
+  height: 27px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, .38);
+  background: rgba(255, 255, 255, .18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 5px 14px rgba(0, 0, 0, .2);
+}
+
+.os-page .site-music-player .site-music-play:hover:not(:disabled),
+.os-page .site-music-player[data-music-state="playing"] .site-music-play {
+  color: #fff;
+  background: rgba(255, 255, 255, .28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 7px 18px rgba(0, 0, 0, .24);
+}
+
+@media (max-width: 800px) {
+  .os-page .site-music-player {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    width: 130px;
+    min-height: 42px;
+    padding: 6px 7px;
+  }
+  .os-page .site-music-player .site-music-controls { gap: 5px; }
+  .os-page .site-music-player .site-music-play { width: 26px; height: 26px; }
+  .os-page .site-music-player .site-music-control { width: 22px; height: 22px; }
+  .os-page .site-music-player .site-music-play { width: 27px; height: 27px; }
+}
+
+/* Phase two: an editorial shell for generated Gmeek pages. Content markup and
+   the Gmeek workflow stay untouched; these selectors only add the OS language. */
+body.lightwind-public-page {
+  color: #dfd1d6;
+  background:
+    radial-gradient(circle at 12% 4%, rgba(206, 37, 64, .14), transparent 32rem),
+    radial-gradient(circle at 88% 16%, rgba(241, 199, 109, .08), transparent 26rem),
+    #0b080a;
+}
+
+body.lightwind-public-page #header,
+body.lightwind-public-page #content,
+body.lightwind-public-page #footer {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: min(1080px, calc(100% - 40px));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body.lightwind-public-page #header {
+  padding: clamp(24px, 5vw, 64px) clamp(20px, 4vw, 58px) 24px;
+  border: 1px solid var(--lw-line);
+  border-radius: var(--lw-radius-lg);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .025)), var(--lw-glass);
+  box-shadow: var(--lw-shadow);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+}
+
+body.lightwind-public-page #content {
+  padding: clamp(26px, 5vw, 64px) clamp(20px, 4vw, 58px) 120px;
+  border-right: 1px solid rgba(255, 255, 255, .07);
+  border-left: 1px solid rgba(255, 255, 255, .07);
+  background: rgba(15, 10, 13, .62);
+}
+
+body.lightwind-public-page #header .postTitle,
+body.lightwind-public-page #content h1,
+body.lightwind-public-page #content h2,
+body.lightwind-public-page #content h3 {
+  color: #fff4f5;
+  letter-spacing: -.025em;
+}
+
+body.lightwind-public-page #content h1 { font-size: clamp(28px, 5vw, 54px); line-height: 1.05; }
+body.lightwind-public-page #content h2 { font-size: clamp(22px, 3.5vw, 34px); }
+body.lightwind-public-page #content p,
+body.lightwind-public-page #content li { color: #bcaab0; line-height: 1.9; }
+body.lightwind-public-page #content a { color: #f2b8c1; }
+body.lightwind-public-page #content a:hover { color: #fff; }
+
+body.lightwind-public-page .markdown-body,
+body.lightwind-public-page .postList,
+body.lightwind-public-page .post-list,
+body.lightwind-public-page .post-item {
+  color: #bcaab0;
+}
+
+body.lightwind-public-page .postList > li,
+body.lightwind-public-page .post-list > article,
+body.lightwind-public-page .post-item {
+  margin: 0 0 16px;
+  padding: clamp(16px, 2.6vw, 28px);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .04);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .16);
+  transition: transform .24s ease, border-color .24s ease, background-color .24s ease;
+}
+
+body.lightwind-public-page .postList > li:hover,
+body.lightwind-public-page .post-list > article:hover,
+body.lightwind-public-page .post-item:hover {
+  transform: translateY(-3px);
+  border-color: rgba(241, 199, 109, .32);
+  background: rgba(255, 255, 255, .065);
+}
+
+body.lightwind-public-page .site-pagination-tools {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  color: var(--lw-muted);
+}
+
+body.lightwind-public-page .site-pagination-select {
+  color: var(--lw-ink);
+  border-color: rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .08);
+}
+
+@media (max-width: 600px) {
+  body.lightwind-public-page #header,
+  body.lightwind-public-page #content,
+  body.lightwind-public-page #footer {
+    width: calc(100% - 20px);
+  }
+  body.lightwind-public-page #header { border-radius: 16px; }
+  body.lightwind-public-page #content { padding-right: 14px; padding-left: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.lightwind-public-page .postList > li,
+  body.lightwind-public-page .post-list > article,
+  body.lightwind-public-page .post-item { transition: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-music-title.is-scrolling .site-music-title-text { animation: none; }
   .site-music-player { transition: none; }
@@ -707,16 +924,16 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
     right: max(14px, env(safe-area-inset-right)) !important;
     bottom: auto !important;
     left: auto !important;
-    width: 112px;
+    width: 130px;
     height: 42px;
     min-height: 42px;
-    padding: 4px;
-    border-color: var(--os-mobile-control-border, rgba(255, 255, 255, .09));
+    padding: 6px 7px;
+    border-color: rgba(255, 255, 255, .2);
     border-radius: var(--os-mobile-control-radius, 14px);
-    background: var(--os-mobile-control-background, rgba(255, 255, 255, .075));
-    box-shadow: var(--os-mobile-control-shadow, inset 0 1px rgba(255, 255, 255, .055));
-    backdrop-filter: var(--os-mobile-control-filter, blur(16px));
-    -webkit-backdrop-filter: var(--os-mobile-control-filter, blur(16px));
+    background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+    box-shadow: inset 0 1px rgba(255, 255, 255, .055);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   body.os-page .desktop-clock-controls {
@@ -752,17 +969,24 @@ body.os-page .desktop-clock {
   color: rgba(241, 229, 232, .88);
   border: 0;
   border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(13px) saturate(1.15);
+  -webkit-backdrop-filter: blur(13px) saturate(1.15);
+}
+
+body.os-page .pet-speech {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(13px) saturate(1.15);
+  -webkit-backdrop-filter: blur(13px) saturate(1.15);
 }
 
 body.os-page .site-music-player {
   color: #52606d;
-  border-color: rgba(255, 255, 255, .18);
-  background: linear-gradient(145deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .04)), rgba(255, 255, 255, .1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 8px 25px rgba(0, 0, 0, .28);
+  border-color: rgba(255, 255, 255, .2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
   backdrop-filter: blur(13px) saturate(1.15);
   -webkit-backdrop-filter: blur(13px) saturate(1.15);
 }
@@ -833,7 +1057,7 @@ body.os-page .site-music-player[data-music-state="playing"] .site-music-play {
 
 @media (min-width: 801px) {
   body.os-page .desktop-page-sidebar {
-    background: rgba(17, 9, 12, .10);
+    background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
     border-left-color: rgba(255, 255, 255, .10);
     border-right-color: transparent;
     box-shadow: -8px 0 22px rgba(0, 0, 0, .08);
@@ -934,4 +1158,138 @@ body.os-page .site-music-player[data-music-state="playing"] .site-music-play {
     min-width: 78px;
     padding: 4px 20px 4px 7px;
   }
+}
+
+/* Final shared surfaces: kept at the end so generated Primer rules cannot
+   override the OS-specific glass controls or public-page visual tokens. */
+body.lightwind-public-page #header,
+body.lightwind-public-page #content,
+body.lightwind-public-page #footer {
+  box-sizing: border-box;
+}
+
+.os-page .site-music-player {
+  width: 130px;
+  min-height: 42px;
+  padding: 6px 7px;
+  gap: 0;
+  border-color: rgba(255, 255, 255, .22);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .045)), rgba(17, 10, 14, .66);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 12px 32px rgba(0, 0, 0, .3);
+  backdrop-filter: blur(18px) saturate(1.16);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
+}
+.os-page .site-music-player .site-music-controls { justify-content: space-between; gap: 5px; }
+.os-page .site-music-player .site-music-control {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .055);
+}
+.os-page .site-music-player .site-music-control svg { width: 14px; height: 14px; }
+.os-page .site-music-player .site-music-control:hover:not(:disabled),
+.os-page .site-music-player .site-music-mode[data-music-mode="shuffle"] {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .28);
+  background: rgba(255, 255, 255, .16);
+}
+.os-page .site-music-player .site-music-play {
+  width: 27px;
+  height: 27px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, .38);
+  background: rgba(255, 255, 255, .18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 5px 14px rgba(0, 0, 0, .2);
+}
+.os-page .site-music-player .site-music-play:hover:not(:disabled),
+.os-page .site-music-player[data-music-state="playing"] .site-music-play {
+  color: #fff;
+  background: rgba(255, 255, 255, .28);
+}
+
+body.lightwind-public-page {
+  color: #dfd1d6;
+  background: radial-gradient(circle at 12% 4%, rgba(206, 37, 64, .14), transparent 32rem), radial-gradient(circle at 88% 16%, rgba(241, 199, 109, .08), transparent 26rem), #0b080a;
+}
+body.lightwind-public-page #header,
+body.lightwind-public-page #content,
+body.lightwind-public-page #footer {
+  position: relative;
+  z-index: 1;
+  width: min(1080px, calc(100% - 40px));
+  margin-right: auto;
+  margin-left: auto;
+}
+body.lightwind-public-page #header {
+  padding: clamp(24px, 5vw, 64px) clamp(20px, 4vw, 58px) 24px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .025)), rgba(22, 13, 17, .76);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .34);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+}
+body.lightwind-public-page #content {
+  padding: clamp(26px, 5vw, 64px) clamp(20px, 4vw, 58px) 120px;
+  border-right: 1px solid rgba(255, 255, 255, .07);
+  border-left: 1px solid rgba(255, 255, 255, .07);
+  background: rgba(15, 10, 13, .62);
+}
+body.lightwind-public-page #header .postTitle,
+body.lightwind-public-page #content h1,
+body.lightwind-public-page #content h2,
+body.lightwind-public-page #content h3 { color: #fff4f5; letter-spacing: -.025em; }
+body.lightwind-public-page #content h1 { font-size: clamp(28px, 5vw, 54px); line-height: 1.05; }
+body.lightwind-public-page #content h2 { font-size: clamp(22px, 3.5vw, 34px); }
+body.lightwind-public-page #content p,
+body.lightwind-public-page #content li { color: #bcaab0; line-height: 1.9; }
+body.lightwind-public-page #content a { color: #f2b8c1; }
+body.lightwind-public-page #content a:hover { color: #fff; }
+body.lightwind-public-page .postList > li,
+body.lightwind-public-page .post-list > article,
+body.lightwind-public-page .post-item {
+  margin: 0 0 16px;
+  padding: clamp(16px, 2.6vw, 28px);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .04);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .16);
+  transition: transform .24s ease, border-color .24s ease, background-color .24s ease;
+}
+body.lightwind-public-page .postList > li:hover,
+body.lightwind-public-page .post-list > article:hover,
+body.lightwind-public-page .post-item:hover { transform: translateY(-3px); border-color: rgba(241, 199, 109, .32); background: rgba(255, 255, 255, .065); }
+body.lightwind-public-page .site-pagination-tools { margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, .1); color: #a9959c; }
+body.lightwind-public-page .site-pagination-select { color: #f6edf0; border-color: rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .08); }
+
+@media (max-width: 800px) {
+  .os-page .desktop-topbar { transform: none; }
+  .os-page .site-music-player { top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); width: 130px; min-height: 42px; padding: 6px 7px; }
+  .os-page .site-music-player .site-music-controls { gap: 5px; }
+  .os-page .site-music-player .site-music-play { width: 26px; height: 26px; }
+  body.os-page .site-music-player {
+    border-color: rgba(255, 255, 255, .2);
+    background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+    box-shadow: inset 0 1px rgba(255, 255, 255, .055);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
+
+@media (min-width: 801px) {
+  .os-page .site-music-player {
+    min-height: 36px;
+    padding: 4px 7px;
+  }
+  .os-page .site-music-player .site-music-control { width: 22px; height: 22px; }
+  .os-page .site-music-player .site-music-play { width: 26px; height: 26px; }
+}
+
+@media (max-width: 600px) {
+  body.lightwind-public-page #header,
+  body.lightwind-public-page #content,
+  body.lightwind-public-page #footer { width: calc(100% - 20px); }
+  body.lightwind-public-page #header { border-radius: 16px; }
+  body.lightwind-public-page #content { padding-right: 14px; padding-left: 14px; }
 }

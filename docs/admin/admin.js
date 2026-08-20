@@ -130,6 +130,16 @@ function setMusicSaveStatus(message, kind = '') {
   musicSaveStatus.className = `preview-note${kind ? ` is-${kind}` : ''}`;
 }
 
+function uiIconName(value, fallback = 'Link2') {
+  return window.LightwindIcons?.normalize(value, fallback) || fallback;
+}
+
+function mountUiIcon(element, value, fallback = 'Link2') {
+  if (!element) return element;
+  if (window.LightwindIcons) window.LightwindIcons.mount(element, uiIconName(value, fallback));
+  return element;
+}
+
 function faviconFor(url) {
   try {
     const parsed = new URL(url, window.location.origin);
@@ -144,27 +154,40 @@ function makeIcon(item, className = 'item-icon') {
   const icon = document.createElement('span');
   icon.className = className;
   icon.style.setProperty('--item-color', item.color || '#e8d9dc');
-  if (item.icon) {
-    icon.textContent = item.icon;
-  } else if (item.type === 'link' && faviconFor(item.url)) {
+  const fallbackName = uiIconName(item.icon, item.type === 'folder' ? 'Folder' : 'Link2');
+  if (item.type === 'link' && faviconFor(item.url)) {
     const image = document.createElement('img');
     image.src = faviconFor(item.url);
     image.alt = '';
     image.loading = 'lazy';
-    image.addEventListener('error', () => { image.remove(); icon.textContent = '↗'; }, { once: true });
+    image.addEventListener('error', () => { image.remove(); mountUiIcon(icon, fallbackName); }, { once: true });
     icon.append(image);
   } else {
-    icon.textContent = item.type === 'folder' ? '▰' : '↗';
+    mountUiIcon(icon, fallbackName);
   }
   return icon;
 }
 
-function button(label, action, title = '') {
+function button(label, action, title = '', iconName = '') {
   const element = document.createElement('button');
   element.type = 'button';
-  element.textContent = label;
   element.dataset.action = action;
-  if (title) element.title = title;
+  if (title) {
+    element.title = title;
+    element.setAttribute('aria-label', title);
+  }
+  if (iconName) {
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    mountUiIcon(icon, iconName);
+    element.append(icon);
+  }
+  if (label) {
+    const text = document.createElement('span');
+    text.className = 'button-label';
+    text.textContent = label;
+    element.append(text);
+  }
   return element;
 }
 
@@ -181,7 +204,8 @@ function makeManagerItem(item, parentFolderId = '') {
   row.className = 'item-row';
   const handle = document.createElement('span');
   handle.className = 'drag-handle';
-  handle.textContent = '⠿';
+  handle.setAttribute('aria-hidden', 'true');
+  mountUiIcon(handle, 'GripVertical');
   handle.title = '拖动排序';
 
   const identity = document.createElement('div');
@@ -199,10 +223,10 @@ function makeManagerItem(item, parentFolderId = '') {
   const actions = document.createElement('div');
   actions.className = 'item-actions';
   actions.append(
-    button('↑', 'move-up', '上移'),
-    button('↓', 'move-down', '下移'),
-    button('编辑 / 移动', 'edit'),
-    button('删除', 'delete')
+    button('上移', 'move-up', '上移', 'ChevronUp'),
+    button('下移', 'move-down', '下移', 'ChevronDown'),
+    button('编辑 / 移动', 'edit', '编辑 / 移动', 'Pencil'),
+    button('删除', 'delete', '删除', 'Trash2')
   );
   row.append(handle, identity, actions);
   article.append(row);
@@ -291,10 +315,10 @@ function makePageManagerItem(page, index) {
   const actions = document.createElement('div');
   actions.className = 'desktop-page-actions';
   actions.append(
-    button('↑', 'move-page-up', '上移页面'),
-    button('↓', 'move-page-down', '下移页面'),
-    button('重命名', 'rename-page'),
-    button('删除', 'delete-page')
+    button('上移', 'move-page-up', '上移页面', 'ChevronUp'),
+    button('下移', 'move-page-down', '下移页面', 'ChevronDown'),
+    button('重命名', 'rename-page', '重命名', 'Pencil'),
+    button('删除', 'delete-page', '删除', 'Trash2')
   );
   article.append(select, actions);
   return article;
@@ -307,7 +331,7 @@ function renderPages() {
 
 function renderPreview() {
   previewIcons.replaceChildren();
-  const terminal = { type: 'link', title: '终端', icon: '$_', color: '#ef3f57' };
+  const terminal = { type: 'link', title: '终端', icon: 'Terminal', color: '#ef3f57' };
   [terminal, ...selectedItems()].slice(0, 11).forEach((item) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'preview-item';
@@ -366,7 +390,7 @@ function makeMusicManagerItem(track, index) {
   const icon = document.createElement('span');
   icon.className = 'music-item-icon';
   icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = '♫';
+  mountUiIcon(icon, 'Music2');
   const copy = document.createElement('div');
   copy.className = 'item-copy';
   const name = document.createElement('strong');
@@ -382,11 +406,11 @@ function makeMusicManagerItem(track, index) {
   const previewButton = button(isPreviewing ? '暂停' : '试听', 'preview-music');
   previewButton.setAttribute('aria-pressed', String(isPreviewing));
   actions.append(
-    button('↑', 'move-music-up', '上移'),
-    button('↓', 'move-music-down', '下移'),
+    button('上移', 'move-music-up', '上移', 'ChevronUp'),
+    button('下移', 'move-music-down', '下移', 'ChevronDown'),
     previewButton,
-    button('编辑', 'edit-music'),
-    button('删除', 'delete-music')
+    button('编辑', 'edit-music', '编辑音乐', 'Pencil'),
+    button('删除', 'delete-music', '删除音乐', 'Trash2')
   );
   row.append(order, identity, actions);
   article.append(row);
@@ -648,7 +672,10 @@ function openItemDialog(type, item = null, parentFolderId = '') {
   document.querySelector('#itemType').value = type;
   document.querySelector('#itemName').value = item?.title || '';
   document.querySelector('#itemUrl').value = item?.url || '';
-  document.querySelector('#itemIcon').value = item?.icon || '';
+  const iconSelect = document.querySelector('#itemIcon');
+  iconSelect.value = uiIconName(item?.icon, isFolder ? 'Folder' : 'Link2');
+  if (![...iconSelect.options].some((option) => option.value === iconSelect.value)) iconSelect.value = isFolder ? 'Folder' : 'Link2';
+  mountUiIcon(document.querySelector('#itemIconPreview'), iconSelect.value, isFolder ? 'Folder' : 'Link2');
   document.querySelector('#itemColor').value = item?.color || (isFolder ? '#f4c84a' : '#e8d9dc');
   document.querySelector('#itemOpenMode').value = item?.openMode || 'auto';
   document.querySelectorAll('.link-field').forEach((field) => { field.hidden = isFolder; });
@@ -660,6 +687,10 @@ function openItemDialog(type, item = null, parentFolderId = '') {
   itemDialog.showModal();
   document.querySelector('#itemName').focus();
 }
+
+document.querySelector('#itemIcon')?.addEventListener('change', (event) => {
+  mountUiIcon(document.querySelector('#itemIconPreview'), event.target.value);
+});
 
 function findItem(id) {
   for (const item of selectedItems()) {

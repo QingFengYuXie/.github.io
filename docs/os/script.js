@@ -16,6 +16,44 @@ const globalDesktopLayers = [
 ];
 globalDesktopLayers.forEach((layer) => pageViewport?.append(layer));
 const mobileLayoutMedia = window.matchMedia('(max-width: 800px)');
+const iconMarkup = (name, attributes = {}) => window.LightwindIcons?.svg(name, attributes) || '';
+const normalizeOsIcon = (value, fallback = 'Link2') => window.LightwindIcons?.normalize(value, fallback) || fallback;
+const reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+const activeSprings = new Map();
+
+function springValue(key, { from, to, velocity = 0, stiffness = 190, damping = 24, onUpdate, onComplete } = {}) {
+  const previousFrame = activeSprings.get(key);
+  if (previousFrame) window.cancelAnimationFrame(previousFrame);
+  if (reducedMotionMedia.matches) {
+    onUpdate?.(to);
+    onComplete?.();
+    activeSprings.delete(key);
+    return;
+  }
+  let value = Number(from) || 0;
+  let speed = Number(velocity) || 0;
+  let lastTime = performance.now();
+  const tick = (now) => {
+    const elapsed = Math.min(.032, Math.max(.001, (now - lastTime) / 1000));
+    lastTime = now;
+    const force = (to - value) * stiffness - speed * damping;
+    speed += force * elapsed;
+    value += speed * elapsed;
+    onUpdate?.(value);
+    if (Math.abs(to - value) < .001 && Math.abs(speed) < .01) {
+      onUpdate?.(to);
+      activeSprings.delete(key);
+      onComplete?.();
+      return;
+    }
+    const frame = window.requestAnimationFrame(tick);
+    activeSprings.set(key, frame);
+  };
+  const frame = window.requestAnimationFrame(tick);
+  activeSprings.set(key, frame);
+}
+
+window.LightwindMotion = Object.freeze({ spring: springValue });
 let topZ = 60;
 let bootComplete = false;
 let bootPetAnimationFrame = 0;
@@ -199,8 +237,19 @@ function makeDraggable(element, handle, bounds) {
     element.style.left = `${nextX}px`;
     element.style.top = `${nextY}px`;
   });
-  handle.addEventListener('pointerup', () => { dragging = false; });
-  handle.addEventListener('pointercancel', () => { dragging = false; });
+  const settle = () => {
+    dragging = false;
+    springValue(`window:${element.id}`, {
+      from: 1.035,
+      to: 1,
+      stiffness: 260,
+      damping: 22,
+      onUpdate: (scale) => { element.style.transform = `scale(${scale})`; },
+      onComplete: () => { element.style.transform = ''; }
+    });
+  };
+  handle.addEventListener('pointerup', settle);
+  handle.addEventListener('pointercancel', settle);
 }
 
 windows.forEach((windowElement) => makeDraggable(windowElement, windowElement.querySelector('.window-header'), desktop));
@@ -515,6 +564,14 @@ if (desktopPet) {
       petInteracting = false;
       syncPetState();
       savePetPosition(Number.parseFloat(desktopPet.style.left), Number.parseFloat(desktopPet.style.top));
+      springValue('desktop-pet', {
+        from: -3,
+        to: 0,
+        stiffness: 250,
+        damping: 20,
+        onUpdate: (offset) => { desktopPet.style.transform = `translate3d(0, ${offset}px, 0)`; },
+        onComplete: () => { desktopPet.style.transform = ''; }
+      });
       return;
     }
     beginPetInteraction();
@@ -551,14 +608,14 @@ const defaultDesktopNavigation = {
     position: 0,
     items: [
       {
-        id: 'folder-lightwind', type: 'folder', title: '轻风雨斜 OS', icon: '✦', color: '#f4c84a', position: 0,
+        id: 'folder-lightwind', type: 'folder', title: '轻风雨斜 OS', icon: 'Sparkles', color: '#f4c84a', position: 0,
         links: [
-          { id: 'link-dynamic', type: 'link', title: '动态', url: '/dynamic/', icon: '◫', color: '#e33a52', openMode: 'same', position: 0 },
-          { id: 'link-about', type: 'link', title: '关于', url: '/about.html', icon: '@', color: '#d8b4bd', openMode: 'same', position: 1 }
+          { id: 'link-dynamic', type: 'link', title: '动态', url: '/dynamic/', icon: 'Activity', color: '#e33a52', openMode: 'same', position: 0 },
+          { id: 'link-about', type: 'link', title: '关于', url: '/about.html', icon: 'AtSign', color: '#d8b4bd', openMode: 'same', position: 1 }
         ]
       },
-      { id: 'link-github', type: 'link', title: 'GitHub', url: 'https://github.com/QingFengYuXie', icon: '⌘', color: '#ddd5d7', openMode: 'new', position: 1 },
-      { id: 'link-contact', type: 'link', title: '联系我', url: 'mailto:2399975530@qq.com', icon: '@', color: '#e8d9dc', openMode: 'same', position: 2 }
+      { id: 'link-github', type: 'link', title: 'GitHub', url: 'https://github.com/QingFengYuXie', icon: 'Github', color: '#ddd5d7', openMode: 'new', position: 1 },
+      { id: 'link-contact', type: 'link', title: '联系我', url: 'mailto:2399975530@qq.com', icon: 'Mail', color: '#e8d9dc', openMode: 'same', position: 2 }
     ]
   }]
 };
@@ -698,7 +755,7 @@ function normalizeNavigationLink(value) {
   if (!/^[a-zA-Z0-9_-]{1,90}$/.test(id) || !title || !url) return null;
   return {
     id, type: 'link', title, url,
-    icon: String(value.icon || '').trim().slice(0, 24),
+    icon: normalizeOsIcon(value.icon, 'Link2'),
     color: /^#[0-9a-f]{6}$/i.test(value.color) ? value.color : '#e8d9dc',
     openMode: ['auto', 'same', 'new'].includes(value.openMode) ? value.openMode : 'auto',
     position: Number(value.position) || 0
@@ -727,7 +784,7 @@ function normalizeDesktopNavigation(value) {
         id: folderId,
         type: 'folder',
         title,
-        icon: String(item.icon || '▰').trim().slice(0, 24) || '▰',
+        icon: normalizeOsIcon(item.icon, 'Folder'),
         color: /^#[0-9a-f]{6}$/i.test(item.color) ? item.color : '#f4c84a',
         position: Number(item.position) || 0,
         links: item.links.map(normalizeNavigationLink).filter(Boolean)
@@ -815,17 +872,17 @@ function createFaviconLoader() {
 
 const faviconLoader = createFaviconLoader();
 
-function shortFaviconFallback(title) {
-  return [...String(title || '').trim()].slice(0, 2).join('') || '↗';
+function shortFaviconFallback() {
+  return 'Link2';
 }
 
 function makeFavicon(link, fallback = '') {
   const wrapper = document.createElement('span');
-  const fallbackText = link.icon || fallback || shortFaviconFallback(link.title);
+  const fallbackName = normalizeOsIcon(link.icon || fallback || shortFaviconFallback(link.title), 'Link2');
   wrapper.className = 'navigation-favicon';
-  if (!link.icon) wrapper.classList.add('is-text-fallback');
+  wrapper.dataset.iconName = fallbackName;
   wrapper.style.setProperty('--navigation-color', link.color || '#e8d9dc');
-  wrapper.textContent = fallbackText;
+  wrapper.innerHTML = iconMarkup(fallbackName);
   faviconLoader.enqueue(link.id, wrapper);
   return wrapper;
 }
@@ -834,10 +891,14 @@ function makeFolderVisual(folder) {
   const icon = document.createElement('span');
   icon.className = 'icon folder-icon navigation-folder-icon';
   icon.style.setProperty('--navigation-color', folder.color);
+  const folderGlyph = document.createElement('span');
+  folderGlyph.className = 'folder-glyph';
+  folderGlyph.innerHTML = iconMarkup('FolderOpen');
+  folderGlyph.setAttribute('aria-hidden', 'true');
   const miniGrid = document.createElement('span');
   miniGrid.className = 'folder-mini-grid';
   folder.links.slice(0, 9).forEach((link) => miniGrid.append(makeFavicon(link, link.title.slice(0, 1))));
-  icon.append(miniGrid);
+  icon.append(folderGlyph, miniGrid);
   return icon;
 }
 
@@ -972,6 +1033,14 @@ function bindDesktopIcon(icon) {
     icon.classList.remove('is-dragging');
     iconGrid.classList.remove('is-arranging');
     setIconCell(icon, freeCell.x, freeCell.y);
+    springValue(`desktop-icon:${icon.dataset.navigationId}`, {
+      from: 1.045,
+      to: 1,
+      stiffness: 280,
+      damping: 23,
+      onUpdate: (scale) => { icon.style.transform = `scale(${scale})`; },
+      onComplete: () => { icon.style.transform = ''; }
+    });
     saveIconGrid();
   });
   icon.addEventListener('pointercancel', (event) => {
@@ -997,7 +1066,7 @@ function makeTerminalIcon() {
   button.title = '打开命令工具';
   const icon = document.createElement('span');
   icon.className = 'icon app-icon';
-  icon.textContent = '$_';
+  icon.innerHTML = iconMarkup('Terminal');
   const label = document.createElement('span');
   label.textContent = '终端';
   button.append(icon, label);
@@ -1078,10 +1147,36 @@ function activatePage(index) {
 function goToPage(index, source = 'programmatic') {
   if (!desktopPages.length || !pageTrack) return;
   const nextIndex = Math.max(0, Math.min(desktopPages.length - 1, Number(index) || 0));
+  const previousIndex = currentPageIndex;
   currentPageIndex = nextIndex;
-  pageTrack.style.transform = mobileLayoutMedia.matches
-    ? `translate3d(${-nextIndex * 100}%, 0, 0)`
-    : `translate3d(0, ${-nextIndex * 100}%, 0)`;
+  const setTrackPosition = (pagePosition) => {
+    pageTrack.style.transform = mobileLayoutMedia.matches
+      ? `translate3d(${-pagePosition * 100}%, 0, 0)`
+      : `translate3d(0, ${-pagePosition * 100}%, 0)`;
+  };
+  const shouldAnimate = pageTrack.dataset.ready === 'true'
+    && previousIndex !== nextIndex
+    && source !== 'responsive';
+  pageTrack.classList.toggle('is-springing', shouldAnimate);
+  if (shouldAnimate) {
+    springValue('page-track', {
+      from: previousIndex,
+      to: nextIndex,
+      velocity: source === 'swipe' ? (nextIndex > previousIndex ? .75 : -.75) : 0,
+      stiffness: 210,
+      damping: 25,
+      onUpdate: setTrackPosition,
+      onComplete: () => pageTrack.classList.remove('is-springing')
+    });
+  } else {
+    const runningPageSpring = activeSprings.get('page-track');
+    if (runningPageSpring) {
+      window.cancelAnimationFrame(runningPageSpring);
+      activeSprings.delete('page-track');
+    }
+    setTrackPosition(nextIndex);
+  }
+  pageTrack.dataset.ready = 'true';
   pageTrack.dataset.pageIndex = String(nextIndex);
   document.body.dataset.page = String(nextIndex);
   pageGridElements.forEach((grid, pageIndex) => {
@@ -1429,7 +1524,7 @@ function executeTerminalCommand(rawCommand) {
   appendTerminalLine(`<span>lightwind@universe</span>:<b>~</b>$ ${safeText(rawCommand)}`);
   if (command === 'help') appendTerminalLine(terminalHelp(), 'terminal-muted');
   else if (command === 'about') { openWindow('aboutWindow'); appendTerminalLine('已打开 about.html。'); }
-  else if (command === 'posts' || command === 'dynamic') { appendTerminalLine('<a class="terminal-link" href="/dynamic/">正在打开动态 ↗</a>'); window.setTimeout(() => { window.location.href = '/dynamic/'; }, 350); }
+  else if (command === 'posts' || command === 'dynamic') { appendTerminalLine('<a class="terminal-link" href="/dynamic/">正在打开动态</a>'); window.setTimeout(() => { window.location.href = '/dynamic/'; }, 350); }
   else if (command === 'contact') { openWindow('contactWindow'); appendTerminalLine('已打开 contact.md。'); }
   else if (command === 'status') appendTerminalLine('系统在线 · FOCUS 68% · CURIOSITY 92% · Rem: active');
   else if (command === 'theme') { document.body.classList.toggle('desktop-soft-light'); appendTerminalLine('已切换桌面光效。'); }
@@ -1445,13 +1540,13 @@ terminalForm?.addEventListener('submit', (event) => {
 
 function commandItems() {
   return [
-    { icon: '$_', title: '打开终端', detail: '> terminal', run: openTerminal },
-    { icon: '⌂', title: '打开关于', detail: '> about', run: () => openWindow('aboutWindow') },
-    { icon: '✦', title: '打开系统状态', detail: '> status', run: () => openWindow('nowWindow') },
-    { icon: '↗', title: '前往动态', detail: '> posts', run: () => { window.location.href = '/dynamic/'; } },
-    { icon: '✉', title: '打开联系', detail: '> contact', run: () => openWindow('contactWindow') },
-    { icon: '◌', title: '整理桌面', detail: '> arrange', run: arrangeIcons },
-    { icon: '◐', title: '切换桌面光效', detail: '> theme', run: () => document.body.classList.toggle('desktop-soft-light') }
+    { icon: 'Terminal', title: '打开终端', detail: '> terminal', run: openTerminal },
+    { icon: 'AtSign', title: '打开关于', detail: '> about', run: () => openWindow('aboutWindow') },
+    { icon: 'Activity', title: '打开系统状态', detail: '> status', run: () => openWindow('nowWindow') },
+    { icon: 'ArrowUpRight', title: '前往动态', detail: '> posts', run: () => { window.location.href = '/dynamic/'; } },
+    { icon: 'Mail', title: '打开联系', detail: '> contact', run: () => openWindow('contactWindow') },
+    { icon: 'Grid2X2', title: '整理桌面', detail: '> arrange', run: arrangeIcons },
+    { icon: 'Radio', title: '切换桌面光效', detail: '> theme', run: () => document.body.classList.toggle('desktop-soft-light') }
   ].filter((item) => item.detail !== '> terminal');
 }
 
@@ -1466,7 +1561,7 @@ function getPaletteItems(query) {
     .filter((post) => normalizeTestTitle(post.postTitle).toLowerCase().includes(normalizedQuery))
     .slice(0, 7)
     .map((post) => ({
-      icon: '▤', title: normalizeTestTitle(post.postTitle), detail: post.createdDate || '动态',
+       icon: 'FileText', title: normalizeTestTitle(post.postTitle), detail: post.createdDate || '动态',
       run: () => { window.location.href = `/dynamic/${post.postUrl}`; }
     }));
   return [...commands, ...posts];
@@ -1481,12 +1576,11 @@ function renderPalette() {
     return;
   }
   commandPaletteResults.innerHTML = paletteItems.map((item, index) => (
-    `<button class="command-palette-result${index === paletteActiveIndex ? ' is-active' : ''}" type="button" data-palette-index="${index}" role="option"><i>${item.icon}</i><span>${safeText(item.title)}</span><small>${safeText(item.detail)}</small></button>`
+    `<button class="command-palette-result${index === paletteActiveIndex ? ' is-active' : ''}" type="button" data-palette-index="${index}" role="option"><i>${iconMarkup(item.icon)}</i><span>${safeText(item.title)}</span><small>${safeText(item.detail)}</small></button>`
   )).join('');
 }
 
 function openPalette() {
-  return;
   if (!commandPalette) return;
   commandPalette.hidden = false;
   commandPaletteInput.value = '';
@@ -1565,10 +1659,18 @@ async function loadLatestPost() {
     const latest = cachedPosts[0];
     if (latest && latestPost) {
       latestPost.href = `/dynamic/${latest.postUrl}`;
-      latestPost.innerHTML = `${safeText(normalizeTestTitle(latest.postTitle))}<b>↗</b>`;
+      latestPost.replaceChildren(
+        document.createTextNode(normalizeTestTitle(latest.postTitle)),
+        Object.assign(document.createElement('b'), { innerHTML: iconMarkup('ArrowUpRight') })
+      );
     }
   } catch {
-    if (latestPost) latestPost.textContent = '前往查看全部动态 ↗';
+    if (latestPost) {
+      latestPost.replaceChildren(
+        document.createTextNode('前往查看全部动态'),
+        Object.assign(document.createElement('b'), { innerHTML: iconMarkup('ArrowUpRight') })
+      );
+    }
   }
 }
 
