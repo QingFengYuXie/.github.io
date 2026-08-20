@@ -379,10 +379,10 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
 .os-page .site-music-player {
   z-index: 24;
   top: 4px;
-  right: clamp(136px, 9.8vw, 156px);
+  right: 24px;
   bottom: auto;
   left: auto;
-  width: 110px;
+  width: 130px;
   min-height: 36px;
   padding: 3px 4px;
   gap: 0;

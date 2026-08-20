@@ -663,6 +663,8 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
           clockControlsDisplay: getComputedStyle(document.querySelector('.desktop-clock-controls')).display,
           search: rect('.desktop-web-search'),
           music: rect('.site-music-player'),
+          brand: rect('.os-brand'),
+          about: rect('.top-links button'),
           musicControls,
           navigation: rect('.site-global-nav'),
           navigationLink: {
@@ -678,8 +680,10 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.notEqual(desktopLayout.clockControlsDisplay, 'none');
       assert.equal(desktopLayout.search.width, 340);
       assert.equal(desktopLayout.search.height, 34);
-      assert.equal(desktopLayout.music.width, 110);
+      assert.equal(desktopLayout.music.width, 130);
       assert.equal(desktopLayout.music.height, 36);
+      assert.ok(desktopLayout.brand.right < desktopLayout.about.left);
+      assert.ok(desktopLayout.music.right <= 1280);
       assert.deepEqual(mobileLayout.musicControls, desktopLayout.musicControls);
       assert.ok(Math.abs(mobileLayout.navigation.width - desktopLayout.navigation.width) <= 1);
       assert.ok(Math.abs(mobileLayout.navigation.height - desktopLayout.navigation.height) <= 1);

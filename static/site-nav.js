@@ -354,14 +354,10 @@
 
     function alignOsMusicPlayer() {
       if (!document.body.classList.contains('os-page')) return;
-      const brand = document.querySelector('.os-brand');
-      if (!brand) return;
-      const brandBox = brand.getBoundingClientRect();
-      const playerBox = player.getBoundingClientRect();
-      const gap = 14;
-      player.style.left = `${Math.max(8, brandBox.left - playerBox.width - gap)}px`;
-      player.style.right = 'auto';
-      player.style.top = `${Math.max(4, brandBox.top + (brandBox.height - playerBox.height) / 2 + 5)}px`;
+      if (!window.matchMedia('(min-width: 801px)').matches) return;
+      player.style.left = 'auto';
+      player.style.right = '24px';
+      player.style.top = '4px';
       player.style.bottom = 'auto';
     }
 
