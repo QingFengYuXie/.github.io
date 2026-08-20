@@ -8,7 +8,7 @@ const MAX_REDIRECTS = 2;
 const MAX_ICON_BYTES = 128 * 1024;
 const MAX_HTML_BYTES = 256 * 1024;
 // Refresh edge failures without discarding successful icons already stored in R2.
-const FAVICON_CACHE_VERSION = 5;
+const FAVICON_CACHE_VERSION = 4;
 const R2_FAVICON_VERSION = 3;
 const PRIMARY_ICON_PATH = '/favicon.ico';
 const SECONDARY_ICON_PATHS = [

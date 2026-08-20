@@ -14,6 +14,7 @@ import {
   HttpError,
   cleanText,
   normalizeFolderInput,
+  normalizeIconName,
   normalizeLinkInput,
   normalizeMusicInput,
   normalizePageInput,
@@ -198,7 +199,7 @@ function mapLink(row) {
     pageId: row.pageId || null,
     title: row.title,
     url: row.url,
-    icon: row.icon || '',
+    icon: normalizeIconName(row.icon, 'Link2'),
     color: row.color,
     openMode: row.openMode,
     position: Number(row.position)
@@ -459,7 +460,7 @@ async function getDesktopData(env) {
       type: 'folder',
       pageId: row.pageId,
       title: row.name,
-      icon: row.icon || '▰',
+      icon: normalizeIconName(row.icon, 'Folder'),
       color: row.color,
       position: Number(row.position),
       links: linksByFolder.get(row.id) || []
