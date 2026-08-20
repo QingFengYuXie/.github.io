@@ -17,21 +17,6 @@
   const musicPlaybackModeKey = 'lightwind-background-music-mode-v1';
   const avatarFallbackSources = ['/os/assets/avatar.webp', '/os/assets/avatar.jpg'];
 
-  function iconMarkup(name, attributes = {}) {
-    return window.LightwindIcons?.svg(name, attributes) || '';
-  }
-
-  function actionIconName(action) {
-    const title = `${action.getAttribute('title') || ''} ${action.getAttribute('aria-label') || ''}`;
-    if (/搜索/.test(title)) return 'Search';
-    if (/RSS/i.test(title)) return 'Radio';
-    if (/关于/.test(title)) return 'AtSign';
-    if (/首页/.test(title)) return 'ArrowLeft';
-    if (/Issue/i.test(title)) return 'ExternalLink';
-    if (/主题/.test(title) || action.getAttribute('onclick')?.includes('modeSwitch')) return 'Settings2';
-    return 'Link2';
-  }
-
   function getCurrentPath() {
     return window.location.pathname.replace(/\/+$/, '') || '/';
   }
@@ -87,13 +72,9 @@
       .forEach((action) => {
         action.classList.add('site-title-icon-action');
         action.setAttribute('aria-label', action.getAttribute('aria-label') || action.getAttribute('title') || '页面操作');
-        action.replaceChildren();
-        action.insertAdjacentHTML('afterbegin', iconMarkup(actionIconName(action)));
       });
     themeAction.classList.add('site-title-icon-action', 'site-theme-action');
     themeAction.setAttribute('aria-label', themeAction.getAttribute('title') || '切换主题');
-    themeAction.replaceChildren();
-    themeAction.insertAdjacentHTML('afterbegin', iconMarkup('Settings2'));
     actions.append(themeAction);
     return actions;
   }
@@ -109,7 +90,7 @@
     button.className = 'site-article-back';
     button.setAttribute('aria-label', '返回上个页面');
     button.title = '返回上个页面';
-    button.innerHTML = iconMarkup('ArrowLeft');
+    button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
     button.addEventListener('click', () => {
       let canGoBack = false;
       try {
@@ -322,7 +303,9 @@
     const previousButton = document.createElement('button');
     const playButton = document.createElement('button');
     const nextButton = document.createElement('button');
-    const playIcon = (isPlaying) => iconMarkup(isPlaying ? 'Pause' : 'Play');
+    const playIcon = (isPlaying) => isPlaying
+      ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>'
+      : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg>';
     let musicEnabled = true;
     let tracks = [];
     let currentIndex = -1;
@@ -393,7 +376,7 @@
     previousButton.dataset.musicAction = 'previous';
     previousButton.setAttribute('aria-label', '上一首');
     previousButton.title = '上一首';
-    previousButton.innerHTML = iconMarkup('SkipBack');
+    previousButton.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6V6Z"/></svg>';
 
     playButton.type = 'button';
     playButton.className = 'site-music-control site-music-play';
@@ -407,7 +390,7 @@
     nextButton.dataset.musicAction = 'next';
     nextButton.setAttribute('aria-label', '下一首');
     nextButton.title = '下一首';
-    nextButton.innerHTML = iconMarkup('SkipForward');
+    nextButton.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 5v14M6 6l8 6-8 6V6Z"/></svg>';
 
     player.querySelector('.site-music-controls').append(modeButton, previousButton, playButton, nextButton);
 
@@ -597,7 +580,9 @@
         ? '当前为随机播放，点击切换到顺序循环'
         : '当前为顺序循环，点击切换到随机播放');
       modeButton.title = playbackMode === 'shuffle' ? '随机播放（切换到顺序循环）' : '顺序循环（切换到随机播放）';
-      modeButton.innerHTML = iconMarkup(playbackMode === 'shuffle' ? 'Shuffle' : 'Repeat2');
+      modeButton.innerHTML = playbackMode === 'shuffle'
+        ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h3c5 0 5 12 10 12h3m-3-3 3 3-3 3M4 18h3c2.1 0 3.4-2.3 4.7-5M17 3l3 3-3 3"/></svg>'
+        : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7h12m-3-3 3 3-3 3m5 7H7m3 3-3-3 3-3"/></svg>';
       playButton.setAttribute('aria-label', isPlaying ? '暂停音乐' : '播放音乐');
       playButton.title = isPlaying ? '暂停' : '播放';
       playButton.innerHTML = playIcon(isPlaying);
@@ -875,8 +860,6 @@
   }
 
   function initializeSiteChrome() {
-    const pageType = getChromePageType();
-    if (pageType) document.body.classList.add('lightwind-public-page', `lightwind-page--${pageType}`);
     mountAvatarFallback();
     const titleActions = mountTitleActions();
     mountArticleBackButton(titleActions);

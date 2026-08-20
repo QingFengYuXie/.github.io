@@ -6,43 +6,6 @@ export class HttpError extends Error {
   }
 }
 
-export const ICON_NAMES = Object.freeze([
-  'Activity', 'AlertTriangle', 'ArrowLeft', 'ArrowRight', 'ArrowUpRight', 'AtSign',
-  'Check', 'ChevronDown', 'ChevronRight', 'ChevronUp', 'CircleHelp', 'CloudUpload',
-  'Command', 'ExternalLink', 'FileText', 'Folder', 'FolderOpen', 'Github', 'Globe2',
-  'Grid2X2', 'GripVertical', 'Image', 'Link2', 'ListMusic', 'LockKeyhole', 'Mail',
-  'Minus', 'Move', 'Music2', 'Pause', 'Pencil', 'Play', 'Plus', 'Radio', 'Repeat2',
-  'RotateCcw', 'Save', 'Search', 'Settings2', 'Shuffle', 'SkipBack', 'SkipForward',
-  'SlidersHorizontal', 'Sparkles', 'Terminal', 'Trash2', 'Upload', 'Volume2', 'X'
-]);
-
-export const LEGACY_ICON_MAP = Object.freeze({
-  '$_': 'Terminal',
-  '↗': 'ArrowUpRight',
-  '✉': 'Mail',
-  '▰': 'Folder',
-  '@': 'AtSign',
-  '⌘': 'Command',
-  '◫': 'FileText',
-  '✦': 'Sparkles',
-  '♫': 'Music2',
-  '◐': 'Radio',
-  '→': 'ArrowRight',
-  '←': 'ArrowLeft',
-  '×': 'X',
-  '—': 'Minus',
-  '↑': 'ChevronUp',
-  '↓': 'ChevronDown',
-  '⠿': 'GripVertical'
-});
-
-export function normalizeIconName(value, fallback = 'Link2') {
-  const candidate = String(value ?? '').trim();
-  if (ICON_NAMES.includes(candidate)) return candidate;
-  if (LEGACY_ICON_MAP[candidate]) return LEGACY_ICON_MAP[candidate];
-  return ICON_NAMES.includes(fallback) ? fallback : 'Link2';
-}
-
 export async function readJson(request, limit = 32768) {
   const declaredLength = Number(request.headers.get('content-length') || 0);
   if (declaredLength > limit) throw new HttpError(413, '请求内容过大。', 'PAYLOAD_TOO_LARGE');
@@ -112,24 +75,18 @@ export function normalizeMusicUrl(value) {
 }
 
 export function normalizeFolderInput(body, current = {}) {
-  const iconValue = body.icon === undefined && current.icon !== undefined
-    ? current.icon
-    : cleanOptionalText(body.icon, '文件夹图标', 24);
   return {
     name: body.name === undefined && current.name !== undefined ? current.name : cleanText(body.name, '文件夹名称', { max: 40 }),
-    icon: normalizeIconName(iconValue, 'Folder'),
+    icon: body.icon === undefined && current.icon !== undefined ? current.icon : cleanOptionalText(body.icon, '文件夹图标', 24) || '▰',
     color: body.color === undefined && current.color !== undefined ? current.color : normalizeColor(body.color, '#f4c84a')
   };
 }
 
 export function normalizeLinkInput(body, current = {}) {
-  const iconValue = body.icon === undefined && current.icon !== undefined
-    ? current.icon
-    : cleanOptionalText(body.icon, '网址图标', 24);
   return {
     title: body.title === undefined && current.title !== undefined ? current.title : cleanText(body.title, '网址名称', { max: 60 }),
     url: body.url === undefined && current.url !== undefined ? current.url : normalizeUrl(body.url),
-    icon: normalizeIconName(iconValue, 'Link2'),
+    icon: body.icon === undefined && current.icon !== undefined ? current.icon : cleanOptionalText(body.icon, '网址图标', 24),
     color: body.color === undefined && current.color !== undefined ? current.color : normalizeColor(body.color),
     openMode: body.openMode === undefined && current.openMode !== undefined ? current.openMode : normalizeOpenMode(body.openMode),
     pageId: body.pageId === undefined && current.pageId !== undefined

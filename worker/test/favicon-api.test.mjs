@@ -209,6 +209,7 @@ test('favicon handler persists successful icons in R2', async () => {
   assert.equal(second.headers.get('content-type'), 'image/png');
   assert.equal(fetches, 1);
   assert.equal(bucket.values.size, 1);
+  assert.ok([...bucket.values.keys()][0].startsWith('favicons/v3/'));
 });
 
 test('favicon handler trusts image signatures instead of incorrect content types', async () => {

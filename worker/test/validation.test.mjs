@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HttpError, assertWallpaperType, ICON_NAMES, LEGACY_ICON_MAP, normalizeColor, normalizeIconName, normalizeMusicInput, normalizeMusicUrl, normalizeOpenMode, normalizePageInput, normalizeUrl, wallpaperExtension, WALLPAPER_MAX_BYTES } from '../src/validation.js';
+import { HttpError, assertWallpaperType, normalizeColor, normalizeMusicInput, normalizeMusicUrl, normalizeOpenMode, normalizePageInput, normalizeUrl, wallpaperExtension, WALLPAPER_MAX_BYTES } from '../src/validation.js';
 import { normalizeFolderInput, normalizeLinkInput } from '../src/validation.js';
 
 test('accepts supported wallpaper formats and rejects unsafe uploads', () => {
@@ -28,17 +28,6 @@ test('normalizes supported visual settings', () => {
   assert.equal(normalizeOpenMode('new'), 'new');
   assert.throws(() => normalizeColor('red'), HttpError);
   assert.throws(() => normalizeOpenMode('_blank'), HttpError);
-});
-
-test('normalizes legacy desktop icons into the Lucide allowlist', () => {
-  assert.ok(ICON_NAMES.includes('Folder'));
-  assert.ok(ICON_NAMES.includes('Link2'));
-  assert.equal(LEGACY_ICON_MAP['$_'], 'Terminal');
-  assert.equal(normalizeIconName('▰', 'Link2'), 'Folder');
-  assert.equal(normalizeIconName('⌘', 'Link2'), 'Command');
-  assert.equal(normalizeIconName('not-a-real-icon', 'Link2'), 'Link2');
-  assert.equal(normalizeFolderInput({ name: '工具', icon: '▰', color: '#f4c84a' }).icon, 'Folder');
-  assert.equal(normalizeLinkInput({ title: '动态', url: '/dynamic/', icon: '↗', color: '#e8d9dc' }).icon, 'ArrowUpRight');
 });
 
 test('requires names and URLs when creating records', () => {

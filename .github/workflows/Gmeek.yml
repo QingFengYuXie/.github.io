@@ -84,7 +84,6 @@ jobs:
           config = json.loads(Path('/opt/Gmeek/config.json').read_text(encoding='utf-8'))
           all_head = config.get('allHead', '')
           site_nav_css = re.search(r"https://qfyx\\.top/site-nav\\.css\\?v=[^'\\\" ]+", all_head)
-          site_icons = re.search(r"https://qfyx\\.top/icons\\.js\\?v=[^'\\\" ]+", all_head)
           site_nav_js = re.search(r"https://qfyx\\.top/site-nav\\.js\\?v=[^'\\\" ]+", all_head)
 
           for page in docs_dir.rglob('*.html'):
@@ -93,12 +92,6 @@ jobs:
                   content = re.sub(
                       r"https://qfyx\\.top/site-nav\\.css\\?v=[^'\\\" ]+",
                       site_nav_css.group(0),
-                      content,
-                  )
-              if site_icons:
-                  content = re.sub(
-                      r"https://qfyx\\.top/icons\\.js\\?v=[^'\\\" ]+",
-                      site_icons.group(0),
                       content,
                   )
               if site_nav_js:
@@ -221,7 +214,6 @@ jobs:
           PY
           cp /opt/Gmeek/static/root-redirect.html /opt/Gmeek/docs/index.html
           cp /opt/Gmeek/static/site-nav.css /opt/Gmeek/docs/site-nav.css
-          cp /opt/Gmeek/static/icons.js /opt/Gmeek/docs/icons.js
           cp /opt/Gmeek/static/site-nav.js /opt/Gmeek/docs/site-nav.js
           rm -rf /opt/Gmeek/docs/admin
           cp -a /opt/Gmeek/static/admin /opt/Gmeek/docs/admin

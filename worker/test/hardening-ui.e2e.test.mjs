@@ -580,7 +580,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.ok(mobileLayout.icons.bottom <= mobileLayout.navigation.top - 7);
       assert.ok(mobileLayout.icons.bottom >= mobileLayout.navigation.top - 10);
       assert.equal(mobileLayout.iconsOverflowY, 'auto');
-      assert.equal(mobileLayout.iconColumns, 2);
+      assert.equal(mobileLayout.iconColumns, 4);
       assert.ok(mobileLayout.lastIcon.top >= mobileLayout.icons.top);
       assert.ok(mobileLayout.lastIcon.bottom <= mobileLayout.icons.bottom);
       assert.equal(mobileLayout.lastIconHitId, 'link-mobile-home-12');
@@ -630,7 +630,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.ok(compactMobileLayout.music.right <= 320);
       assert.ok(compactMobileLayout.icons.bottom <= compactMobileLayout.navigation.top - 7);
       assert.ok(compactMobileLayout.icons.bottom >= compactMobileLayout.navigation.top - 10);
-      assert.equal(compactMobileLayout.iconColumns, 2);
+      assert.equal(compactMobileLayout.iconColumns, 4);
       assert.ok(compactMobileLayout.lastIcon.top >= compactMobileLayout.icons.top);
       assert.ok(compactMobileLayout.lastIcon.bottom <= compactMobileLayout.icons.bottom);
       assert.equal(compactMobileLayout.lastIconHitId, 'link-mobile-home-12');
@@ -757,10 +757,10 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await desktopPage.waitForTimeout(700);
       const desktopPet = await desktopPage.locator('#desktopPet').boundingBox();
       const desktopSprite = await desktopPage.locator('.desktop-pet-sprite').boundingBox();
-      assert.equal(desktopPet.width, 100);
-      assert.equal(desktopPet.height, 127);
-      assert.equal(desktopSprite.width, 100);
-      assert.equal(desktopSprite.height, 108);
+      assert.equal(desktopPet.width, 144);
+      assert.equal(desktopPet.height, 182);
+      assert.equal(desktopSprite.width, 144);
+      assert.equal(desktopSprite.height, 156);
       await desktopContext.close();
     });
 
@@ -826,11 +826,10 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await page.waitForFunction(() => performance.getEntriesByType('resource')
         .filter((entry) => entry.name.includes('/api/v1/favicons/')).length >= 5);
       const failedFavicon = page.locator('[data-navigation-id="link-e"] .navigation-favicon');
-      assert.equal((await failedFavicon.textContent()).trim(), '');
+      assert.equal(await failedFavicon.textContent(), 'Ge');
       assert.equal(await failedFavicon.locator('img').count(), 0);
-      assert.equal(await failedFavicon.locator('svg').count(), 1);
-      assert.equal(await failedFavicon.evaluate((element) => element.classList.contains('is-text-fallback')), false);
-      assert.equal(await failedFavicon.getAttribute('data-icon-name'), 'Link2');
+      assert.equal(await failedFavicon.evaluate((element) => element.classList.contains('is-text-fallback')), true);
+      assert.equal(await failedFavicon.evaluate((element) => getComputedStyle(element).color), 'rgb(159, 41, 61)');
       const timing = await page.evaluate(() => {
         const navigationRequests = performance.getEntriesByType('resource')
           .filter((entry) => entry.name.includes('/api/v1/favicons/'));
@@ -862,7 +861,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       await page.goto(`${origin}/admin/`);
       await page.waitForFunction(() => document.querySelectorAll('#desktopPageManagerList [data-page-id]').length === 3);
       assert.equal((await page.locator('.desktop-pages-panel h2').textContent()).trim(), '页面');
-      assert.equal((await page.locator('#addDesktopPageButton').textContent()).trim(), '新增页面');
+      assert.equal((await page.locator('#addDesktopPageButton').textContent()).trim(), '＋ 新增页面');
       const pagePanelStyle = await page.locator('.desktop-pages-panel').evaluate((element) => {
         const style = getComputedStyle(element);
         return { position: style.position, overflowY: style.overflowY };

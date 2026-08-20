@@ -7,9 +7,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; media-src 'self' https:; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'" />
     <title>轻风雨斜 OS · 管理后台</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./admin.css?v=20260820-12" />
-    <script data-cfasync="false" src="/icons.js?v=20260820-12" defer></script>
-    <script data-cfasync="false" src="./admin.js?v=20260820-12" defer></script>
+    <link rel="stylesheet" href="./admin.css?v=20260818-10" />
+    <script data-cfasync="false" src="./admin.js?v=20260819-1" defer></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -18,8 +17,8 @@
 
     <main class="admin-shell">
       <section class="login-card" id="loginView" aria-labelledby="loginTitle">
-        <a class="back-link" href="/os/"><span data-icon="ArrowLeft" aria-hidden="true"></span> 返回我的 OS</a>
-        <div class="login-mark" data-icon="Terminal" aria-hidden="true"></div>
+        <a class="back-link" href="/os/">← 返回我的 OS</a>
+        <div class="login-mark" aria-hidden="true">$_</div>
         <p class="eyebrow"><i></i> LIGHTWIND ADMIN</p>
         <h1 id="loginTitle">管理我的导航</h1>
         <p class="login-description">登录后可以管理页面、网址、文件夹和网站音乐库。</p>
@@ -32,7 +31,7 @@
             <span>密码</span>
             <input id="loginPassword" name="password" type="password" autocomplete="current-password" maxlength="128" required />
           </label>
-          <button class="primary-button full-button" type="submit">进入后台 <span data-icon="ArrowRight" aria-hidden="true"></span></button>
+          <button class="primary-button full-button" type="submit">进入后台 <b>→</b></button>
           <p class="form-message" id="loginMessage" role="status"></p>
         </form>
       </section>
@@ -96,7 +95,7 @@
           <aside class="preview-panel wallpaper-preview-panel">
             <div class="panel-heading compact-heading">
               <div><p class="eyebrow"><i></i> LIVE PREVIEW</p><h2>壁纸预览</h2></div>
-              <a class="open-desktop" href="/os/" target="_blank" rel="noopener">打开 OS <span data-icon="ExternalLink" aria-hidden="true"></span></a>
+              <a class="open-desktop" href="/os/" target="_blank" rel="noopener">打开 OS ↗</a>
             </div>
             <div class="wallpaper-preview" id="wallpaperPreview">
               <span id="wallpaperPreviewEmpty">尚未配置壁纸</span>
@@ -110,7 +109,7 @@
           <section class="desktop-pages-panel">
             <div class="panel-heading">
               <div><p class="eyebrow"><i></i> PAGES</p><h2>页面</h2></div>
-              <button class="primary-button" id="addDesktopPageButton" type="button"><span data-icon="Plus" aria-hidden="true"></span> 新增页面</button>
+              <button class="primary-button" id="addDesktopPageButton" type="button">＋ 新增页面</button>
             </div>
             <p class="manager-help">每个页面拥有独立的网址和文件夹；拖动页面可调整顺序，也可把当前页面预览或内容列表中的项目拖到目标页面。</p>
             <div class="desktop-page-manager-list" id="desktopPageManagerList" aria-live="polite"></div>
@@ -119,11 +118,11 @@
             <div class="panel-heading">
               <div><p class="eyebrow"><i></i> PAGE ITEMS</p><h2 id="desktopContentTitle">页面内容</h2></div>
               <div class="toolbar">
-                <button class="secondary-button" id="addFolderButton" type="button"><span data-icon="Plus" aria-hidden="true"></span> 文件夹</button>
-                <button class="primary-button" id="addLinkButton" type="button"><span data-icon="Plus" aria-hidden="true"></span> 网址</button>
+                <button class="secondary-button" id="addFolderButton" type="button">＋ 文件夹</button>
+                <button class="primary-button" id="addLinkButton" type="button">＋ 网址</button>
               </div>
             </div>
-            <p class="manager-help">拖动可以排序或把网址移入文件夹；点击“编辑 / 移动”后选择目标页面，文件夹中的网址会随文件夹同步归属；手机上可使用上移、下移按钮调整顺序。</p>
+            <p class="manager-help">拖动可以排序或把网址移入文件夹；点击“编辑 / 移动”后选择目标页面，文件夹中的网址会随文件夹同步归属；手机上可使用 ↑ ↓ 调整顺序。</p>
             <div class="manager-list top-level-list" id="desktopList" data-drop-list data-folder-id="" aria-live="polite"></div>
             <div class="empty-state" id="emptyState" hidden>
               <b>当前页面还是空的</b>
@@ -134,7 +133,7 @@
           <aside class="preview-panel">
             <div class="panel-heading compact-heading">
               <div><p class="eyebrow"><i></i> CURRENT PAGE</p><h2>当前页面预览</h2></div>
-              <a class="open-desktop" href="/os/" target="_blank" rel="noopener">打开导航页 <span data-icon="ExternalLink" aria-hidden="true"></span></a>
+              <a class="open-desktop" href="/os/" target="_blank" rel="noopener">打开导航页 ↗</a>
             </div>
             <div class="preview-screen">
               <div class="preview-topbar"><span>About&nbsp;&nbsp; Values&nbsp;&nbsp; Now</span><b>轻风雨斜 OS</b></div>
@@ -150,9 +149,9 @@
           <section class="manager-panel">
             <div class="panel-heading">
               <div><p class="eyebrow"><i></i> MUSIC LIBRARY</p><h2>音乐库</h2></div>
-              <div class="toolbar"><button class="primary-button" id="addMusicButton" type="button"><span data-icon="Plus" aria-hidden="true"></span> 音乐</button></div>
+              <div class="toolbar"><button class="primary-button" id="addMusicButton" type="button">＋ 音乐</button></div>
             </div>
-            <p class="manager-help">播放器会按这里的顺序循环播放；拖动排序，手机上可使用上移、下移按钮调整。</p>
+            <p class="manager-help">播放器会按这里的顺序循环播放；拖动排序，手机上可使用 ↑ ↓ 调整。</p>
             <div class="manager-list music-list" id="musicList" aria-live="polite"></div>
             <div class="empty-state" id="musicEmptyState" hidden>
               <b>音乐库还是空的</b>
@@ -166,7 +165,7 @@
               <button class="ghost-button" id="stopMusicPreview" type="button" disabled>停止</button>
             </div>
             <div class="music-preview-card" id="musicPreviewCard" data-preview-state="idle">
-              <span class="music-preview-disc" data-icon="Music2" aria-hidden="true"></span>
+              <span class="music-preview-disc" aria-hidden="true">♫</span>
               <div><small id="musicPreviewStatus">尚未选择音乐</small><strong id="musicPreviewTitle">点击列表中的“试听”</strong></div>
             </div>
             <audio id="musicPreviewAudio" preload="metadata"></audio>
@@ -180,7 +179,7 @@
       <form method="dialog" class="dialog-card" id="pageForm">
         <div class="dialog-heading">
           <div><p class="eyebrow"><i></i> EDIT PAGE</p><h2 id="pageDialogTitle">新增页面</h2></div>
-          <button class="icon-button" type="button" data-close-dialog="pageDialog" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button>
+          <button class="icon-button" type="button" data-close-dialog="pageDialog" aria-label="关闭">×</button>
         </div>
         <input id="pageId" type="hidden" />
         <label><span>页面名称</span><input id="pageName" maxlength="40" required /></label>
@@ -196,7 +195,7 @@
       <form method="dialog" class="dialog-card" id="deletePageForm">
         <div class="dialog-heading">
           <div><p class="eyebrow"><i></i> DELETE PAGE</p><h2>删除页面</h2></div>
-          <button class="icon-button" type="button" data-close-dialog="deletePageDialog" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button>
+          <button class="icon-button" type="button" data-close-dialog="deletePageDialog" aria-label="关闭">×</button>
         </div>
         <p class="dialog-copy">该页面的文件夹和网址会被迁移到目标页面，不会被删除。</p>
         <label><span>迁移到</span><select id="deletePageTarget" required></select></label>
@@ -212,28 +211,14 @@
       <form method="dialog" class="dialog-card" id="itemForm">
         <div class="dialog-heading">
           <div><p class="eyebrow"><i></i> EDIT ITEM</p><h2 id="itemDialogTitle">新增网址</h2></div>
-          <button class="icon-button" type="button" data-close-dialog="itemDialog" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button>
+          <button class="icon-button" type="button" data-close-dialog="itemDialog" aria-label="关闭">×</button>
         </div>
         <input id="itemId" type="hidden" />
         <input id="itemType" type="hidden" />
         <div class="form-grid">
           <label class="wide-field"><span id="nameLabel">名称</span><input id="itemName" maxlength="60" required /></label>
           <label class="link-field wide-field"><span>网址</span><input id="itemUrl" type="text" maxlength="2048" placeholder="https://example.com 或 /dynamic/" /></label>
-          <label><span>Lucide 图标</span><select id="itemIcon" aria-describedby="itemIconHelp">
-            <option value="Link2">链接</option>
-            <option value="Globe2">网站</option>
-            <option value="Folder">文件夹</option>
-            <option value="FileText">文档</option>
-            <option value="Terminal">终端</option>
-            <option value="Mail">邮件</option>
-            <option value="Github">GitHub</option>
-            <option value="AtSign">账号</option>
-            <option value="Music2">音乐</option>
-            <option value="Activity">动态</option>
-            <option value="Sparkles">灵感</option>
-            <option value="Command">命令</option>
-            <option value="ExternalLink">外链</option>
-          </select><small id="itemIconHelp" class="field-help">真实网站 favicon 成功加载后仍优先显示。</small><span class="icon-picker-preview" id="itemIconPreview" data-icon="Link2" aria-hidden="true"></span></label>
+          <label><span>图标 / Emoji</span><input id="itemIcon" maxlength="24" placeholder="留空自动获取" /></label>
           <label><span>主题颜色</span><input id="itemColor" type="color" value="#e8d9dc" /></label>
           <label class="wide-field">
             <span>所在页面（可跨页面移动）</span>
@@ -256,7 +241,7 @@
       <form method="dialog" class="dialog-card" id="musicForm">
         <div class="dialog-heading">
           <div><p class="eyebrow"><i></i> EDIT MUSIC</p><h2 id="musicDialogTitle">新增音乐</h2></div>
-          <button class="icon-button" type="button" data-close-dialog="musicDialog" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button>
+          <button class="icon-button" type="button" data-close-dialog="musicDialog" aria-label="关闭">×</button>
         </div>
         <input id="musicId" type="hidden" />
         <div class="form-grid single-column">
@@ -273,7 +258,7 @@
 
     <dialog class="editor-dialog small-dialog" id="deleteFolderDialog">
       <div class="dialog-card">
-        <div class="dialog-heading"><div><p class="eyebrow"><i></i> DELETE FOLDER</p><h2>删除文件夹</h2></div><button class="icon-button" type="button" data-close-dialog="deleteFolderDialog" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div>
+        <div class="dialog-heading"><div><p class="eyebrow"><i></i> DELETE FOLDER</p><h2>删除文件夹</h2></div><button class="icon-button" type="button" data-close-dialog="deleteFolderDialog">×</button></div>
         <p class="dialog-copy">这个文件夹中还有网址。你希望怎样处理？</p>
         <div class="stacked-actions">
           <button class="secondary-button" id="moveFolderLinksButton" type="button">删除文件夹，网址移到当前页面</button>
@@ -285,7 +270,7 @@
 
     <dialog class="editor-dialog small-dialog" id="passwordDialog">
       <form method="dialog" class="dialog-card" id="passwordForm">
-        <div class="dialog-heading"><div><p class="eyebrow"><i></i> SECURITY</p><h2>修改管理员密码</h2></div><button class="icon-button" type="button" data-close-dialog="passwordDialog" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div>
+        <div class="dialog-heading"><div><p class="eyebrow"><i></i> SECURITY</p><h2>修改管理员密码</h2></div><button class="icon-button" type="button" data-close-dialog="passwordDialog">×</button></div>
         <div class="form-grid single-column">
           <label><span>当前密码</span><input id="currentPassword" type="password" autocomplete="current-password" maxlength="128" required /></label>
           <label><span>新密码</span><input id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required /></label>

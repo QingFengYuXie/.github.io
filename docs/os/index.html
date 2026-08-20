@@ -7,10 +7,9 @@
     <meta name="theme-color" content="#090607" />
     <title>轻风雨斜 OS · 个人桌面</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260820-12" />
-    <link rel="stylesheet" href="/site-nav.css?v=20260820-12" />
-    <script data-cfasync="false" src="/icons.js?v=20260820-12" defer></script>
-    <script data-cfasync="false" src="/site-nav.js?v=20260820-12" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260820-8" />
+    <link rel="stylesheet" href="../site-nav.css?v=20260820-9" />
+    <script data-cfasync="false" src="../site-nav.js?v=20260820-9" defer></script>
   </head>
   <body class="os-page">
     <div class="boot-screen" id="bootScreen">
@@ -44,9 +43,9 @@
       <div class="desktop-topbar">
         <nav class="top-links"><button data-open="aboutWindow">About</button><button data-open="osWindow">Values</button><button data-open="nowWindow">Now</button></nav>
         <form class="desktop-web-search" action="https://www.bing.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
-          <span class="desktop-search-icon" data-icon="Search" aria-hidden="true"></span>
+          <span class="desktop-search-icon" aria-hidden="true"></span>
           <input type="search" name="q" maxlength="200" autocomplete="off" placeholder="使用 Bing 搜索…" aria-label="使用 Bing 搜索" required />
-          <button type="submit" aria-label="搜索" title="使用 Bing 搜索"><span data-icon="ArrowUpRight" aria-hidden="true"></span></button>
+          <button type="submit" aria-label="搜索" title="使用 Bing 搜索">↗</button>
         </form>
         <div class="os-brand"><a class="os-admin-link" href="/admin/" title="进入页面管理后台">轻风雨斜 <i>OS</i></a></div>
         <div class="desktop-clock-controls">
@@ -64,66 +63,66 @@
 
       <aside class="desktop-status-card" id="desktopStatusCard" aria-label="系统状态">
         <button class="status-card-toggle" id="statusCardToggle" type="button" aria-controls="desktopStatusCard" aria-expanded="true" aria-label="收起系统状态" title="收起系统状态">
-          <span data-icon="ChevronRight" aria-hidden="true"></span>
+          <span aria-hidden="true">›</span>
         </button>
-        <div class="status-card-heading"><span><i></i> LIVE STATUS</span><button type="button" id="openPaletteButton" aria-label="打开命令面板（Ctrl + K）" title="打开命令面板（Ctrl + K）"><span data-icon="Command" aria-hidden="true"></span><b aria-hidden="true">K</b></button></div>
+        <div class="status-card-heading"><span><i></i> LIVE STATUS</span><button type="button" id="openPaletteButton" title="打开命令面板（Ctrl + K）">⌘K</button></div>
         <p class="status-card-now">正在把小想法做成网页。</p>
         <dl class="status-card-metrics">
           <div><dt>FOCUS</dt><dd><i style="--value:68%"></i><b>68%</b></dd></div>
           <div><dt>CURIOSITY</dt><dd><i style="--value:92%"></i><b>92%</b></dd></div>
         </dl>
-        <a class="status-card-post" id="latestPost" href="/dynamic/">最近动态加载中… <b data-icon="ArrowUpRight" aria-hidden="true"></b></a>
+        <a class="status-card-post" id="latestPost" href="/dynamic/">最近动态加载中… <b>↗</b></a>
         <p class="status-card-runtime">UPTIME <span id="siteUptime">—</span></p>
       </aside>
 
       <section class="desktop-icon-viewport" id="desktopIconViewport" aria-label="桌面图标分页">
         <div class="site-track" id="pageTrack">
           <section class="desktop-icons" id="desktopIcons" data-page-id="desktop-page-home" aria-label="桌面网址导航" aria-busy="true">
-            <button class="desktop-icon terminal-icon" data-open="terminalWindow" data-navigation-id="system-terminal" style="--x: 0; --y: 0" title="打开命令工具"><span class="icon app-icon" data-icon="Terminal" aria-hidden="true"></span><span>终端</span></button>
+            <button class="desktop-icon terminal-icon" data-open="terminalWindow" data-navigation-id="system-terminal" style="--x: 0; --y: 0" title="打开命令工具"><span class="icon app-icon">$_</span><span>终端</span></button>
             <p class="navigation-loading" id="navigationLoading">正在加载桌面网址…</p>
           </section>
         </div>
       </section>
 
       <section class="app-window" id="aboutWindow" data-window="about" hidden>
-        <header class="window-header"><span><i class="mini-icon green-bg" data-icon="AtSign" aria-hidden="true"></i> about.html</span><div><button class="minimize-button" aria-label="最小化"><span data-icon="Minus" aria-hidden="true"></span></button><button class="close-button" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div></header>
-        <div class="window-content about-content"><div class="window-avatar"><img src="assets/avatar.webp" alt="轻风雨头像" loading="lazy" decoding="async" /></div><div><p class="eyebrow">ABOUT ME / 01</p><h1>你好，我是轻风雨。</h1><p>一个程序员，喜欢把模糊的想法变成可以点击、可以运行、可以分享的东西。</p><p class="muted">这里是我的个人桌面。你可以打开文件、看看作品，也可以随时回来看看我正在做什么。</p><a class="green-link" href="mailto:byliudazhi@foxmail.com">写信给我 <span data-icon="ArrowUpRight" aria-hidden="true"></span></a></div></div>
+        <header class="window-header"><span><i class="mini-icon green-bg">@</i> about.html</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
+        <div class="window-content about-content"><div class="window-avatar"><img src="assets/avatar.webp" alt="轻风雨头像" loading="lazy" decoding="async" /></div><div><p class="eyebrow">ABOUT ME / 01</p><h1>你好，我是轻风雨。</h1><p>一个程序员，喜欢把模糊的想法变成可以点击、可以运行、可以分享的东西。</p><p class="muted">这里是我的个人桌面。你可以打开文件、看看作品，也可以随时回来看看我正在做什么。</p><a class="green-link" href="mailto:byliudazhi@foxmail.com">写信给我 ↗</a></div></div>
       </section>
 
       <section class="app-window wide" id="worksWindow" data-window="works" hidden>
-        <header class="window-header"><span><i class="mini-icon orange-bg" data-icon="Folder" aria-hidden="true"></i> works/</span><div><button class="minimize-button" aria-label="最小化"><span data-icon="Minus" aria-hidden="true"></span></button><button class="close-button" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div></header>
-        <div class="window-content"><p class="eyebrow">WORKSPACE / 02</p><h2>正在构建的东西</h2><div class="project-grid"><article><span class="project-no">01</span><h3>qfyx.top</h3><p>这个个人桌面。用 GitHub Pages 免费托管，把域名、代码和生活放在一起。</p><span class="project-status"><i class="status-dot" aria-hidden="true"></i>online</span></article><article><span class="project-no">02</span><h3>Light Tools</h3><p>一些解决小问题的网页工具：文本整理、灵感收集和日常自动化。</p><span class="project-status pending"><i class="status-dot" aria-hidden="true"></i>collecting ideas</span></article><article><span class="project-no">03</span><h3>AI × Life</h3><p>记录和 AI 一起学习、写作、做项目的过程，试错本身也是作品。</p><span class="project-status pending"><i class="status-dot" aria-hidden="true"></i>in progress</span></article></div></div>
+        <header class="window-header"><span><i class="mini-icon orange-bg">▰</i> works/</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
+        <div class="window-content"><p class="eyebrow">WORKSPACE / 02</p><h2>正在构建的东西</h2><div class="project-grid"><article><span class="project-no">01</span><h3>qfyx.top</h3><p>这个个人桌面。用 GitHub Pages 免费托管，把域名、代码和生活放在一起。</p><span class="project-status">● online</span></article><article><span class="project-no">02</span><h3>Light Tools</h3><p>一些解决小问题的网页工具：文本整理、灵感收集和日常自动化。</p><span class="project-status pending">○ collecting ideas</span></article><article><span class="project-no">03</span><h3>AI × Life</h3><p>记录和 AI 一起学习、写作、做项目的过程，试错本身也是作品。</p><span class="project-status pending">○ in progress</span></article></div></div>
       </section>
 
       <section class="app-window" id="blogWindow" data-window="blog" hidden>
-        <header class="window-header"><span><i class="mini-icon blue-bg" data-icon="FileText" aria-hidden="true"></i> notes/</span><div><button class="minimize-button" aria-label="最小化"><span data-icon="Minus" aria-hidden="true"></span></button><button class="close-button" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div></header>
-        <div class="window-content"><p class="eyebrow">NOTES / 03</p><h2>写了就发</h2><div class="notes"><a href="#"><time>2026.08.11</time><span class="note-tag">建站</span><strong>从一个空仓库开始，搭建自己的博客</strong><b data-icon="ArrowUpRight" aria-hidden="true"></b></a><a href="#"><time>2026.08.08</time><span class="note-tag">编程</span><strong>把重复的事情交给代码</strong><b data-icon="ArrowUpRight" aria-hidden="true"></b></a><a href="#"><time>2026.08.01</time><span class="note-tag">生活</span><strong>给生活留一点空白</strong><b data-icon="ArrowUpRight" aria-hidden="true"></b></a></div></div>
+        <header class="window-header"><span><i class="mini-icon blue-bg">.md</i> notes/</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
+        <div class="window-content"><p class="eyebrow">NOTES / 03</p><h2>写了就发</h2><div class="notes"><a href="#"><time>2026.08.11</time><span class="note-tag">建站</span><strong>从一个空仓库开始，搭建自己的博客</strong><b>↗</b></a><a href="#"><time>2026.08.08</time><span class="note-tag">编程</span><strong>把重复的事情交给代码</strong><b>↗</b></a><a href="#"><time>2026.08.01</time><span class="note-tag">生活</span><strong>给生活留一点空白</strong><b>↗</b></a></div></div>
       </section>
 
       <section class="app-window" id="osWindow" data-window="os" hidden>
-        <header class="window-header"><span><i class="mini-icon green-bg" data-icon="Folder" aria-hidden="true"></i> lightwind-os/</span><div><button class="minimize-button" aria-label="最小化"><span data-icon="Minus" aria-hidden="true"></span></button><button class="close-button" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div></header>
+        <header class="window-header"><span><i class="mini-icon green-bg">▰</i> lightwind-os/</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
         <div class="window-content"><p class="eyebrow">MY OS / 04</p><h2>系统状态</h2><div class="os-list"><div><b>01</b><span>先做出来，再慢慢变好。</span></div><div><b>02</b><span>保持好奇，但不盲目追赶。</span></div><div><b>03</b><span>让工具服务于生活。</span></div></div><p class="eyebrow skill-label">SKILLS &amp; INTERESTS</p><div class="tags"><span>HTML / CSS / JS</span><span>GitHub Pages</span><span>AI Tools</span><span>自动化</span><span>阅读</span><span>做小工具</span></div></div>
       </section>
 
       <section class="app-window small-window" id="nowWindow" data-window="now" hidden>
-        <header class="window-header"><span><i class="mini-icon orange-bg" data-icon="Activity" aria-hidden="true"></i> now.html</span><div><button class="minimize-button" aria-label="最小化"><span data-icon="Minus" aria-hidden="true"></span></button><button class="close-button" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div></header>
+        <header class="window-header"><span><i class="mini-icon orange-bg">.html</i> now.html</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
         <div class="window-content now-content"><p class="eyebrow">CURRENTLY / 05</p><h2>现在做什么？</h2><div class="online"><i></i> online · curious</div><p>正在把生活里的小想法做成网页，顺便学习如何让代码更有温度。</p><div class="meter"><span>focus</span><div><i style="width: 68%"></i></div><b>68%</b></div><div class="meter"><span>curiosity</span><div><i style="width: 92%"></i></div><b>92%</b></div></div>
       </section>
 
       <section class="app-window small-window" id="contactWindow" data-window="contact" hidden>
-        <header class="window-header"><span><i class="mini-icon pink-bg" data-icon="Mail" aria-hidden="true"></i> contact.md</span><div><button class="minimize-button" aria-label="最小化"><span data-icon="Minus" aria-hidden="true"></span></button><button class="close-button" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div></header>
-        <div class="window-content contact-content"><p class="eyebrow">CONTACT / 06</p><h2>来找我。</h2><p class="quote">“慢一点没有关系，重要的是不要停下来。”</p><a href="mailto:byliudazhi@foxmail.com"><span data-icon="Mail" aria-hidden="true"></span> byliudazhi@foxmail.com</a><a href="https://www.douyin.com/root/search/%E8%BD%BB%E9%A3%8E%E9%9B%A8?aid=84c5f2c1-b4d7-4435-a519-f9347f8b4471&type=general" target="_blank" rel="noreferrer"><span data-icon="Music2" aria-hidden="true"></span> 抖音：轻风雨 <span data-icon="ArrowUpRight" aria-hidden="true"></span></a></div>
+        <header class="window-header"><span><i class="mini-icon pink-bg">@</i> contact.md</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
+        <div class="window-content contact-content"><p class="eyebrow">CONTACT / 06</p><h2>来找我。</h2><p class="quote">“慢一点没有关系，重要的是不要停下来。”</p><a href="mailto:byliudazhi@foxmail.com">✉ byliudazhi@foxmail.com</a><a href="https://www.douyin.com/root/search/%E8%BD%BB%E9%A3%8E%E9%9B%A8?aid=84c5f2c1-b4d7-4435-a519-f9347f8b4471&type=general" target="_blank" rel="noreferrer">♪ 抖音：轻风雨 ↗</a></div>
       </section>
 
       <section class="app-window terminal-window" id="terminalWindow" data-window="terminal" hidden>
-        <header class="window-header"><span><i class="mini-icon green-bg" data-icon="Terminal" aria-hidden="true"></i> terminal — lightwind@universe</span><div><button class="minimize-button" aria-label="最小化"><span data-icon="Minus" aria-hidden="true"></span></button><button class="close-button" aria-label="关闭"><span data-icon="X" aria-hidden="true"></span></button></div></header>
+        <header class="window-header"><span><i class="mini-icon green-bg">$_</i> terminal — lightwind@universe</span><div><button class="minimize-button">—</button><button class="close-button" aria-label="关闭">×</button></div></header>
         <div class="terminal-body" id="terminalOutput" aria-live="polite"><p><span>lightwind@universe</span>:<b>~</b>$ 欢迎来到轻风雨 OS。</p><p class="terminal-muted">输入 <code>help</code> 查看可用命令。</p></div>
         <form class="terminal-input-row" id="terminalForm"><label for="terminalInput"><span>lightwind@universe</span>:<b>~</b>$</label><input id="terminalInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="终端命令" /></form>
       </section>
 
       <section class="navigation-folder" id="navigationFolder" role="dialog" aria-modal="true" aria-labelledby="navigationFolderTitle" hidden>
         <div class="navigation-folder-panel">
-          <header><div><span class="navigation-folder-kicker">DESKTOP FOLDER</span><h2 id="navigationFolderTitle">文件夹</h2></div><button type="button" id="closeNavigationFolder" aria-label="关闭文件夹"><span data-icon="X" aria-hidden="true"></span></button></header>
+          <header><div><span class="navigation-folder-kicker">DESKTOP FOLDER</span><h2 id="navigationFolderTitle">文件夹</h2></div><button type="button" id="closeNavigationFolder" aria-label="关闭文件夹">×</button></header>
           <div class="navigation-folder-grid" id="navigationFolderGrid"></div>
           <p class="navigation-folder-empty" id="navigationFolderEmpty" hidden>这个文件夹还是空的。</p>
         </div>
@@ -138,7 +137,7 @@
 
       <section class="command-palette" id="commandPalette" aria-label="命令面板" aria-modal="true" role="dialog" hidden>
         <div class="command-palette-panel">
-          <div class="command-palette-input"><span data-icon="Command" aria-hidden="true"></span><input id="commandPaletteInput" type="search" autocomplete="off" placeholder="搜索动态，或输入命令…" aria-label="搜索动态或命令" /><kbd>ESC</kbd></div>
+          <div class="command-palette-input"><span>⌘</span><input id="commandPaletteInput" type="search" autocomplete="off" placeholder="搜索动态，或输入命令…" aria-label="搜索动态或命令" /><kbd>ESC</kbd></div>
           <div class="command-palette-results" id="commandPaletteResults" role="listbox"></div>
           <p class="command-palette-help">输入 <code>&gt;</code> 搜索命令 · Ctrl + K 打开或关闭</p>
         </div>
@@ -146,6 +145,6 @@
 
     </main>
     </div>
-    <script data-cfasync="false" src="./script.js?v=20260820-12" defer></script>
+    <script data-cfasync="false" src="./script.js?v=20260820-3" defer></script>
   </body>
 </html>

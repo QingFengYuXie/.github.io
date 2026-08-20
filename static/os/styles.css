@@ -53,7 +53,7 @@ a { color: inherit; text-decoration: none; }
 .desktop { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: radial-gradient(circle at 50% 52%, rgba(255,255,255,.06), transparent 34%), linear-gradient(135deg, var(--blue-deep), var(--blue)); transition: transform .55s cubic-bezier(.2,.8,.2,1), filter .55s; }.desktop::before, .desktop::after { content: ''; position: absolute; pointer-events: none; }.desktop::before { inset: 0; opacity: .78; background-image: radial-gradient(circle, var(--yellow) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(255,255,255,.35) 0 1px, transparent 1.5px); background-position: 4% 10%, 16% 18%; background-size: 170px 140px, 230px 190px; }.desktop::after { left: 9%; bottom: -42%; width: 72%; height: 80%; opacity: .11; border: 1px solid #fff; border-radius: 50%; transform: rotate(-18deg); box-shadow: 0 0 0 50px rgba(255,255,255,.04), 0 0 0 100px rgba(255,255,255,.03); }.stars { position: absolute; z-index: 0; width: 6px; height: 6px; background: var(--yellow); transform: rotate(45deg); filter: drop-shadow(0 0 4px rgba(255,218,94,.8)); }.stars-a { left: 25%; top: 29%; }.stars-b { left: 54%; top: 19%; width: 4px; height: 4px; }.stars-c { left: 71%; top: 66%; width: 8px; height: 8px; }.aurora { position: absolute; z-index: 0; width: 33vw; height: 15vw; opacity: .12; border-radius: 50%; filter: blur(30px); background: #74dcff; transform: rotate(-20deg); }.aurora-a { left: 18%; bottom: -3%; }.aurora-b { right: 17%; top: 13%; background: #f7a7d8; }
 
 .desktop-topbar { position: relative; z-index: 4; display: flex; align-items: center; height: 52px; padding: 0 20px; color: var(--muted); }.os-brand { color: var(--yellow); font-size: 15px; font-weight: 700; font-style: italic; }.os-brand i { color: #fff; font-style: normal; }.top-links { display: flex; gap: 24px; margin-left: 24px; }.top-links button { padding: 5px 0; color: var(--muted); background: transparent; font-size: 12px; }.top-links button:hover { color: white; }.desktop-topbar time { margin-left: auto; font-size: 12px; }
-.desktop-art { position: absolute; z-index: 1; left: 50%; bottom: 24%; width: 180px; height: 180px; transform: translateX(-50%); }.desktop-art img { position: absolute; inset: 11px; width: calc(100% - 22px); height: calc(100% - 22px); object-fit: cover; opacity: .9; border: 3px solid rgba(255,255,255,.6); border-radius: 50%; box-shadow: 0 0 35px rgba(255,255,255,.2); }.avatar-orbit { position: absolute; inset: -18px; border: 1px solid rgba(255,255,255,.4); border-radius: 50%; transform: rotate(25deg) scaleY(.42); }.avatar-orbit::after { content: ''; position: absolute; top: 7px; left: 20%; width: 7px; height: 7px; border-radius: 1px; background: var(--yellow); box-shadow: 0 0 8px currentColor; transform: rotate(45deg); }
+.desktop-art { position: absolute; z-index: 1; left: 50%; bottom: 24%; width: 180px; height: 180px; transform: translateX(-50%); }.desktop-art img { position: absolute; inset: 11px; width: calc(100% - 22px); height: calc(100% - 22px); object-fit: cover; opacity: .9; border: 3px solid rgba(255,255,255,.6); border-radius: 50%; box-shadow: 0 0 35px rgba(255,255,255,.2); }.avatar-orbit { position: absolute; inset: -18px; border: 1px solid rgba(255,255,255,.4); border-radius: 50%; transform: rotate(25deg) scaleY(.42); }.avatar-orbit::after { content: '✦'; position: absolute; top: 7px; left: 20%; color: var(--yellow); font-size: 22px; }
 .desktop-icons { position: absolute; z-index: 4; top: 74px; right: 32px; display: grid; grid-template-columns: repeat(3, 88px); gap: 18px 24px; }.desktop-icon { width: 88px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.35); background: transparent; font-size: 10px; }.desktop-icon:hover { color: var(--yellow); }.desktop-icon:focus-visible { outline: 2px solid var(--yellow); }.icon { width: 48px; height: 44px; display: grid; place-items: center; position: relative; color: #2e79bd; background: #f8fafc; border-radius: 11px; box-shadow: 0 5px 10px rgba(0,0,0,.13); font-size: 10px; font-weight: 700; text-shadow: none; }.folder-icon { color: #6f561b; background: linear-gradient(#ffe782 0 20%, #ffd968 20%); border-radius: 10px 10px 12px 12px; font-size: 0; }.folder-icon::before { content: ''; position: absolute; top: -4px; left: 7px; width: 20px; height: 10px; border-radius: 5px 5px 0 0; background: #ffe782; }.file-icon::after { content: ''; position: absolute; right: 7px; bottom: 7px; width: 23px; height: 4px; background: #2c79be; border-radius: 2px; }.file-icon.html::before { content: '<html>'; position: absolute; top: 9px; color: #2c79be; font-size: 8px; }.app-icon { color: #e97848; font-size: 25px; }.desktop-tip { position: absolute; z-index: 2; left: 25px; bottom: 80px; color: rgba(255,255,255,.75); font-size: 11px; }.prompt { color: #d8f6b8; }.command { color: var(--yellow); }
 
 .dock { position: absolute; z-index: 20; left: 50%; bottom: 28px; display: flex; gap: 4px; padding: 6px; border: 6px solid rgba(255,255,255,.72); border-radius: 35px; background: rgba(236,244,253,.92); box-shadow: 0 10px 30px rgba(0,0,0,.18); transform: translateX(-50%); }.dock-item { min-width: 86px; display: flex; flex-direction: column; gap: 1px; align-items: center; padding: 9px 14px; color: #5f6f86; border-radius: 25px; background: transparent; font-size: 11px; }.dock-item b { color: #9da9b9; font-size: 9px; font-weight: 400; }.dock-item.active, .dock-item:hover { color: #fff; background: #398bd8; }.dock-item.active b, .dock-item:hover b { color: #d6edff; }.dock-contact { min-width: 66px; }
@@ -274,7 +274,7 @@ body { color: #f3eded; background: #070506; }
 .top-links button:hover { color: #ff6675; }
 .desktop-art img { border-color: rgba(255,71,89,.55); box-shadow: 0 0 42px rgba(187,18,40,.32); filter: grayscale(.18) contrast(1.08); }
 .avatar-orbit { border-color: rgba(255,56,77,.46); }
-.avatar-orbit::after { color: #ff3a50; background: #ff3a50; }
+.avatar-orbit::after { color: #ff3a50; }
 .desktop-icon:hover { color: #ff5364; }
 .desktop-icon:focus-visible { outline-color: #ff5364; }
 .icon { color: #c23041; background: linear-gradient(145deg, #f2e8e9, #cababc); box-shadow: 0 7px 18px rgba(0,0,0,.5), 0 0 0 1px rgba(255,77,94,.16); }
@@ -746,8 +746,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   .desktop-status-card, .desktop-context-menu, .desktop-tip { display: none !important; }
 
   .desktop-pet {
-    right: auto;
-    left: calc(50% - 48px);
+    right: max(12px, env(safe-area-inset-right));
     bottom: calc(env(safe-area-inset-bottom) + 138px);
     display: grid;
     width: 96px;
@@ -792,15 +791,15 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 
   .desktop-web-search,
   .desktop-web-search:focus-within {
-    position: fixed;
+    position: absolute;
     z-index: 24;
-    top: max(12px, env(safe-area-inset-top));
-    right: calc(max(12px, env(safe-area-inset-right)) + 139px);
+    top: calc(env(safe-area-inset-top) + 12px);
+    right: calc(max(14px, env(safe-area-inset-right)) + 120px);
     left: max(16px, env(safe-area-inset-left));
     width: auto;
     min-width: 0;
     height: 42px;
-    transform: none !important;
+    transform: none;
     pointer-events: auto;
     border-color: var(--os-mobile-control-border);
     border-radius: var(--os-mobile-control-radius);
@@ -1032,10 +1031,9 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 }
 @media (max-width: 800px) {
   .desktop-icon-viewport {
-    position: fixed;
-    top: 68px;
+    top: calc(env(safe-area-inset-top) + 68px);
     right: max(12px, env(safe-area-inset-right));
-    bottom: 74px;
+    bottom: calc(max(18px, env(safe-area-inset-bottom)) + 56px);
     left: max(12px, env(safe-area-inset-left));
   }
   .desktop-icon-viewport > .site-track {
@@ -1214,7 +1212,7 @@ body.os-page {
 
 /* Keep the page switcher subtle while giving Rem a smaller footprint. */
 .os-page .desktop-page-sidebar {
-  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  background: rgba(17, 9, 12, .10);
   border-color: rgba(255, 91, 111, .10);
   box-shadow: -8px 0 22px rgba(0, 0, 0, .08);
 }
@@ -1247,135 +1245,4 @@ body.os-page {
     padding: 2px 5px;
     font-size: 7px;
   }
-}
-
-/* Lightwind OS token layer and local Lucide surfaces. */
-:root {
-  --lw-os-black: #080608;
-  --lw-os-red: #dc3049;
-  --lw-os-gold: #f2c76a;
-  --lw-os-text: #f7edf0;
-  --lw-os-muted: #ad969d;
-  --lw-os-glass: rgba(17, 10, 14, .74);
-  --lw-os-line: rgba(255, 255, 255, .14);
-  --lw-os-radius: 16px;
-  --lw-os-shadow: 0 18px 52px rgba(0, 0, 0, .38);
-}
-
-.lightwind-icon {
-  display: block;
-  width: 1em;
-  height: 1em;
-  flex: 0 0 auto;
-  overflow: visible;
-  stroke: currentColor;
-  pointer-events: none;
-}
-
-[data-icon], .lightwind-icon-host {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-}
-
-.desktop-search-icon {
-  width: 19px;
-  height: 19px;
-  border: 0;
-  color: rgba(255, 255, 255, .78);
-  transform: none;
-}
-.desktop-search-icon::after { display: none; }
-.desktop-search-icon .lightwind-icon { width: 18px; height: 18px; }
-.desktop-web-search > button .lightwind-icon { width: 16px; height: 16px; }
-.status-card-toggle > span { width: 20px; height: 20px; font-size: inherit; transform: none; }
-.status-card-toggle .lightwind-icon { width: 20px; height: 20px; transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
-.desktop-status-card.is-collapsed .status-card-toggle .lightwind-icon { transform: rotate(180deg); }
-.status-card-heading button { display: inline-flex; align-items: center; gap: 3px; }
-.status-card-heading button .lightwind-icon { width: 12px; height: 12px; }
-.status-card-heading button b { font: inherit; }
-.status-card-post b { display: inline-flex; align-items: center; }
-.status-card-post b .lightwind-icon { width: 15px; height: 15px; }
-.window-header .mini-icon { display: inline-flex; align-items: center; justify-content: center; }
-.window-header .mini-icon .lightwind-icon { width: 14px; height: 14px; }
-.window-header button .lightwind-icon { width: 15px; height: 15px; }
-.window-header .close-button::before,
-.window-header .close-button::after { content: none !important; display: none !important; }
-.notes a b { display: inline-flex; align-items: center; }
-.notes a b .lightwind-icon { width: 15px; height: 15px; }
-.contact-content a { display: inline-flex; align-items: center; gap: 7px; }
-.contact-content a .lightwind-icon { width: 15px; height: 15px; }
-.project-status { display: inline-flex; align-items: center; gap: 6px; }
-.status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 9px currentColor; }
-.project-status.pending .status-dot { opacity: .65; }
-.command-palette-input > span { display: inline-flex; width: 18px; height: 18px; }
-.command-palette-input > span .lightwind-icon { width: 18px; height: 18px; }
-.command-palette-result > i { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; }
-.command-palette-result > i .lightwind-icon { width: 18px; height: 18px; }
-.site-track.is-springing { transition: none !important; }
-.app-icon .lightwind-icon { width: 26px; height: 26px; }
-.folder-glyph { position: absolute; inset: 10px; display: grid; place-items: center; color: var(--navigation-color, #f0c76a); opacity: .92; }
-.folder-glyph .lightwind-icon { width: 30px; height: 30px; }
-.folder-mini-grid { z-index: 1; }
-.navigation-favicon > .lightwind-icon { width: 24px; height: 24px; }
-.folder-mini-grid .navigation-favicon > .lightwind-icon { width: 10px; height: 10px; }
-
-/* On phones the OS remains a real two-column touch desktop. The terminal is
-   the only system shortcut intentionally omitted from the home grid. */
-@media (max-width: 800px) {
-  .os-page .desktop-pet {
-    width: 96px;
-    height: 122px;
-  }
-  .os-page .desktop-pet-sprite {
-    width: 96px;
-    height: 104px;
-    background-size: 768px 936px;
-  }
-  .desktop-icon-viewport {
-    z-index: 30;
-    pointer-events: none;
-  }
-  .desktop-icon-viewport .desktop-icons {
-    position: relative;
-    z-index: 30;
-    pointer-events: none;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(92px, auto);
-    gap: 12px 10px;
-    padding: 6px 2px 30px;
-  }
-  .desktop-icon,
-  .desktop-icon.navigation-icon {
-    pointer-events: auto;
-    z-index: 40;
-    scroll-margin-bottom: 132px;
-    min-height: 92px;
-    padding: 8px 5px;
-    gap: 8px;
-    border: 1px solid rgba(255, 255, 255, .08);
-    background: rgba(255, 255, 255, .035);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
-  }
-  .desktop-icon .icon,
-  .desktop-icon .navigation-folder-icon,
-  .desktop-icon .navigation-link-icon {
-    width: 62px;
-    height: 62px;
-    flex-basis: 62px;
-    border-radius: 18px;
-  }
-  .desktop-icon > span:last-child,
-  .navigation-icon > span:last-child { max-width: 112px; font-size: 11px; }
-  .desktop-icon .app-icon .lightwind-icon { width: 28px; height: 28px; }
-  .navigation-folder-icon .folder-glyph { inset: 14px; }
-  .navigation-folder-icon .folder-glyph .lightwind-icon { width: 32px; height: 32px; }
-  .window-header .close-button { color: #f2e5e8; }
-  .window-header .close-button > span { display: inline-flex; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lightwind-icon,
-  .status-card-toggle .lightwind-icon { transition: none !important; }
 }
