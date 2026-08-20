@@ -224,9 +224,7 @@
     previousButton.dataset.musicAction = 'previous';
     previousButton.setAttribute('aria-label', '上一首');
     previousButton.title = '上一首';
-    previousButton.innerHTML = titleActions
-      ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6V6Z"/></svg>'
-      : '<span aria-hidden="true">⏮</span>';
+    previousButton.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6V6Z"/></svg>';
 
     playButton.type = 'button';
     playButton.className = 'site-music-control site-music-play';
@@ -240,9 +238,7 @@
     nextButton.dataset.musicAction = 'next';
     nextButton.setAttribute('aria-label', '下一首');
     nextButton.title = '下一首';
-    nextButton.innerHTML = titleActions
-      ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 5v14M6 6l8 6-8 6V6Z"/></svg>'
-      : '<span aria-hidden="true">⏭</span>';
+    nextButton.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 5v14M6 6l8 6-8 6V6Z"/></svg>';
 
     player.querySelector('.site-music-controls').append(modeButton, previousButton, playButton, nextButton);
 
