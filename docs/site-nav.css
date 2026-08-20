@@ -886,7 +886,7 @@ body.os-page .site-music-player[data-music-state="playing"] .site-music-play {
   justify-content: center;
   flex-wrap: wrap;
   gap: 8px 14px;
-  margin: 0 0 10px;
+  margin: 10px 0 0;
   color: var(--fgColor-muted, var(--color-fg-muted, #59636e));
   font: 500 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
 }
@@ -926,7 +926,7 @@ body.os-page .site-music-player[data-music-state="playing"] .site-music-play {
 @media (max-width: 600px) {
   .site-pagination-tools {
     gap: 7px 10px;
-    margin-bottom: 9px;
+    margin-top: 9px;
     font-size: 11px;
   }
 
