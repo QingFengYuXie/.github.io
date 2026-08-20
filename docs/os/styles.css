@@ -1163,3 +1163,34 @@ body.os-page {
     color: #2c4f6b;
   }
 }
+
+/* Keep the OS search chrome white and free of red accents. */
+.os-page .desktop-web-search {
+  border-color: rgba(255, 255, 255, .2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+}
+.os-page .desktop-web-search:focus-within {
+  border-color: rgba(255, 255, 255, .58);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 10px 28px rgba(0, 0, 0, .34), 0 0 20px rgba(255, 255, 255, .12);
+}
+.os-page .desktop-search-icon {
+  border-color: rgba(255, 255, 255, .82);
+}
+.os-page .desktop-search-icon::after {
+  background: rgba(255, 255, 255, .82);
+}
+.os-page .desktop-web-search input {
+  color: #fff;
+}
+.os-page .desktop-web-search input::placeholder {
+  color: rgba(255, 255, 255, .62);
+}
+.os-page .desktop-web-search button {
+  color: rgba(255, 255, 255, .78);
+}
+.os-page .desktop-web-search button:hover,
+.os-page .desktop-web-search button:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, .18);
+}
