@@ -774,7 +774,11 @@ function createFaviconLoader() {
     };
     image.alt = '';
     image.decoding = 'async';
-    image.addEventListener('load', () => settle(true), { once: true });
+    image.addEventListener('load', () => {
+      // Some browsers fire `load` for an empty/204 response. Keep the text
+      // fallback in place unless the response produced a real image.
+      settle(image.naturalWidth > 0 && image.naturalHeight > 0);
+    }, { once: true });
     image.addEventListener('error', () => settle(false), { once: true });
     task.timeout = window.setTimeout(() => {
       image.removeAttribute('src');
