@@ -79,52 +79,6 @@
     return actions;
   }
 
-  function mountNavigationCurtain() {
-    if (document.querySelector('.site-navigation-curtain')) return;
-
-    const curtain = document.createElement('div');
-    curtain.className = 'site-navigation-curtain';
-    curtain.hidden = true;
-    curtain.setAttribute('aria-hidden', 'true');
-    curtain.innerHTML = '<div class="site-navigation-curtain__log"><header><span>Lightwind GNU/Linux</span><span>tty1</span></header><p>[   0.000000] Linux version 6.8.12-lightwind (root@universe)</p><p>[  OK  ] Starting Lightwind Display Manager.</p></div>';
-    document.body.append(curtain);
-
-    const resetCurtain = () => {
-      document.documentElement.classList.remove('site-navigating');
-      curtain.classList.remove('is-os-target');
-      curtain.hidden = true;
-    };
-    resetCurtain();
-    window.addEventListener('pagehide', resetCurtain);
-    window.addEventListener('pageshow', resetCurtain);
-
-    document.addEventListener('click', (event) => {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      if (event.button !== undefined && event.button !== 0) return;
-
-      const link = event.target?.closest?.('a[href]');
-      if (!link || link.hasAttribute('download')) return;
-      const target = (link.getAttribute('target') || '').toLowerCase();
-      if (target && target !== '_self') return;
-
-      const rawHref = link.getAttribute('href') || '';
-      if (!rawHref || rawHref.startsWith('#') || /^(?:mailto|tel|javascript):/i.test(rawHref)) return;
-
-      let url;
-      try {
-        url = new URL(link.href, window.location.href);
-      } catch {
-        return;
-      }
-      if (url.origin !== window.location.origin) return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
-
-      document.documentElement.classList.add('site-navigating');
-      curtain.classList.toggle('is-os-target', getNavigationCurrent(url.pathname) === 'os');
-      curtain.hidden = false;
-    }, true);
-  }
-
   function mountArticleBackButton() {
     const path = getCurrentPath();
     if (!/^\/(?:dynamic\/)?post\/.+(?:\.html)?$/.test(path)) return;
@@ -853,7 +807,6 @@
 
   function initializeSiteChrome() {
     mountAvatarFallback();
-    mountNavigationCurtain();
     const titleActions = mountTitleActions();
     mountArticleBackButton();
     mountUtterancesThemeSync();
