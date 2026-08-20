@@ -79,6 +79,70 @@
     return actions;
   }
 
+  function mountNavigationCurtain() {
+    if (document.querySelector('.site-navigation-curtain')) return;
+
+    const curtain = document.createElement('div');
+    curtain.className = 'site-navigation-curtain';
+    curtain.hidden = true;
+    curtain.setAttribute('aria-hidden', 'true');
+    curtain.innerHTML = '<div class="site-navigation-curtain__log"><header><span>Lightwind GNU/Linux</span><span>tty1</span></header><p>[   0.000000] Linux version 6.8.12-lightwind (root@universe)</p><p>[  OK  ] Starting Lightwind Display Manager.</p></div>';
+    document.body.append(curtain);
+
+    document.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.button !== undefined && event.button !== 0) return;
+
+      const link = event.target?.closest?.('a[href]');
+      if (!link || link.hasAttribute('download')) return;
+      const target = (link.getAttribute('target') || '').toLowerCase();
+      if (target && target !== '_self') return;
+
+      const rawHref = link.getAttribute('href') || '';
+      if (!rawHref || rawHref.startsWith('#') || /^(?:mailto|tel|javascript):/i.test(rawHref)) return;
+
+      let url;
+      try {
+        url = new URL(link.href, window.location.href);
+      } catch {
+        return;
+      }
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+
+      document.documentElement.classList.add('site-navigating');
+      curtain.classList.toggle('is-os-target', getNavigationCurrent(url.pathname) === 'os');
+      curtain.hidden = false;
+    }, true);
+  }
+
+  function mountArticleBackButton() {
+    const path = getCurrentPath();
+    if (!/^\/(?:dynamic\/)?post\/.+(?:\.html)?$/.test(path)) return;
+    if (document.querySelector('.site-article-back')) return;
+
+    document.body.classList.add('site-article-page');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'site-article-back';
+    button.setAttribute('aria-label', '返回上个页面');
+    button.title = '返回上个页面';
+    button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
+    button.addEventListener('click', () => {
+      let canGoBack = false;
+      try {
+        canGoBack = window.history.length > 1
+          && Boolean(document.referrer)
+          && new URL(document.referrer, window.location.href).origin === window.location.origin;
+      } catch {
+        canGoBack = false;
+      }
+      if (canGoBack) window.history.back();
+      else window.location.assign('/dynamic/');
+    });
+    document.body.append(button);
+  }
+
   function mountGlobalNavigation() {
     if (document.querySelector('.site-global-nav')) return;
 
@@ -713,7 +777,9 @@
 
   function initializeSiteChrome() {
     mountAvatarFallback();
+    mountNavigationCurtain();
     const titleActions = mountTitleActions();
+    mountArticleBackButton();
     mountGlobalNavigation();
     mountVisitStats();
     mountMusicControl(titleActions);

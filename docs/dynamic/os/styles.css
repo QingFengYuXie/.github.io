@@ -78,8 +78,8 @@ a { color: inherit; text-decoration: none; }
   padding: 0;
   color: #b8989f;
   border-left: 1px solid rgba(255, 91, 111, .22);
-  background: rgba(17, 9, 12, .48);
-  box-shadow: -8px 0 28px rgba(0, 0, 0, .18);
+  background: rgba(17, 9, 12, .10);
+  box-shadow: -8px 0 22px rgba(0, 0, 0, .08);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -1197,18 +1197,18 @@ body.os-page {
 
 /* Keep the page switcher subtle while giving Rem a smaller footprint. */
 .os-page .desktop-page-sidebar {
-  background: rgba(17, 9, 12, .38);
-  border-color: rgba(255, 91, 111, .16);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, .13);
+  background: rgba(17, 9, 12, .10);
+  border-color: rgba(255, 91, 111, .10);
+  box-shadow: -8px 0 22px rgba(0, 0, 0, .08);
 }
 .os-page .desktop-pet {
-  width: 124px;
-  height: 157px;
+  width: 100px;
+  height: 127px;
 }
 .os-page .desktop-pet-sprite {
-  width: 124px;
-  height: 134px;
-  background-size: 992px 1206px;
+  width: 100px;
+  height: 108px;
+  background-size: 800px 972px;
 }
 .os-page .desktop-pet-name {
   margin-top: -3px;
