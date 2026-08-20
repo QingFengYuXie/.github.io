@@ -79,7 +79,7 @@
     return actions;
   }
 
-  function mountArticleBackButton() {
+  function mountArticleBackButton(titleActions) {
     const path = getCurrentPath();
     if (!/^\/(?:dynamic\/)?post\/.+(?:\.html)?$/.test(path)) return;
     if (document.querySelector('.site-article-back')) return;
@@ -103,7 +103,8 @@
       if (canGoBack) window.history.back();
       else window.location.assign('/dynamic/');
     });
-    document.body.append(button);
+    if (titleActions) titleActions.prepend(button);
+    else document.body.append(button);
   }
 
   function mountUtterancesThemeSync() {
@@ -243,11 +244,9 @@
     const previousButton = document.createElement('button');
     const playButton = document.createElement('button');
     const nextButton = document.createElement('button');
-    const playIcon = (isPlaying) => titleActions
-      ? (isPlaying
-        ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>'
-        : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg>')
-      : `<span aria-hidden="true">${isPlaying ? 'Ⅱ' : '▶'}</span>`;
+    const playIcon = (isPlaying) => isPlaying
+      ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>'
+      : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg>';
     let musicEnabled = true;
     let tracks = [];
     let currentIndex = -1;
@@ -804,7 +803,7 @@
   function initializeSiteChrome() {
     mountAvatarFallback();
     const titleActions = mountTitleActions();
-    mountArticleBackButton();
+    mountArticleBackButton(titleActions);
     mountUtterancesThemeSync();
     mountGlobalNavigation();
     mountVisitStats();
