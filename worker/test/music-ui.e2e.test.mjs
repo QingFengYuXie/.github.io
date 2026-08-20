@@ -340,6 +340,8 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
           const layout = await page.evaluate(() => {
             const actions = document.querySelector('.title-right');
             const header = document.querySelector('#header');
+            const title = document.querySelector('.postTitle');
+            const back = document.querySelector('.site-article-back');
             const player = document.querySelector('.site-music-player');
             const stats = document.querySelector('.site-visit-stats');
             const theme = document.querySelector('.title-right a[onclick*="modeSwitch"]');
@@ -357,13 +359,18 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               const box = element.getBoundingClientRect();
               return box.top + box.height / 2;
             };
-            const actionRects = visibleActions.map(rect);
-            const actionCenters = visibleActions.map(centerY);
+            const spacingActions = visibleActions.filter((element) => !element.classList.contains('site-article-back'));
+            const actionRects = spacingActions.map(rect);
+            const actionCenters = spacingActions.map(centerY);
             const iconCenters = iconSvgs.map(centerY);
             const adjacentGaps = actionRects.slice(1).map((box, index) => box.left - actionRects[index].right);
             return {
               actions: rect(actions),
               header: rect(header),
+              title: title ? rect(title) : null,
+              back: back ? rect(back) : null,
+              backParentIsActions: back?.parentElement === actions,
+              backPosition: back ? getComputedStyle(back).position : null,
               player: rect(player),
               stats: rect(stats),
               theme: rect(theme),
@@ -397,6 +404,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               viewportWidth: window.innerWidth,
               documentWidth: document.documentElement.scrollWidth,
               order: [...actions.children].filter((element) => getComputedStyle(element).display !== 'none').map((element) => {
+                if (element.classList.contains('site-article-back')) return 'back';
                 if (element.id === 'buttonSearch') return 'search';
                 if (element.id === 'buttonRSS') return 'rss';
                 if (element.id === 'buttonHome') return 'home';
@@ -408,15 +416,29 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
             };
           });
           const isFeedRoute = route === '/dynamic' || route === '/dynamic/' || /^\/(?:dynamic\/)?(?:page\d+|tag|search)(?:\.html)?$/.test(route);
+          const isArticleRoute = /^\/(?:dynamic\/)?post\//.test(route);
+          const isAboutRoute = ['/about', '/about.html', '/dynamic/about', '/dynamic/about.html'].includes(route);
           const expectedOrder = isFeedRoute
             ? ['search', 'rss', 'theme', 'music']
-            : ['home', 'issue', 'theme', 'music'];
+            : isArticleRoute
+              ? ['back', 'home', 'issue', 'theme', 'music']
+              : ['home', 'issue', 'theme', 'music'];
           assert.deepEqual(layout.order, expectedOrder, `${route} ${viewport.width}px action order`);
           const expectedNavigationHref = ['/about', '/about.html', '/dynamic/about', '/dynamic/about.html'].includes(route)
             ? '/about.html'
             : '/dynamic/';
           assert.equal(layout.activeNavigationHref, expectedNavigationHref, `${route} ${viewport.width}px active navigation`);
           assert.equal(layout.themeCount, 1);
+          if (isArticleRoute) {
+            assert.equal(layout.backParentIsActions, true);
+            assert.equal(layout.backPosition, viewport.width <= 600 ? 'static' : 'fixed');
+          }
+          if ((isArticleRoute || isAboutRoute) && viewport.width <= 600) {
+            assert.ok(layout.actions.bottom <= layout.title.top, `${route} ${viewport.width}px action bar should precede title`);
+          }
+          if (isArticleRoute && viewport.width <= 600) {
+            assert.ok(layout.back.left <= layout.actions.left + .5, `${route} ${viewport.width}px back button should start the action bar`);
+          }
           assert.equal(layout.playerParentIsActions, true);
           assert.equal(layout.playerPosition, 'static');
           assert.equal(layout.playerBackground, 'rgba(0, 0, 0, 0)');
@@ -549,7 +571,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.ok(playerBox.y < 60);
       assert.ok(playerBox.width >= 129 && playerBox.width <= 131);
       assert.equal(await page.locator('.site-music-play-icon').count(), 0);
-      assert.equal(await page.locator('.site-music-play > span').count(), 1);
+      assert.equal(await page.locator('.site-music-play > svg').count(), 1);
       const brandBox = await page.locator('.os-brand').boundingBox();
       const aboutBox = await page.locator('.top-links button').first().boundingBox();
       assert.ok(brandBox.x < aboutBox.x);
@@ -560,7 +582,7 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
         await page.locator('.site-music-control').evaluateAll((controls) => [...new Set(controls.map((control) => getComputedStyle(control).color))]),
         ['rgb(255, 255, 255)']
       );
-      assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
+      assert.equal(await page.locator('.site-music-play > svg').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
       const osSurfaces = await page.evaluate(() => {
         const surface = (selector) => {
           const style = getComputedStyle(document.querySelector(selector));
