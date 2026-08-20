@@ -752,9 +752,9 @@ body.os-page .site-music-player:hover {
 
 body.os-page .site-music-title { color: #263746; }
 body.os-page .site-music-status { color: #6b7785; }
-body.os-page .site-music-control { color: #5d6b78; }
-body.os-page .site-music-control:hover:not(:disabled) { color: #20303e; background: rgba(255, 255, 255, .18); }
-body.os-page .site-music-mode[data-music-mode="shuffle"] { color: #5d6b78; background: rgba(255, 255, 255, .11); }
+body.os-page .site-music-control { color: #fff; }
+body.os-page .site-music-control:hover:not(:disabled) { color: #fff; background: rgba(255, 255, 255, .18); }
+body.os-page .site-music-mode[data-music-mode="shuffle"] { color: #fff; background: rgba(255, 255, 255, .11); }
 body.os-page .site-music-play {
   color: #fff;
   border-color: rgba(255, 255, 255, .36);

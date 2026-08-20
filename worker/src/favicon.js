@@ -6,9 +6,11 @@ const FETCH_BUDGET_MS = 5200;
 const REQUEST_TIMEOUT_MS = 2400;
 const MAX_REDIRECTS = 2;
 const MAX_ICON_BYTES = 128 * 1024;
-const FAVICON_CACHE_VERSION = 2;
+const MAX_HTML_BYTES = 256 * 1024;
+const FAVICON_CACHE_VERSION = 3;
 const PRIMARY_ICON_PATH = '/favicon.ico';
 const SECONDARY_ICON_PATHS = [
+  '/favicon.svg',
   '/favicon.png',
   '/favicon-32x32.png',
   '/apple-touch-icon.png'
@@ -97,10 +99,18 @@ function urlFingerprint(value) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
+function faviconRevision(link) {
+  return `${Number(link.updatedAt) || 0}-${urlFingerprint(link.url)}`;
+}
+
 function cacheKey(link) {
   const id = encodeURIComponent(link.id);
-  const revision = `${Number(link.updatedAt) || 0}-${urlFingerprint(link.url)}`;
+  const revision = faviconRevision(link);
   return new Request(`https://qfyx.top/__edge-cache/favicons/v${FAVICON_CACHE_VERSION}/${id}/${revision}`);
+}
+
+function faviconObjectKey(link) {
+  return `favicons/v${FAVICON_CACHE_VERSION}/${encodeURIComponent(link.id)}/${faviconRevision(link)}`;
 }
 
 function imageKind(bytes) {
@@ -118,12 +128,17 @@ function imageKind(bytes) {
   const signature = new TextDecoder().decode(bytes.slice(0, 12));
   if (signature.startsWith('GIF87a') || signature.startsWith('GIF89a')) return 'image/gif';
   if (signature.startsWith('RIFF') && signature.slice(8, 12) === 'WEBP') return 'image/webp';
+  const svg = new TextDecoder().decode(bytes);
+  if (/<svg(?:\s|>)/i.test(svg)) {
+    if (/<(?:script|foreignObject|iframe|object|embed)\b|\bon[a-z]+\s*=|javascript\s*:/i.test(svg)) return null;
+    return 'image/svg+xml';
+  }
   return null;
 }
 
-async function readLimitedBody(response) {
+async function readLimitedBody(response, maxBytes = MAX_ICON_BYTES) {
   const declaredSize = Number(response.headers.get('content-length') || 0);
-  if (declaredSize > MAX_ICON_BYTES || !response.body) return null;
+  if (declaredSize > maxBytes || !response.body) return null;
   const reader = response.body.getReader();
   const chunks = [];
   let size = 0;
@@ -132,7 +147,7 @@ async function readLimitedBody(response) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > MAX_ICON_BYTES) {
+      if (size > maxBytes) {
         await reader.cancel();
         return null;
       }
@@ -150,16 +165,20 @@ async function readLimitedBody(response) {
   return body;
 }
 
-async function fetchFollowingSafeRedirects(startUrl, fetcher, signal) {
+async function fetchFollowingSafeRedirects(
+  startUrl,
+  fetcher,
+  signal,
+  accept = 'image/png,image/x-icon,image/vnd.microsoft.icon,image/jpeg,image/gif,image/webp;q=0.9',
+  includeUrl = false
+) {
   let current = safeHttpUrl(startUrl);
   for (let redirects = 0; current && redirects <= MAX_REDIRECTS; redirects += 1) {
     const response = await fetcher(current, {
       method: 'GET',
       redirect: 'manual',
       signal,
-      headers: {
-        accept: 'image/png,image/x-icon,image/vnd.microsoft.icon,image/jpeg,image/gif,image/webp;q=0.9'
-      }
+      headers: { accept }
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('location');
@@ -167,7 +186,7 @@ async function fetchFollowingSafeRedirects(startUrl, fetcher, signal) {
       current = safeHttpUrl(new URL(location, current));
       continue;
     }
-    return response;
+    return includeUrl ? { response, url: current.href } : response;
   }
   return null;
 }
@@ -199,6 +218,112 @@ async function fetchWithinBudget(url, fetcher, deadline) {
   return fetchCandidate(url, fetcher, Math.min(REQUEST_TIMEOUT_MS, remaining));
 }
 
+function imageDimensions(icon) {
+  const { body, contentType } = icon;
+  if (contentType === 'image/png' && body.length >= 24) {
+    return {
+      width: (body[16] << 24) | (body[17] << 16) | (body[18] << 8) | body[19],
+      height: (body[20] << 24) | (body[21] << 16) | (body[22] << 8) | body[23]
+    };
+  }
+  if (contentType === 'image/x-icon' && body.length >= 6) {
+    const imageCount = body[4] | (body[5] << 8);
+    if (!imageCount || body.length < 6 + imageCount * 16) return null;
+    let width = 0;
+    let height = 0;
+    for (let index = 0; index < imageCount; index += 1) {
+      const offset = 6 + index * 16;
+      if (offset + 2 > body.length) break;
+      width = Math.max(width, body[offset] || 256);
+      height = Math.max(height, body[offset + 1] || 256);
+    }
+    return width && height ? { width, height } : null;
+  }
+  return null;
+}
+
+function isHighQualityIcon(icon) {
+  if (icon.contentType === 'image/svg+xml') return true;
+  const dimensions = imageDimensions(icon);
+  return !dimensions || Math.max(dimensions.width, dimensions.height) >= 64;
+}
+
+function attributeValue(tag, name) {
+  const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+  return match ? (match[1] ?? match[2] ?? match[3] ?? '') : '';
+}
+
+function declaredIconCandidates(html, baseUrl) {
+  const candidates = [];
+  const seen = new Set();
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = match[0];
+    const rel = attributeValue(tag, 'rel').toLowerCase().split(/\s+/).filter(Boolean);
+    if (!rel.some((value) => value === 'icon' || value === 'shortcut' || value === 'apple-touch-icon' || value === 'mask-icon')) continue;
+    const href = attributeValue(tag, 'href').trim();
+    if (!href) continue;
+    let url;
+    try {
+      url = safeHttpUrl(new URL(href, baseUrl));
+    } catch {
+      continue;
+    }
+    if (!url || seen.has(url.href)) continue;
+    seen.add(url.href);
+    const type = attributeValue(tag, 'type').toLowerCase();
+    const sizes = attributeValue(tag, 'sizes').toLowerCase();
+    const dimensions = [...sizes.matchAll(/(\d+)\s*x\s*(\d+)/gi)]
+      .map((item) => Math.max(Number(item[1]), Number(item[2])))
+      .filter((size) => Number.isFinite(size));
+    let score = Math.max(0, ...dimensions) * 100;
+    if (sizes.includes('any')) score += 100000;
+    if (type.includes('svg') || url.pathname.toLowerCase().endsWith('.svg')) score += 50000;
+    if (rel.includes('apple-touch-icon')) score += 1000;
+    candidates.push({ url, score });
+  }
+  return candidates.sort((left, right) => right.score - left.score).slice(0, 8);
+}
+
+async function fetchHtmlDocument(url, fetcher, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const result = await fetchFollowingSafeRedirects(
+      url,
+      fetcher,
+      controller.signal,
+      'text/html,application/xhtml+xml;q=0.9',
+      true
+    );
+    const response = result?.response;
+    if (!response || response.status !== 200) return null;
+    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+    if (contentType && !contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) return null;
+    const body = await readLimitedBody(response, MAX_HTML_BYTES);
+    if (!body?.byteLength) return null;
+    const html = new TextDecoder().decode(body);
+    if (!/<(?:html|head|link)\b/i.test(html)) return null;
+    return { html, url: result.url };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchDeclaredIcon(origin, fetcher, deadline) {
+  const remaining = remainingBudget(deadline);
+  if (!remaining) return null;
+  const document = await fetchHtmlDocument(new URL('/', origin), fetcher, Math.min(REQUEST_TIMEOUT_MS, remaining));
+  if (!document) return null;
+  for (const candidate of declaredIconCandidates(document.html, document.url)) {
+    const icon = await fetchWithinBudget(candidate.url, fetcher, deadline);
+    if (icon) return { ...icon, source: 'site-declared' };
+    if (!remainingBudget(deadline)) break;
+  }
+  return null;
+}
+
 function providerUrl(origin) {
   const url = new URL(FAVICON_PROVIDER_URL);
   url.searchParams.set('domain_url', origin);
@@ -209,10 +334,15 @@ function providerUrl(origin) {
 async function fetchFavicon(origin, fetcher) {
   const deadline = Date.now() + FETCH_BUDGET_MS;
   const primary = await fetchWithinBudget(new URL(PRIMARY_ICON_PATH, origin), fetcher, deadline);
-  if (primary) return { ...primary, source: 'site' };
+  if (primary && isHighQualityIcon(primary)) return { ...primary, source: 'site' };
+
+  const declared = await fetchDeclaredIcon(origin, fetcher, deadline);
+  if (declared) return declared;
 
   const provided = await fetchWithinBudget(providerUrl(origin), fetcher, deadline);
   if (provided) return { ...provided, source: 'provider' };
+
+  if (primary) return { ...primary, source: 'site' };
 
   for (const path of SECONDARY_ICON_PATHS) {
     const icon = await fetchWithinBudget(new URL(path, origin), fetcher, deadline);
@@ -260,6 +390,33 @@ async function cachePut(cache, key, response) {
   }
 }
 
+async function bucketMatch(bucket, key) {
+  if (!bucket || typeof bucket.get !== 'function') return null;
+  try {
+    const object = await bucket.get(key);
+    const contentType = object?.httpMetadata?.contentType || '';
+    if (!object?.body || !contentType.startsWith('image/')) return null;
+    return { body: object.body, contentType, source: 'r2' };
+  } catch {
+    return null;
+  }
+}
+
+async function bucketPut(bucket, key, icon) {
+  if (!bucket || typeof bucket.put !== 'function' || !icon) return;
+  try {
+    await bucket.put(key, icon.body, {
+      httpMetadata: {
+        contentType: icon.contentType,
+        cacheControl: `public, max-age=${SUCCESS_EDGE_TTL}, immutable`
+      },
+      customMetadata: { source: icon.source || 'site' }
+    });
+  } catch {
+    // R2 is a durable optimization; a write failure must not block the icon response.
+  }
+}
+
 export function createFaviconHandler(services = {}) {
   return async function publicFavicon(request, env, linkId) {
     assertGet(request);
@@ -277,8 +434,24 @@ export function createFaviconHandler(services = {}) {
     const configuredOrigin = safeHttpUrl(env.ALLOWED_ORIGIN)?.origin;
     const requestOrigin = safeHttpUrl(new URL(request.url).origin)?.origin;
     const origin = targetOrigin(link.url, configuredOrigin || requestOrigin);
+    if (!origin) {
+      const response = storedImage(null);
+      await cachePut(cache, key, response.clone());
+      return clientResponse(response, 'miss');
+    }
+
+    const bucket = services.faviconBucket || env.FAVICON_BUCKET || env.WALLPAPER_BUCKET;
+    const objectKey = faviconObjectKey(link);
+    const durable = await bucketMatch(bucket, objectKey);
+    if (durable) {
+      const response = storedImage(durable);
+      await cachePut(cache, key, response.clone());
+      return clientResponse(response, 'r2');
+    }
+
     const fetcher = services.fetch || globalThis.fetch;
-    const icon = origin ? await fetchFavicon(origin, fetcher) : null;
+    const icon = await fetchFavicon(origin, fetcher);
+    await bucketPut(bucket, objectKey, icon);
     const response = storedImage(icon);
     await cachePut(cache, key, response.clone());
     return clientResponse(response, 'miss');
