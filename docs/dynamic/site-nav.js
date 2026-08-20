@@ -357,7 +357,7 @@
       if (!window.matchMedia('(min-width: 801px)').matches) return;
       player.style.left = 'auto';
       player.style.right = '24px';
-      player.style.top = '4px';
+      player.style.top = '24px';
       player.style.bottom = 'auto';
     }
 
