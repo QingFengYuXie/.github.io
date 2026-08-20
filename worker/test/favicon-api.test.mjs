@@ -6,7 +6,7 @@ import { HttpError } from '../src/validation.js';
 const PNG = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
 const ICO = new Uint8Array([0, 0, 1, 0, 1, 0, 16, 16, 0, 0, 1, 0]);
 
-function makeEnv(link) {
+function makeEnv(link, extras = {}) {
   return {
     ALLOWED_ORIGIN: 'https://qfyx.top',
     DB: {
@@ -21,7 +21,8 @@ function makeEnv(link) {
           }
         };
       }
-    }
+    },
+    ...extras
   };
 }
 
@@ -34,6 +35,24 @@ function makeCache() {
     },
     async put(request, response) {
       values.set(request.url, response.clone());
+    }
+  };
+}
+
+function makeBucket() {
+  const values = new Map();
+  return {
+    values,
+    async get(key) {
+      const value = values.get(key);
+      if (!value) return null;
+      return { body: new Response(value.body).body, httpMetadata: value.httpMetadata };
+    },
+    async put(key, body, options) {
+      const bytes = body instanceof Uint8Array
+        ? body
+        : new Uint8Array(await new Response(body).arrayBuffer());
+      values.set(key, { body: bytes, httpMetadata: options.httpMetadata });
     }
   };
 }
@@ -106,12 +125,90 @@ test('favicon handler uses a fixed provider after the site root icon fails', asy
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('x-favicon-fallback'), '0');
   assert.equal(response.headers.get('x-favicon-source'), 'provider');
-  assert.equal(requested.length, 2);
+  assert.equal(requested.length, 3);
   assert.equal(requested[0].href, 'https://blocked.example.org/favicon.ico');
-  assert.equal(requested[1].origin, 'https://www.google.com');
-  assert.equal(requested[1].searchParams.get('domain_url'), 'https://blocked.example.org');
-  assert.equal(requested[1].searchParams.get('sz'), '128');
-  assert.doesNotMatch(requested[1].href, /private|token|secret/);
+  assert.equal(requested[1].href, 'https://blocked.example.org/');
+  assert.equal(requested[2].origin, 'https://www.google.com');
+  assert.equal(requested[2].searchParams.get('domain_url'), 'https://blocked.example.org');
+  assert.equal(requested[2].searchParams.get('sz'), '128');
+  assert.doesNotMatch(requested[2].href, /private|token|secret/);
+});
+
+test('favicon handler discovers declared SVG icons', async () => {
+  const link = { id: 'link-declared-svg', url: 'https://declared.example.org/app', updatedAt: 10 };
+  const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M0 0h64v64H0z"/></svg>');
+  const requested = [];
+  const handler = createFaviconHandler({
+    cache: makeCache(),
+    async fetch(url) {
+      const parsed = new URL(url);
+      requested.push(parsed.href);
+      if (parsed.pathname === '/favicon.ico') return new Response(null, { status: 404 });
+      if (parsed.pathname === '/') {
+        return new Response('<!doctype html><link rel="icon" type="image/svg+xml" sizes="any" href="/assets/icon.svg">', {
+          status: 200,
+          headers: { 'content-type': 'text/html; charset=utf-8' }
+        });
+      }
+      if (parsed.pathname === '/assets/icon.svg') return iconResponse(svg, 'image/svg+xml');
+      return new Response(null, { status: 404 });
+    }
+  });
+
+  const response = await handler(
+    new Request('https://qfyx.top/api/v1/favicons/link-declared-svg'),
+    makeEnv(link),
+    link.id
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'image/svg+xml');
+  assert.equal(response.headers.get('x-favicon-source'), 'site-declared');
+  assert.deepEqual(requested, [
+    'https://declared.example.org/favicon.ico',
+    'https://declared.example.org/',
+    'https://declared.example.org/assets/icon.svg'
+  ]);
+});
+
+test('favicon handler persists successful icons in R2', async () => {
+  const link = { id: 'link-r2', url: 'https://r2.example.org', updatedAt: 10 };
+  const bucket = makeBucket();
+  let fetches = 0;
+  const firstHandler = createFaviconHandler({
+    cache: makeCache(),
+    async fetch() {
+      fetches += 1;
+      return iconResponse();
+    }
+  });
+  const env = makeEnv(link, { FAVICON_BUCKET: bucket });
+  const first = await firstHandler(
+    new Request('https://qfyx.top/api/v1/favicons/link-r2'),
+    env,
+    link.id
+  );
+
+  const secondHandler = createFaviconHandler({
+    cache: makeCache(),
+    async fetch() {
+      fetches += 1;
+      throw new Error('R2 hit should avoid a network fetch');
+    }
+  });
+  const second = await secondHandler(
+    new Request('https://qfyx.top/api/v1/favicons/link-r2'),
+    env,
+    link.id
+  );
+
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('x-favicon-cache'), 'miss');
+  assert.equal(second.status, 200);
+  assert.equal(second.headers.get('x-favicon-cache'), 'r2');
+  assert.equal(second.headers.get('content-type'), 'image/png');
+  assert.equal(fetches, 1);
+  assert.equal(bucket.values.size, 1);
 });
 
 test('favicon handler trusts image signatures instead of incorrect content types', async () => {
@@ -213,11 +310,12 @@ test('favicon handler rejects redirects to private targets', async () => {
 
   assert.equal(response.status, 204);
   assert.equal(response.headers.get('x-favicon-fallback'), '1');
-  assert.equal(requested.length, 5);
+  assert.equal(requested.length, 7);
   assert.ok(requested.every((url) => !url.includes('127.0.0.1')));
   assert.ok(requested[0].startsWith('https://public.example.org/'));
-  assert.ok(requested[1].startsWith('https://www.google.com/s2/favicons?'));
-  assert.ok(requested.slice(2).every((url) => url.startsWith('https://public.example.org/')));
+  assert.ok(requested[1].startsWith('https://public.example.org/'));
+  assert.ok(requested[2].startsWith('https://www.google.com/s2/favicons?'));
+  assert.ok(requested.slice(3).every((url) => url.startsWith('https://public.example.org/')));
 });
 
 test('favicon handler rejects non-images and oversized bodies', async () => {
@@ -245,7 +343,7 @@ test('favicon handler rejects non-images and oversized bodies', async () => {
 
   assert.equal(response.status, 204);
   assert.equal(response.headers.get('x-favicon-fallback'), '1');
-  assert.equal(requestNumber, 5);
+  assert.equal(requestNumber, 7);
 });
 
 test('favicon handler accepts only GET requests and existing link IDs', async () => {

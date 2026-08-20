@@ -556,6 +556,10 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       assert.ok(brandBox.x + brandBox.width < aboutBox.x);
       assert.ok(playerBox.x + playerBox.width <= 1440 - 20);
       assert.equal(await page.locator('.site-music-copy').evaluate((element) => getComputedStyle(element).display), 'none');
+      assert.deepEqual(
+        await page.locator('.site-music-control').evaluateAll((controls) => [...new Set(controls.map((control) => getComputedStyle(control).color))]),
+        ['rgb(255, 255, 255)']
+      );
       assert.equal(await page.locator('.site-music-play > span').evaluate((element) => getComputedStyle(element).animationName), 'site-music-play-rotate');
       const osSurfaces = await page.evaluate(() => {
         const surface = (selector) => {
