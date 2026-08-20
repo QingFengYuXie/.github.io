@@ -89,6 +89,15 @@
     curtain.innerHTML = '<div class="site-navigation-curtain__log"><header><span>Lightwind GNU/Linux</span><span>tty1</span></header><p>[   0.000000] Linux version 6.8.12-lightwind (root@universe)</p><p>[  OK  ] Starting Lightwind Display Manager.</p></div>';
     document.body.append(curtain);
 
+    const resetCurtain = () => {
+      document.documentElement.classList.remove('site-navigating');
+      curtain.classList.remove('is-os-target');
+      curtain.hidden = true;
+    };
+    resetCurtain();
+    window.addEventListener('pagehide', resetCurtain);
+    window.addEventListener('pageshow', resetCurtain);
+
     document.addEventListener('click', (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       if (event.button !== undefined && event.button !== 0) return;
@@ -141,6 +150,73 @@
       else window.location.assign('/dynamic/');
     });
     document.body.append(button);
+  }
+
+  function mountUtterancesThemeSync() {
+    if (!/^\/(?:dynamic\/)?post\/.+(?:\.html)?$/.test(getCurrentPath())) return;
+
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+    const resolveTheme = () => {
+      const mode = document.documentElement.getAttribute('data-color-mode');
+      if (mode === 'dark') return 'dark-blue';
+      if (mode === 'light') return 'github-light';
+      return systemTheme.matches ? 'dark-blue' : 'github-light';
+    };
+    const normalizeTheme = (theme) => theme === 'preferred-color-scheme' ? resolveTheme() : theme;
+    const syncFrameTheme = () => {
+      const frame = document.querySelector('iframe.utterances-frame');
+      if (!frame?.contentWindow) return false;
+      frame.contentWindow.postMessage({ type: 'set-theme', theme: resolveTheme() }, 'https://utteranc.es');
+      return true;
+    };
+
+    const originalThemeSetter = window.utterancesTheme;
+    if (typeof originalThemeSetter === 'function' && !originalThemeSetter.lightwindThemeSync) {
+      const wrappedThemeSetter = (theme) => originalThemeSetter.call(window, normalizeTheme(theme));
+      wrappedThemeSetter.lightwindThemeSync = true;
+      window.utterancesTheme = wrappedThemeSetter;
+    }
+
+    const observedFrames = new WeakSet();
+    const prepareUtterancesNode = (node) => {
+      if (!(node instanceof Element)) return;
+      const scripts = node.matches('script[src="https://utteranc.es/client.js"]')
+        ? [node]
+        : [...node.querySelectorAll('script[src="https://utteranc.es/client.js"]')];
+      scripts.forEach((script) => script.setAttribute('theme', resolveTheme()));
+
+      const frames = node.matches('iframe.utterances-frame')
+        ? [node]
+        : [...node.querySelectorAll('iframe.utterances-frame')];
+      frames.forEach((frame) => {
+        if (observedFrames.has(frame)) return;
+        observedFrames.add(frame);
+        frame.addEventListener('load', () => window.setTimeout(syncFrameTheme, 0));
+        window.requestAnimationFrame(syncFrameTheme);
+      });
+    };
+
+    prepareUtterancesNode(document.documentElement);
+    const observer = new MutationObserver((records) => {
+      let themeChanged = false;
+      records.forEach((record) => {
+        if (record.type === 'attributes') themeChanged = true;
+        record.addedNodes.forEach(prepareUtterancesNode);
+      });
+      if (themeChanged) window.requestAnimationFrame(syncFrameTheme);
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-color-mode'],
+      childList: true,
+      subtree: true
+    });
+
+    const syncSystemTheme = () => {
+      if (document.documentElement.getAttribute('data-color-mode') === 'auto') syncFrameTheme();
+    };
+    if (typeof systemTheme.addEventListener === 'function') systemTheme.addEventListener('change', syncSystemTheme);
+    else systemTheme.addListener(syncSystemTheme);
   }
 
   function mountGlobalNavigation() {
@@ -780,6 +856,7 @@
     mountNavigationCurtain();
     const titleActions = mountTitleActions();
     mountArticleBackButton();
+    mountUtterancesThemeSync();
     mountGlobalNavigation();
     mountVisitStats();
     mountMusicControl(titleActions);
