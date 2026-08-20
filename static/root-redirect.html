@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>轻风雨斜 OS</title>
+    <meta http-equiv="refresh" content="0; url=/os/">
+    <title>正在进入我的OS</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <style>
       :root { color-scheme: dark; }
@@ -11,88 +12,32 @@
       html, body { min-height: 100%; margin: 0; background: #050706; }
       body {
         min-height: 100vh;
-        padding: clamp(18px, 3vw, 42px);
+        display: grid;
+        place-items: center;
         overflow: hidden;
-        color: #bfc7c2;
+        color: #dce4df;
         font: 12px/1.5 "Cascadia Mono", Consolas, monospace;
-        text-shadow: 0 0 5px rgba(187, 255, 197, .15);
+        text-shadow: 0 0 8px rgba(220, 228, 223, .12);
       }
-      .redirect-boot {
-        position: relative;
-        min-height: calc(100vh - clamp(36px, 6vw, 84px));
+      .redirect-splash {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
       }
-      .redirect-boot::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 4px);
-        opacity: .35;
-      }
-      .redirect-boot-header {
-        display: flex;
-        justify-content: space-between;
-        gap: 18px;
-        color: #e3e9e5;
-        font-weight: 700;
+      .redirect-splash p {
+        margin: 0;
+        color: rgba(220, 228, 223, .82);
         letter-spacing: .08em;
       }
-      .redirect-boot-status {
-        position: absolute;
-        top: clamp(82px, 18vh, 170px);
-        left: 50%;
-        display: grid;
-        justify-items: center;
-        gap: 13px;
-        transform: translateX(-50%);
-        color: #a8b5ad;
-        white-space: nowrap;
-      }
-      .redirect-boot-status i {
-        display: block;
-        width: 128px;
-        height: 6px;
-        overflow: hidden;
-        border: 1px solid rgba(196, 255, 205, .35);
-        background: rgba(196, 255, 205, .08);
-      }
-      .redirect-boot-status i::after {
-        content: "";
-        display: block;
-        width: 46%;
-        height: 100%;
-        background: #c4ffcd;
-        box-shadow: 0 0 8px rgba(196, 255, 205, .7);
-      }
-      .redirect-boot-log {
-        position: absolute;
-        right: 0;
-        bottom: clamp(150px, 25vh, 260px);
-        left: 0;
-        color: #97a49c;
-      }
-      .redirect-boot-log p { margin: 3px 0; }
-      .redirect-boot-log p:last-child { color: #c4ffcd; }
-      noscript { color: #c4ffcd; }
+      noscript { position: absolute; }
       noscript a { color: inherit; }
     </style>
     <script>window.location.replace('/os/');</script>
   </head>
   <body>
-    <main class="redirect-boot" role="log" aria-label="轻风雨斜 OS 启动日志">
-      <header class="redirect-boot-header">
-        <span>Lightwind GNU/Linux</span>
-        <span>tty1</span>
-      </header>
-      <div class="redirect-boot-status" aria-hidden="true">
-        <i></i>
-        <span>Initializing kernel...</span>
-      </div>
-      <div class="redirect-boot-log" aria-hidden="true">
-        <p>[   0.000000] Linux version 6.8.12-lightwind (root@universe)</p>
-        <p>[  OK  ] Starting Lightwind Display Manager.</p>
-      </div>
+    <main class="redirect-splash" aria-live="polite">
+      <p>正在进入我的OS</p>
     </main>
-    <noscript><a href="/os/">进入我的 OS</a></noscript>
+    <noscript><a href="/os/">进入我的OS</a></noscript>
   </body>
 </html>
