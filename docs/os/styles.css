@@ -446,6 +446,11 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 .desktop-topbar .top-links { margin-left: 0; }
 .os-brand { order: 2; font-style: normal; }
 .os-brand i { font-style: italic; }
+@media (min-width: 801px) {
+  .desktop-topbar { justify-content: flex-start; }
+  .os-page .desktop-topbar .os-brand { order: 0; margin-left: 0; }
+  .os-page .desktop-topbar .top-links { order: 1; margin-left: 0; }
+}
 .desktop-web-search {
   position: absolute;
   z-index: 6;
