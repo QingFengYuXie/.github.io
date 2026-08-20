@@ -1055,6 +1055,11 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
   }
   .desktop-icon-viewport .desktop-icons::-webkit-scrollbar { display: none; }
 }
+
+/* The terminal remains available on desktop, but stays out of the mobile home screen. */
+@media (max-width: 800px) {
+  .desktop-icons .terminal-icon { display: none !important; }
+}
 /* The desktop frame is a fixed compositor layer; only its icon viewport is paged. */
 html:has(body.os-page) {
   position: fixed;
