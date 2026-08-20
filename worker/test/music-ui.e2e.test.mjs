@@ -371,6 +371,9 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
               back: back ? rect(back) : null,
               backParentIsActions: back?.parentElement === actions,
               backPosition: back ? getComputedStyle(back).position : null,
+              backBorderStyle: back ? getComputedStyle(back).borderStyle : null,
+              backBackground: back ? getComputedStyle(back).backgroundColor : null,
+              backBoxShadow: back ? getComputedStyle(back).boxShadow : null,
               player: rect(player),
               stats: rect(stats),
               theme: rect(theme),
@@ -438,6 +441,10 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
           }
           if (isArticleRoute && viewport.width <= 600) {
             assert.ok(layout.back.left <= layout.actions.left + .5, `${route} ${viewport.width}px back button should start the action bar`);
+            assert.equal(layout.backBorderStyle, 'none');
+            assert.equal(layout.backBackground, 'rgba(0, 0, 0, 0)');
+            assert.equal(layout.backBoxShadow, 'none');
+            assert.ok(Math.abs(layout.back.width - layout.theme.width) <= .5, `${route} ${viewport.width}px back icon size should match the action icons`);
           }
           assert.equal(layout.playerParentIsActions, true);
           assert.equal(layout.playerPosition, 'static');
