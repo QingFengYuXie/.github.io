@@ -1194,3 +1194,40 @@ body.os-page {
   color: #fff;
   background: rgba(255, 255, 255, .18);
 }
+
+/* Keep the page switcher subtle while giving Rem a smaller footprint. */
+.os-page .desktop-page-sidebar {
+  background: rgba(17, 9, 12, .38);
+  border-color: rgba(255, 91, 111, .16);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, .13);
+}
+.os-page .desktop-pet {
+  width: 124px;
+  height: 157px;
+}
+.os-page .desktop-pet-sprite {
+  width: 124px;
+  height: 134px;
+  background-size: 992px 1206px;
+}
+.os-page .desktop-pet-name {
+  margin-top: -3px;
+  padding: 2px 6px;
+  font-size: 8px;
+}
+@media (max-width: 800px) {
+  .os-page .desktop-pet {
+    width: 82px;
+    height: 104px;
+  }
+  .os-page .desktop-pet-sprite {
+    width: 82px;
+    height: 89px;
+    background-size: 656px 801px;
+  }
+  .os-page .desktop-pet-name {
+    margin-top: -2px;
+    padding: 2px 5px;
+    font-size: 7px;
+  }
+}
