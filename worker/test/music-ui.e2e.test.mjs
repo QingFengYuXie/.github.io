@@ -105,7 +105,7 @@ function titleActionsFixture(pathname) {
 }
 
 function pageFixture(pathname) {
-  return `<!doctype html><html lang="zh-CN" data-color-mode="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pathname}</title><link rel="stylesheet" href="/site-nav.css"><style>body{box-sizing:border-box;min-width:200px;max-width:900px;margin:20px auto;padding:45px;font:16px/1.25 sans-serif}#header{display:flex;padding-bottom:8px;border-bottom:1px solid #d0d7de;margin-bottom:16px}.title-left{display:flex;align-items:center;gap:8px;white-space:nowrap}.mobile-page-mark{width:40px;height:40px;border-radius:50%;background:#d0d7de}.postTitle{margin:auto 0;font-size:40px}.title-right{display:flex;margin:auto 0 0 auto}.title-right .circle{box-sizing:border-box;padding:14px 16px;margin-right:8px}.title-right svg{display:block}.SideNav{min-width:360px}@media(max-width:600px){body{padding:8px}.title-left strong{display:none}.postTitle{font-size:24px}}</style></head><body><header id="header">${titleActionsFixture(pathname)}</header><main id="content"><h2>${pathname}</h2>${pathname === '/dynamic/' ? '<nav class="SideNav"></nav><div class="pagination"><a class="next_page" rel="next" href="/dynamic/page2.html">下一页</a></div>' : ''}</main><span id="busuanzi_value_site_pv" hidden>12345</span><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
+  return `<!doctype html><html lang="zh-CN" data-color-mode="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${pathname}</title><link rel="stylesheet" href="/site-nav.css"><style>body{box-sizing:border-box;min-width:200px;max-width:900px;margin:20px auto;padding:45px;font:16px/1.25 sans-serif}#header{display:flex;padding-bottom:8px;border-bottom:1px solid #d0d7de;margin-bottom:16px}.title-left{display:flex;align-items:center;gap:8px;white-space:nowrap}.mobile-page-mark{width:40px;height:40px;border-radius:50%;background:#d0d7de}.postTitle{margin:auto 0;font-size:40px}.title-right{display:flex;margin:auto 0 0 auto}.title-right .circle{box-sizing:border-box;padding:14px 16px;margin-right:8px}.title-right svg{display:block}.SideNav{min-width:360px}@media(max-width:600px){body{padding:8px}.title-left strong{display:none}.postTitle{font-size:24px}}</style></head><body><header id="header">${titleActionsFixture(pathname)}</header><main id="content"><h2>${pathname}</h2>${pathname === '/dynamic/' ? '<nav class="SideNav"></nav><nav class="paginate-container" data-page-current="1" data-page-total="3" aria-label="Pagination"><div class="pagination"><a class="next_page" rel="next" href="/dynamic/page2.html">下一页</a></div></nav>' : ''}</main><span id="busuanzi_value_site_pv" hidden>12345</span><script>function modeSwitch(){}</script><script src="/site-nav.js"></script></body></html>`;
 }
 
 function contentType(filePath) {
@@ -226,6 +226,10 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       ], 10);
       music.tracks[0].title = 'A very long song title that should scroll inside the compact player';
       await page.goto(`${origin}/dynamic/`);
+      await page.waitForSelector('.site-pagination-summary');
+      assert.equal(await page.locator('.site-pagination-summary').textContent(), '第 1 页 / 共 3 页');
+      assert.equal(await page.locator('.site-pagination-select option').count(), 3);
+      assert.equal(await page.locator('.site-pagination-select').inputValue(), '/dynamic/');
       await waitForTrack(page, 'track-a');
       await page.waitForSelector('.site-music-player[data-music-state="playing"]');
       assert.equal(await page.locator('.site-music-player').evaluate((element) => getComputedStyle(element).position), 'static');

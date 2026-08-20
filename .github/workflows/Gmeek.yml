@@ -164,6 +164,26 @@ jobs:
                   )
               page.write_text(content, encoding='utf-8')
 
+          dynamic_pages = []
+          dynamic_index = dynamic_dir / 'index.html'
+          if dynamic_index.exists():
+              dynamic_pages.append((1, dynamic_index))
+          for candidate in dynamic_dir.glob('page*.html'):
+              match = re.fullmatch(r'page(\d+)\.html', candidate.name)
+              if match:
+                  dynamic_pages.append((int(match.group(1)), candidate))
+          dynamic_pages.sort(key=lambda item: item[0])
+          page_total = len(dynamic_pages)
+          for page_current, page_path in dynamic_pages:
+              content = page_path.read_text(encoding='utf-8')
+              content = re.sub(r'\sdata-page-(?:current|total)="\d+"', '', content)
+              content = content.replace(
+                  '<nav class="paginate-container" aria-label="Pagination"',
+                  f'<nav class="paginate-container" aria-label="Pagination" data-page-current="{page_current}" data-page-total="{page_total}"',
+                  1,
+              )
+              page_path.write_text(content, encoding='utf-8')
+
           # The temporary test Issues were created with literal question marks
           # in their titles and label. Gmeek's search page reads postList.json
           # directly, so repair both the root and /dynamic search indexes too.
