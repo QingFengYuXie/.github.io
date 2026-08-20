@@ -739,7 +739,7 @@ function normalizeDesktopNavigation(value) {
 }
 
 function createFaviconLoader() {
-  const maxConcurrent = 3;
+  const maxConcurrent = 6;
   const requestTimeoutMs = 8000;
   const pending = [];
   let pageLoaded = document.readyState === 'complete';
@@ -1268,17 +1268,26 @@ async function loadDesktopWallpaper() {
     if (!wallpaper.configured || !rawUrl) {
       desktop.classList.remove('has-custom-wallpaper');
       desktop.style.removeProperty('--wallpaper-image');
+      desktop.style.removeProperty('--wallpaper-image-mobile');
       return;
     }
-    const imageUrl = new URL(rawUrl, window.location.origin);
-    if (imageUrl.origin !== window.location.origin || imageUrl.pathname !== '/api/v1/wallpaper/image') {
-      throw new Error('invalid wallpaper url');
-    }
-    desktop.style.setProperty('--wallpaper-image', `url("${imageUrl.href}")`);
+    const validateWallpaperUrl = (value) => {
+      const imageUrl = new URL(value, window.location.origin);
+      if (imageUrl.origin !== window.location.origin || imageUrl.pathname !== '/api/v1/wallpaper/image') {
+        throw new Error('invalid wallpaper url');
+      }
+      return imageUrl.href;
+    };
+    const imageUrl = validateWallpaperUrl(rawUrl);
+    const mobileUrl = wallpaper.mobileUrl ? validateWallpaperUrl(String(wallpaper.mobileUrl)) : '';
+    desktop.style.setProperty('--wallpaper-image', `url("${imageUrl}")`);
+    if (mobileUrl) desktop.style.setProperty('--wallpaper-image-mobile', `url("${mobileUrl}")`);
+    else desktop.style.removeProperty('--wallpaper-image-mobile');
     desktop.classList.add('has-custom-wallpaper');
   } catch {
     desktop.classList.remove('has-custom-wallpaper');
     desktop.style.removeProperty('--wallpaper-image');
+    desktop.style.removeProperty('--wallpaper-image-mobile');
   }
 }
 

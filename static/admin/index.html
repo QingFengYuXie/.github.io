@@ -75,11 +75,15 @@
             <div class="panel-heading">
               <div><p class="eyebrow"><i></i> DESKTOP WALLPAPER</p><h2>修改壁纸</h2></div>
             </div>
-            <p class="manager-help">上传 JPG、PNG 或 WebP 图片，最大 30 MB。保存后 OS 页面刷新即可看到新壁纸。</p>
+            <p class="manager-help">上传 JPG、PNG、WebP 或 AVIF 图片，桌面图与手机图合计最大 30 MB；手机图可选，未提供时自动使用桌面图。</p>
             <form class="wallpaper-form" id="wallpaperForm">
               <label class="wallpaper-file-field">
-                <span>选择图片</span>
-                <input id="wallpaperFile" type="file" accept="image/jpeg,image/png,image/webp" required />
+                <span>桌面壁纸</span>
+                <input id="wallpaperFile" type="file" accept="image/jpeg,image/png,image/webp,image/avif" required />
+              </label>
+              <label class="wallpaper-file-field">
+                <span>手机壁纸（可选）</span>
+                <input id="wallpaperMobileFile" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
               </label>
               <div class="wallpaper-upload-actions">
                 <button class="primary-button" id="uploadWallpaperButton" type="submit">上传并应用</button>

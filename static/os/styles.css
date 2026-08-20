@@ -253,6 +253,11 @@ body { color: #f3eded; background: #070506; }
   background-size: cover;
   background-repeat: no-repeat;
 }
+@media (max-width: 800px) {
+  .desktop.has-custom-wallpaper {
+    background-image: var(--wallpaper-image-mobile, var(--wallpaper-image));
+  }
+}
 .desktop.has-custom-wallpaper::before,
 .desktop.has-custom-wallpaper::after,
 .desktop.has-custom-wallpaper .stars,

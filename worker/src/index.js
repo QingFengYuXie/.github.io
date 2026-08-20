@@ -31,6 +31,67 @@ const JSON_HEADERS = {
   'content-security-policy': "default-src 'none'; frame-ancestors 'none'"
 };
 
+const PUBLIC_DATA_MAX_AGE = 15;
+const PUBLIC_DATA_STALE_WHILE_REVALIDATE = 30;
+const WALLPAPER_MAX_AGE = 31536000;
+const PUBLIC_DATA_CACHE_HEADERS = {
+  'cache-control': `public, max-age=${PUBLIC_DATA_MAX_AGE}, stale-while-revalidate=${PUBLIC_DATA_STALE_WHILE_REVALIDATE}`,
+  'cdn-cache-control': `public, max-age=${PUBLIC_DATA_MAX_AGE}, stale-while-revalidate=${PUBLIC_DATA_STALE_WHILE_REVALIDATE}`
+};
+
+function publicCache() {
+  return globalThis.caches?.default || null;
+}
+
+function cacheKeyFor(request) {
+  return new Request(new URL(request.url).toString(), { method: 'GET' });
+}
+
+function withCacheStatus(response, status) {
+  const headers = new Headers(response.headers);
+  headers.set('x-lightwind-cache', status);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
+async function cachedPublicGet(request, loader) {
+  if (request.method !== 'GET') return loader();
+  const cache = publicCache();
+  if (!cache) return loader();
+  const key = cacheKeyFor(request);
+  try {
+    const cached = await cache.match(key);
+    if (cached) return withCacheStatus(cached, 'hit');
+  } catch {
+    // Edge cache failures must not make public data unavailable.
+  }
+  const response = await loader();
+  if (response.status === 200) {
+    try {
+      await cache.put(key, response.clone());
+    } catch {
+      // D1 response remains valid even when the edge cache is unavailable.
+    }
+  }
+  return withCacheStatus(response, 'miss');
+}
+
+async function purgePublicCache(env, paths) {
+  const cache = publicCache();
+  if (!cache) return;
+  const origin = env.ALLOWED_ORIGIN || 'https://qfyx.top';
+  await Promise.all(paths.map(async (path) => {
+    try {
+      await cache.delete(new Request(new URL(path, origin).toString(), { method: 'GET' }));
+    } catch {
+      // A failed purge only leaves a short-lived public cache entry.
+    }
+  }));
+}
+
 function unixTime() {
   return Math.floor(Date.now() / 1000);
 }
@@ -167,52 +228,117 @@ async function getMusicData(env) {
 
 async function getWallpaperConfig(env) {
   return env.DB.prepare(
-    'SELECT object_key AS objectKey, content_type AS contentType, size_bytes AS sizeBytes, version, updated_at AS updatedAt FROM wallpaper_config WHERE id = 1'
+    `SELECT object_key AS objectKey, content_type AS contentType, size_bytes AS sizeBytes,
+            mobile_object_key AS mobileObjectKey, mobile_content_type AS mobileContentType,
+            mobile_size_bytes AS mobileSizeBytes, version, updated_at AS updatedAt
+       FROM wallpaper_config WHERE id = 1`
   ).first();
 }
 
 function wallpaperPayload(config) {
+  const version = Number(config?.version || 1);
   return {
     configured: Boolean(config?.objectKey),
     contentType: config?.contentType || null,
     sizeBytes: Number(config?.sizeBytes || 0),
-    version: Number(config?.version || 1),
+    mobileContentType: config?.mobileContentType || null,
+    mobileSizeBytes: Number(config?.mobileSizeBytes || 0),
+    version,
     updatedAt: Number(config?.updatedAt || 0),
-    url: config?.objectKey ? `/api/v1/wallpaper/image?v=${Number(config.version || 1)}` : null
+    url: config?.objectKey ? `/api/v1/wallpaper/image?v=${version}` : null,
+    mobileUrl: config?.mobileObjectKey
+      ? `/api/v1/wallpaper/image?v=${version}&variant=mobile`
+      : null
   };
 }
 
 async function publicWallpaperMeta(request, env) {
   assertMethod(request, ['GET', 'HEAD']);
-  const wallpaper = wallpaperPayload(await getWallpaperConfig(env));
-  const etag = `"lightwind-wallpaper-v${wallpaper.version}"`;
-  if (request.headers.get('if-none-match') === etag) {
-    return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
-  }
-  if (request.method === 'HEAD') return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag } });
-  return json(wallpaper, 200, { etag, 'cache-control': 'no-cache' });
+  return cachedPublicGet(request, async () => {
+    const wallpaper = wallpaperPayload(await getWallpaperConfig(env));
+    const etag = `"lightwind-wallpaper-v${wallpaper.version}"`;
+    if (request.headers.get('if-none-match') === etag) {
+      return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, ...PUBLIC_DATA_CACHE_HEADERS } });
+    }
+    if (request.method === 'HEAD') {
+      return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag, ...PUBLIC_DATA_CACHE_HEADERS } });
+    }
+    return json(wallpaper, 200, { etag, ...PUBLIC_DATA_CACHE_HEADERS });
+  });
 }
 
-async function publicWallpaperImage(request, env) {
+function wallpaperCacheKey(request, version, variant) {
+  const url = new URL(request.url);
+  url.search = '';
+  url.searchParams.set('v', String(version));
+  if (variant === 'mobile') url.searchParams.set('variant', 'mobile');
+  return new Request(url.toString(), { method: 'GET' });
+}
+
+async function publicWallpaperImage(request, env, ctx) {
   assertMethod(request, ['GET', 'HEAD']);
+  const requestUrl = new URL(request.url);
+  const requestedVersion = requestUrl.searchParams.get('v');
+  const requestedVariant = requestUrl.searchParams.get('variant') === 'mobile' ? 'mobile' : 'desktop';
+  const cache = request.method === 'GET' ? publicCache() : null;
+  if (cache && requestedVersion) {
+    try {
+      const cached = await cache.match(wallpaperCacheKey(request, requestedVersion, requestedVariant));
+      if (cached) return withCacheStatus(cached, 'hit');
+    } catch {
+      // R2 remains the source of truth when the edge cache is unavailable.
+    }
+  }
   const config = await getWallpaperConfig(env);
   if (!config?.objectKey || !env.WALLPAPER_BUCKET) {
     throw new HttpError(404, '当前没有配置壁纸。', 'WALLPAPER_NOT_FOUND');
   }
-  const requestedVersion = new URL(request.url).searchParams.get('v');
   if (requestedVersion && requestedVersion !== String(config.version)) {
     throw new HttpError(404, '壁纸版本已更新。', 'WALLPAPER_NOT_FOUND');
   }
-  const object = await env.WALLPAPER_BUCKET.get(config.objectKey);
+  const variant = requestedVariant === 'mobile' && config.mobileObjectKey ? 'mobile' : 'desktop';
+  const objectKey = variant === 'mobile' ? config.mobileObjectKey : config.objectKey;
+  const contentType = variant === 'mobile' ? config.mobileContentType : config.contentType;
+  const object = await env.WALLPAPER_BUCKET.get(objectKey);
   if (!object) throw new HttpError(404, '当前没有配置壁纸。', 'WALLPAPER_NOT_FOUND');
   const headers = new Headers({
-    'cache-control': 'public, max-age=300, stale-while-revalidate=86400',
-    'content-type': config.contentType || object.httpMetadata?.contentType || 'application/octet-stream',
+    'cache-control': `public, max-age=${WALLPAPER_MAX_AGE}, immutable`,
+    'cdn-cache-control': `public, max-age=${WALLPAPER_MAX_AGE}, immutable`,
+    'content-type': contentType || object.httpMetadata?.contentType || 'application/octet-stream',
     etag: object.httpEtag || `"lightwind-wallpaper-v${config.version}"`,
     'x-content-type-options': 'nosniff'
   });
   if (request.method === 'HEAD') return new Response(null, { status: 200, headers });
-  return new Response(object.body, { status: 200, headers });
+  const response = new Response(object.body, { status: 200, headers });
+  if (cache) {
+    const cacheWrite = cache.put(
+      wallpaperCacheKey(request, config.version, variant),
+      response.clone()
+    ).catch(() => {});
+    if (ctx?.waitUntil) ctx.waitUntil(cacheWrite);
+    else await cacheWrite;
+    return withCacheStatus(response, 'miss');
+  }
+  return response;
+}
+
+async function deleteWallpaperObjects(env, config) {
+  const keys = [...new Set([config?.objectKey, config?.mobileObjectKey].filter(Boolean))];
+  await Promise.all(keys.map((key) => env.WALLPAPER_BUCKET.delete(key)));
+}
+
+async function purgeWallpaperImageCache(env, version) {
+  const cache = publicCache();
+  if (!cache || !version) return;
+  const origin = env.ALLOWED_ORIGIN || 'https://qfyx.top';
+  const request = new Request(new URL('/api/v1/wallpaper/image', origin).toString());
+  await Promise.all(['desktop', 'mobile'].map(async (variant) => {
+    try {
+      await cache.delete(wallpaperCacheKey(request, version, variant));
+    } catch {
+      // Old versioned URLs remain harmless if a purge is unavailable.
+    }
+  }));
 }
 
 async function adminWallpaper(request, env) {
@@ -233,36 +359,72 @@ async function adminWallpaper(request, env) {
       throw new HttpError(400, '上传表单格式无效。', 'INVALID_WALLPAPER_FORM');
     }
     const file = form.get('wallpaper');
+    const mobileFile = form.get('mobileWallpaper');
     if (!(file instanceof File)) throw new HttpError(400, '请选择壁纸图片。', 'WALLPAPER_REQUIRED');
-    if (file.size < 1 || file.size > WALLPAPER_MAX_BYTES) {
+    if (mobileFile !== null && !(mobileFile instanceof File)) {
+      throw new HttpError(400, '手机壁纸格式无效。', 'INVALID_WALLPAPER_FORM');
+    }
+    const totalSize = file.size + (mobileFile?.size || 0);
+    if (file.size < 1 || file.size > WALLPAPER_MAX_BYTES || (mobileFile && mobileFile.size < 1)
+      || totalSize > WALLPAPER_MAX_BYTES) {
       throw new HttpError(413, '壁纸文件不能超过 30 MB。', 'WALLPAPER_TOO_LARGE');
     }
     const contentType = assertWallpaperType(file.type.toLowerCase());
+    const mobileContentType = mobileFile ? assertWallpaperType(mobileFile.type.toLowerCase()) : null;
     const extension = wallpaperExtension(contentType);
+    const mobileExtension = mobileContentType ? wallpaperExtension(mobileContentType) : null;
     const key = `wallpaper/${crypto.randomUUID()}.${extension}`;
+    const mobileKey = mobileFile ? `wallpaper/${crypto.randomUUID()}.${mobileExtension}` : null;
     const oldConfig = await getWallpaperConfig(env);
-    await env.WALLPAPER_BUCKET.put(key, file.stream(), {
-      httpMetadata: { contentType, cacheControl: 'public, max-age=300, stale-while-revalidate=86400' }
-    });
+    const uploads = [
+      { key, file, contentType },
+      ...(mobileFile ? [{ key: mobileKey, file: mobileFile, contentType: mobileContentType }] : [])
+    ];
+    try {
+      await Promise.all(uploads.map(({ key: uploadKey, file: uploadFile, contentType: uploadContentType }) => (
+        env.WALLPAPER_BUCKET.put(uploadKey, uploadFile.stream(), {
+          httpMetadata: { contentType: uploadContentType, cacheControl: `public, max-age=${WALLPAPER_MAX_AGE}, immutable` }
+        })
+      )));
+    } catch {
+      await Promise.all(uploads.map(({ key: uploadKey }) => env.WALLPAPER_BUCKET.delete(uploadKey)));
+      throw new HttpError(503, '壁纸上传失败，请重试。', 'WALLPAPER_UPLOAD_FAILED');
+    }
     const now = unixTime();
-    const result = await env.DB.prepare(
-      `UPDATE wallpaper_config
-          SET object_key = ?, content_type = ?, size_bytes = ?, version = version + 1, updated_at = ?
-        WHERE id = 1`
-    ).bind(key, contentType, file.size, now).run();
+    let result;
+    try {
+      result = await env.DB.prepare(
+        `UPDATE wallpaper_config
+            SET object_key = ?, content_type = ?, size_bytes = ?,
+                mobile_object_key = ?, mobile_content_type = ?, mobile_size_bytes = ?,
+                version = version + 1, updated_at = ?
+          WHERE id = 1`
+      ).bind(key, contentType, file.size, mobileKey, mobileContentType, mobileFile?.size || 0, now).run();
+    } catch (error) {
+      await Promise.all(uploads.map(({ key: uploadKey }) => env.WALLPAPER_BUCKET.delete(uploadKey)));
+      throw error;
+    }
     if (Number(result.meta?.changes || 0) !== 1) {
-      await env.WALLPAPER_BUCKET.delete(key);
+      await Promise.all(uploads.map(({ key: uploadKey }) => env.WALLPAPER_BUCKET.delete(uploadKey)));
       throw new HttpError(503, '壁纸配置尚未初始化，请先执行数据库迁移。', 'WALLPAPER_NOT_INITIALIZED');
     }
-    if (oldConfig?.objectKey && oldConfig.objectKey !== key) await env.WALLPAPER_BUCKET.delete(oldConfig.objectKey);
+    await purgeWallpaperImageCache(env, oldConfig?.version);
+    await deleteWallpaperObjects(env, oldConfig);
+    await purgePublicCache(env, ['/api/v1/wallpaper/meta']);
     return json({ ok: true, wallpaper: wallpaperPayload(await getWallpaperConfig(env)) }, 200, { 'cache-control': 'no-store' });
   }
   if (request.method === 'DELETE') {
     const current = await getWallpaperConfig(env);
-    if (current?.objectKey && env.WALLPAPER_BUCKET) await env.WALLPAPER_BUCKET.delete(current.objectKey);
+    await purgeWallpaperImageCache(env, current?.version);
+    if (env.WALLPAPER_BUCKET) await deleteWallpaperObjects(env, current);
     await env.DB.prepare(
-      `UPDATE wallpaper_config SET object_key = NULL, content_type = NULL, size_bytes = 0, version = version + 1, updated_at = ? WHERE id = 1`
+      `UPDATE wallpaper_config
+          SET object_key = NULL, content_type = NULL, size_bytes = 0,
+              mobile_object_key = NULL, mobile_content_type = NULL, mobile_size_bytes = 0,
+              version = version + 1, updated_at = ?
+        WHERE id = 1`
     ).bind(unixTime()).run();
+    await purgePublicCache(env, ['/api/v1/wallpaper/meta']);
     return json({ ok: true, wallpaper: wallpaperPayload(await getWallpaperConfig(env)) }, 200, { 'cache-control': 'no-store' });
   }
   throw new HttpError(405, '请求方法不受支持。', 'METHOD_NOT_ALLOWED');
@@ -321,28 +483,32 @@ async function getDesktopData(env) {
 
 async function publicDesktop(request, env) {
   assertMethod(request, ['GET', 'HEAD']);
-  const desktop = await getDesktopData(env);
-  const etag = `"lightwind-desktop-v${desktop.version}"`;
-  if (request.headers.get('if-none-match') === etag) {
-    return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
-  }
-  if (request.method === 'HEAD') {
-    return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
-  }
-  return json(desktop, 200, { etag, 'cache-control': 'no-cache' });
+  return cachedPublicGet(request, async () => {
+    const desktop = await getDesktopData(env);
+    const etag = `"lightwind-desktop-v${desktop.version}"`;
+    if (request.headers.get('if-none-match') === etag) {
+      return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, ...PUBLIC_DATA_CACHE_HEADERS } });
+    }
+    if (request.method === 'HEAD') {
+      return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag, ...PUBLIC_DATA_CACHE_HEADERS } });
+    }
+    return json(desktop, 200, { etag, ...PUBLIC_DATA_CACHE_HEADERS });
+  });
 }
 
 async function publicMusic(request, env) {
   assertMethod(request, ['GET', 'HEAD']);
-  const music = await getMusicData(env);
-  const etag = `"lightwind-music-v${music.version}"`;
-  if (request.headers.get('if-none-match') === etag) {
-    return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
-  }
-  if (request.method === 'HEAD') {
-    return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag, 'cache-control': 'no-cache' } });
-  }
-  return json(music, 200, { etag, 'cache-control': 'no-cache' });
+  return cachedPublicGet(request, async () => {
+    const music = await getMusicData(env);
+    const etag = `"lightwind-music-v${music.version}"`;
+    if (request.headers.get('if-none-match') === etag) {
+      return new Response(null, { status: 304, headers: { ...JSON_HEADERS, etag, ...PUBLIC_DATA_CACHE_HEADERS } });
+    }
+    if (request.method === 'HEAD') {
+      return new Response(null, { status: 200, headers: { ...JSON_HEADERS, etag, ...PUBLIC_DATA_CACHE_HEADERS } });
+    }
+    return json(music, 200, { etag, ...PUBLIC_DATA_CACHE_HEADERS });
+  });
 }
 
 async function login(request, env) {
@@ -472,10 +638,12 @@ function touchMusic(env, now = unixTime(), expectedVersion = null) {
 }
 
 async function adminMutationResponse(env) {
+  await purgePublicCache(env, ['/api/v1/desktop']);
   return json({ ok: true, desktop: await getDesktopData(env) }, 200, { 'cache-control': 'no-store' });
 }
 
 async function adminMusicMutationResponse(env) {
+  await purgePublicCache(env, ['/api/v1/music']);
   return json({ ok: true, music: await getMusicData(env) }, 200, { 'cache-control': 'no-store' });
 }
 
@@ -896,7 +1064,7 @@ async function updateLayout(request, env) {
   return adminMutationResponse(env);
 }
 
-async function routeRequest(request, env) {
+async function routeRequest(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: JSON_HEADERS });
@@ -906,7 +1074,7 @@ async function routeRequest(request, env) {
   if (path === '/api/v1/desktop') return publicDesktop(request, env);
   if (path === '/api/v1/music') return publicMusic(request, env);
   if (path === '/api/v1/wallpaper/meta') return publicWallpaperMeta(request, env);
-  if (path === '/api/v1/wallpaper/image') return publicWallpaperImage(request, env);
+  if (path === '/api/v1/wallpaper/image') return publicWallpaperImage(request, env, ctx);
   if (path === '/api/v1/admin/wallpaper') {
     assertMethod(request, ['GET', 'POST', 'DELETE']);
     return adminWallpaper(request, env);
@@ -975,9 +1143,9 @@ async function routeRequest(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
-      return await routeRequest(request, env);
+      return await routeRequest(request, env, ctx);
     } catch (error) {
       if (error instanceof HttpError) {
         return json({ ok: false, code: error.code, message: error.message }, error.status, {
