@@ -113,7 +113,8 @@ export const WALLPAPER_MAX_BYTES = 30 * 1024 * 1024;
 export const WALLPAPER_TYPES = Object.freeze({
   'image/jpeg': 'jpg',
   'image/png': 'png',
-  'image/webp': 'webp'
+  'image/webp': 'webp',
+  'image/avif': 'avif'
 });
 
 export function wallpaperExtension(contentType) {
@@ -122,7 +123,7 @@ export function wallpaperExtension(contentType) {
 
 export function assertWallpaperType(contentType) {
   if (!wallpaperExtension(contentType)) {
-    throw new HttpError(400, '壁纸只支持 JPG、PNG 或 WebP 图片。', 'INVALID_WALLPAPER_TYPE');
+    throw new HttpError(400, '壁纸只支持 JPG、PNG、WebP 或 AVIF 图片。', 'INVALID_WALLPAPER_TYPE');
   }
   return contentType;
 }

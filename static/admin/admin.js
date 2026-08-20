@@ -43,6 +43,7 @@ const musicPreviewStatus = document.querySelector('#musicPreviewStatus');
 const stopMusicPreviewButton = document.querySelector('#stopMusicPreview');
 const wallpaperForm = document.querySelector('#wallpaperForm');
 const wallpaperFile = document.querySelector('#wallpaperFile');
+const wallpaperMobileFile = document.querySelector('#wallpaperMobileFile');
 const uploadWallpaperButton = document.querySelector('#uploadWallpaperButton');
 const deleteWallpaperButton = document.querySelector('#deleteWallpaperButton');
 const wallpaperMessage = document.querySelector('#wallpaperMessage');
@@ -508,17 +509,21 @@ function renderWallpaper() {
 async function submitWallpaperUpload(event) {
   event.preventDefault();
   const file = wallpaperFile.files?.[0];
+  const mobileFile = wallpaperMobileFile.files?.[0] || null;
   if (!file) {
     wallpaperMessage.textContent = '请选择一张图片。';
     return;
   }
-  if (file.size < 1 || file.size > MAX_WALLPAPER_BYTES) {
+  if (file.size < 1 || file.size > MAX_WALLPAPER_BYTES
+    || (mobileFile && mobileFile.size < 1)
+    || file.size + (mobileFile?.size || 0) > MAX_WALLPAPER_BYTES) {
     wallpaperMessage.textContent = '壁纸文件不能超过 30 MB。';
     return;
   }
   const submit = uploadWallpaperButton;
   const formData = new FormData();
   formData.append('wallpaper', file);
+  if (mobileFile) formData.append('mobileWallpaper', mobileFile);
   setBusy(submit, true);
   wallpaperMessage.textContent = '';
   setWallpaperStatus('正在上传壁纸…', 'saving');

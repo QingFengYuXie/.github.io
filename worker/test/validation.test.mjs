@@ -6,6 +6,7 @@ import { normalizeFolderInput, normalizeLinkInput } from '../src/validation.js';
 test('accepts supported wallpaper formats and rejects unsafe uploads', () => {
   assert.equal(assertWallpaperType('image/jpeg'), 'image/jpeg');
   assert.equal(wallpaperExtension('image/webp'), 'webp');
+  assert.equal(wallpaperExtension('image/avif'), 'avif');
   assert.equal(WALLPAPER_MAX_BYTES, 30 * 1024 * 1024);
   assert.throws(() => assertWallpaperType('image/svg+xml'), HttpError);
   assert.throws(() => assertWallpaperType('application/octet-stream'), HttpError);

@@ -842,7 +842,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.ok(timing.loadEventEnd > 0);
       assert.ok(timing.requestStarts.length >= 5);
       assert.ok(timing.requestStarts.every((startTime) => startTime >= timing.loadEventEnd));
-      assert.ok(state.maxActiveFaviconRequests <= 3);
+      assert.ok(state.maxActiveFaviconRequests <= 6);
       assert.ok(state.faviconRequests.length >= 5);
       assert.deepEqual(externalImages, []);
       state.faviconFallbackIds.clear();

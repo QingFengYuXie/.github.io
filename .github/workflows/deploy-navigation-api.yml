@@ -37,6 +37,11 @@ jobs:
       - name: Ensure wallpaper storage bucket
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: npx wrangler r2 bucket create lightwind-blog-wallpapers || true
+      - name: Upload optimized wallpaper variants
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          npx wrangler r2 object put lightwind-blog-wallpapers/wallpaper/lightwind-desktop-v12.webp --file=assets/wallpapers/lightwind-desktop-v12.webp --content-type=image/webp --cache-control="public, max-age=31536000, immutable" --remote --force
+          npx wrangler r2 object put lightwind-blog-wallpapers/wallpaper/lightwind-mobile-v12.webp --file=assets/wallpapers/lightwind-mobile-v12.webp --content-type=image/webp --cache-control="public, max-age=31536000, immutable" --remote --force
       - name: Apply D1 migrations
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: npx wrangler d1 migrations apply lightwind-navigation --remote

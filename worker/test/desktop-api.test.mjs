@@ -65,7 +65,7 @@ async function createDesktopRuntime(databaseId) {
     }]
   });
   const database = await miniflare.getD1Database('DB');
-  for (const migrationPath of ['0001_initial.sql', '0003_desktop_pages.sql', '0004_wallpaper.sql']) {
+  for (const migrationPath of ['0001_initial.sql', '0003_desktop_pages.sql', '0004_wallpaper.sql', '0005_wallpaper_variants.sql']) {
     const sql = await readFile(`${workerRoot}/migrations/${migrationPath}`, 'utf8');
     for (const statement of sql.split(';').map((part) => part.trim()).filter(Boolean)) {
       await database.prepare(statement).run();
@@ -401,16 +401,24 @@ test('wallpaper API protects uploads and serves replacement lifecycle', async ()
 
     const firstUpload = new FormData();
     firstUpload.append('wallpaper', new File([new Uint8Array([1, 2, 3])], 'first.png', { type: 'image/png' }));
+    firstUpload.append('mobileWallpaper', new File([new Uint8Array([6, 7])], 'first-mobile.webp', { type: 'image/webp' }));
     const uploaded = await responseJson(await formRequest(miniflare, '/admin/wallpaper', 'POST', authHeaders, firstUpload));
     assert.equal(uploaded.response.status, 200);
     assert.equal(uploaded.payload.wallpaper.configured, true);
     assert.equal(uploaded.payload.wallpaper.contentType, 'image/png');
+    assert.equal(uploaded.payload.wallpaper.mobileContentType, 'image/webp');
     const firstUrl = uploaded.payload.wallpaper.url;
+    const firstMobileUrl = uploaded.payload.wallpaper.mobileUrl;
 
     const image = await miniflare.dispatchFetch(`${origin}${firstUrl}`);
     assert.equal(image.status, 200);
     assert.equal(image.headers.get('content-type'), 'image/png');
     assert.deepEqual([...new Uint8Array(await image.arrayBuffer())], [1, 2, 3]);
+
+    const mobileImage = await miniflare.dispatchFetch(`${origin}${firstMobileUrl}`);
+    assert.equal(mobileImage.status, 200);
+    assert.equal(mobileImage.headers.get('content-type'), 'image/webp');
+    assert.deepEqual([...new Uint8Array(await mobileImage.arrayBuffer())], [6, 7]);
 
     const secondUpload = new FormData();
     secondUpload.append('wallpaper', new File([new Uint8Array([4, 5])], 'second.webp', { type: 'image/webp' }));
