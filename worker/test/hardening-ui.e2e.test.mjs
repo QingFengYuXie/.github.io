@@ -829,6 +829,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.equal(await failedFavicon.textContent(), 'Ge');
       assert.equal(await failedFavicon.locator('img').count(), 0);
       assert.equal(await failedFavicon.evaluate((element) => element.classList.contains('is-text-fallback')), true);
+      assert.equal(await failedFavicon.evaluate((element) => getComputedStyle(element).color), 'rgb(159, 41, 61)');
       const timing = await page.evaluate(() => {
         const navigationRequests = performance.getEntriesByType('resource')
           .filter((entry) => entry.name.includes('/api/v1/favicons/'));
