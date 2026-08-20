@@ -378,13 +378,13 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
 
 .os-page .site-music-player {
   z-index: 24;
-  top: 4px;
+  top: 24px;
   right: 24px;
   bottom: auto;
   left: auto;
   width: 130px;
   min-height: 36px;
-  padding: 3px 4px;
+  padding: 4px 6px;
   gap: 0;
   color: #b9a4a8;
   border-color: rgba(255, 109, 104, .25);
@@ -427,6 +427,22 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
   .os-page .site-music-play:hover:not(:disabled) {
     color: #fff;
     background: rgba(255, 255, 255, .36);
+  }
+  .os-page .site-music-player .site-music-controls {
+    justify-content: center;
+    gap: 5px;
+  }
+  .os-page .site-music-player .site-music-control {
+    width: 22px;
+    height: 22px;
+  }
+  .os-page .site-music-player .site-music-control svg {
+    width: 13px;
+    height: 13px;
+  }
+  .os-page .site-music-player .site-music-play {
+    width: 26px;
+    height: 26px;
   }
 
   .os-page .desktop-page-sidebar {
