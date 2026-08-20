@@ -227,7 +227,7 @@ html[data-color-mode="light"] body:not(.os-page) .site-music-player[data-music-s
 .site-music-player .site-music-control { width: 22px; height: 22px; }
 .site-music-player .site-music-control svg { width: 14px; height: 14px; }
 .site-music-player .site-music-play { width: 28px; height: 28px; }
-.site-music-player[data-music-state="playing"] .site-music-play > span {
+.site-music-player[data-music-state="playing"] .site-music-play > svg {
   animation: site-music-play-rotate 1.15s linear infinite;
   transform-origin: center;
 }
@@ -542,6 +542,28 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
     height: var(--site-title-action-size) !important;
   }
 
+  body.site-title-actions-page:not(.os-page).site-article-page #header,
+  body.site-title-actions-page--about:not(.os-page) #header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.site-title-actions-page:not(.os-page).site-article-page #header .site-title-actions,
+  body.site-title-actions-page--about:not(.os-page) #header .site-title-actions {
+    order: -1;
+    align-self: stretch;
+    width: 100%;
+    margin: 0 0 8px !important;
+    justify-content: flex-end;
+  }
+
+  body.site-title-actions-page:not(.os-page).site-article-page #header .postTitle,
+  body.site-title-actions-page--about:not(.os-page) #header .postTitle {
+    order: 0;
+    align-self: flex-start;
+    margin: 0 !important;
+  }
+
   body.site-title-actions-page--dynamic #buttonRSS {
     display: inline-flex !important;
   }
@@ -827,4 +849,16 @@ body.os-page .site-music-player[data-music-state="playing"] .site-music-play {
     border-radius: 10px;
   }
   .site-article-back svg { width: 16px; height: 16px; }
+
+  body.site-article-page .site-title-actions > .site-article-back {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    align-self: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    margin: 0 auto 0 0 !important;
+    transform: none;
+  }
 }
