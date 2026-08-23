@@ -651,6 +651,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
         };
         const navigationLink = document.querySelector('.site-global-nav a');
         const navigationLinkStyle = getComputedStyle(navigationLink);
+        const fontFamily = (selector) => getComputedStyle(document.querySelector(selector)).fontFamily;
         const musicControls = [...document.querySelectorAll('.site-music-controls [data-music-action]')].map((control) => ({
           action: control.dataset.musicAction,
           iconTag: control.firstElementChild?.tagName || '',
@@ -665,6 +666,14 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
           music: rect('.site-music-player'),
           brand: rect('.os-brand'),
           about: rect('.top-links button'),
+          fontFamilies: {
+            about: fontFamily('.top-links button'),
+            brand: fontFamily('.os-brand'),
+            clock: fontFamily('.desktop-clock'),
+            search: fontFamily('.desktop-web-search input'),
+            label: fontFamily('.desktop-icon > span:last-child'),
+            navigation: fontFamily('.site-global-nav a')
+          },
           musicControls,
           navigation: rect('.site-global-nav'),
           navigationLink: {
@@ -684,6 +693,7 @@ test('Edge navigation and admin hardening regression', { skip: !canRunEdge }, as
       assert.equal(desktopLayout.music.height, 36);
       assert.ok(desktopLayout.brand.right < desktopLayout.about.left);
       assert.ok(desktopLayout.music.right <= 1280);
+      assert.equal(new Set(Object.values(desktopLayout.fontFamilies)).size, 1);
       assert.deepEqual(mobileLayout.musicControls, desktopLayout.musicControls);
       assert.ok(Math.abs(mobileLayout.navigation.width - desktopLayout.navigation.width) <= 1);
       assert.ok(Math.abs(mobileLayout.navigation.height - desktopLayout.navigation.height) <= 1);
