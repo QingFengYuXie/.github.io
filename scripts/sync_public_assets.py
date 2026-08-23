@@ -34,6 +34,7 @@ TREE_MAPPINGS = (
 LEGACY_OUTPUTS = (
     "docs/root-redirect.html",
     "docs/dynamic/root-redirect.html",
+    "docs/dynamic/_redirects",
 )
 
 SITE_NAV_REFERENCE = re.compile(
