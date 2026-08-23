@@ -747,7 +747,7 @@ body[data-page]:not([data-page="0"]) .dock { border-color: rgba(255,77,94,.16); 
 
   .desktop-pet {
     right: max(12px, env(safe-area-inset-right));
-    bottom: calc(env(safe-area-inset-bottom) + 138px);
+    bottom: calc(max(18px, env(safe-area-inset-bottom)) + 56px);
     display: grid;
     width: 96px;
     height: 122px;
@@ -1212,18 +1212,20 @@ body.os-page {
 
 /* Keep the page switcher subtle while giving Rem a smaller footprint. */
 .os-page .desktop-page-sidebar {
-  background: rgba(17, 9, 12, .10);
-  border-color: rgba(255, 91, 111, .10);
-  box-shadow: -8px 0 22px rgba(0, 0, 0, .08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  border-color: rgba(255, 255, 255, .2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(13px) saturate(1.15);
+  -webkit-backdrop-filter: blur(13px) saturate(1.15);
 }
 .os-page .desktop-pet {
-  width: 100px;
-  height: 127px;
+  width: 144px;
+  height: 182px;
 }
 .os-page .desktop-pet-sprite {
-  width: 100px;
-  height: 108px;
-  background-size: 800px 972px;
+  width: 144px;
+  height: 156px;
+  background-size: 1152px 1404px;
 }
 .os-page .desktop-pet-name {
   margin-top: -3px;
@@ -1232,17 +1234,41 @@ body.os-page {
 }
 @media (max-width: 800px) {
   .os-page .desktop-pet {
-    width: 82px;
-    height: 104px;
+    width: 96px;
+    height: 122px;
   }
   .os-page .desktop-pet-sprite {
-    width: 82px;
-    height: 89px;
-    background-size: 656px 801px;
+    width: 96px;
+    height: 104px;
+    background-size: 768px 936px;
   }
   .os-page .desktop-pet-name {
     margin-top: -2px;
     padding: 2px 5px;
     font-size: 7px;
   }
+}
+
+/* Use the same glass recipe for every desktop overlay. */
+.os-page .pet-speech {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+}
+
+/* Keep desktop labels readable over bright or detailed wallpapers. */
+.os-page .desktop-icon > span:last-child,
+.os-page .navigation-icon > span:last-child {
+  width: auto;
+  max-width: calc(100% - 4px);
+  padding: 3px 7px;
+  overflow: hidden;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 7px;
+  background: rgba(7, 5, 8, .68);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .18);
+  font: 600 12px/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .75);
+  white-space: nowrap;
 }

@@ -253,7 +253,7 @@ async function startServer(state) {
       }
 
       let relativePath = pathname.replace(/^\/+/, '');
-      if (pathname === '/os/' || pathname === '/os') relativePath = 'os/index.html';
+      if (pathname === '/' || pathname === '/os/' || pathname === '/os') relativePath = 'os/index.html';
       if (pathname === '/admin/' || pathname === '/admin') relativePath = 'admin/index.html';
       const filePath = path.resolve(staticRoot, relativePath);
       if (!filePath.startsWith(staticRoot)) throw new Error('Unsafe test path');

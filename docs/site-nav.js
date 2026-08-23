@@ -42,7 +42,7 @@
   }
 
   function getNavigationCurrent(path = getCurrentPath()) {
-    if (path === '/os' || path === '/os/index.html') return 'os';
+    if (path === '/' || path === '/index.html' || path === '/os' || path === '/os/index.html') return 'os';
     return getChromePageType(path) === 'about' ? 'about' : 'feed';
   }
 
@@ -181,7 +181,7 @@
     const current = getNavigationCurrent(path);
     const items = [
       { id: 'feed', label: '动态', href: '/dynamic/' },
-      { id: 'os', label: '我的 OS', href: '/os/' },
+      { id: 'os', label: '我的 OS', href: '/' },
       { id: 'about', label: '关于', href: '/about.html' }
     ];
 

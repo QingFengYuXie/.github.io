@@ -397,9 +397,9 @@ body.site-title-actions-page:not(.os-page) .site-music-player.site-music-player-
 .os-page .site-music-status { color: #b78e95; }
 .os-page .site-music-control { color: #b9a4a8; }
 .os-page .site-music-control span { font-size: 9px; }
-.os-page .site-music-player .site-music-control { width: 18px; height: 18px; }
-.os-page .site-music-player .site-music-control svg { width: 12px; height: 12px; }
-.os-page .site-music-player .site-music-play { width: 23px; height: 23px; }
+.os-page .site-music-player .site-music-control { width: 22px; height: 22px; }
+.os-page .site-music-player .site-music-control svg { width: 13px; height: 13px; }
+.os-page .site-music-player .site-music-play { width: 26px; height: 26px; }
 .os-page .site-music-control:hover:not(:disabled) { color: #fff; background: rgba(255, 109, 104, .1); }
 .os-page .site-music-mode[data-music-mode="shuffle"] { color: #ff6b7e; background: rgba(255, 82, 101, .1); }
 .os-page .site-music-play { color: #fff; border-color: rgba(255, 82, 101, .65); background: linear-gradient(145deg, #ed4b5f, #b81736); }
@@ -760,11 +760,8 @@ body.os-page .desktop-clock {
 
 body.os-page .site-music-player {
   color: #52606d;
-  border-color: rgba(255, 255, 255, .18);
-  background: linear-gradient(145deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .04)), rgba(255, 255, 255, .1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 8px 25px rgba(0, 0, 0, .28);
-  backdrop-filter: blur(13px) saturate(1.15);
-  -webkit-backdrop-filter: blur(13px) saturate(1.15);
+  border-color: rgba(255, 255, 255, .2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
 }
 
 body.os-page .site-music-player:hover {
@@ -832,11 +829,17 @@ body.os-page .site-music-player[data-music-state="playing"] .site-music-play {
 }
 
 @media (min-width: 801px) {
+  body.os-page .desktop-clock {
+    background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+    backdrop-filter: blur(13px) saturate(1.15);
+    -webkit-backdrop-filter: blur(13px) saturate(1.15);
+  }
+
   body.os-page .desktop-page-sidebar {
-    background: rgba(17, 9, 12, .10);
-    border-left-color: rgba(255, 255, 255, .10);
+    background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+    border-left-color: rgba(255, 255, 255, .2);
     border-right-color: transparent;
-    box-shadow: -8px 0 22px rgba(0, 0, 0, .08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 25px rgba(0, 0, 0, .28);
   }
 }
 
