@@ -829,12 +829,6 @@ body.os-page .site-music-player[data-music-state="playing"] .site-music-play {
 }
 
 @media (min-width: 801px) {
-  body.os-page .desktop-clock {
-    background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
-    backdrop-filter: blur(13px) saturate(1.15);
-    -webkit-backdrop-filter: blur(13px) saturate(1.15);
-  }
-
   body.os-page .desktop-page-sidebar {
     background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
     border-left-color: rgba(255, 255, 255, .2);

@@ -621,7 +621,11 @@ test('Edge music player and admin library regression', { skip: !canRunEdge }, as
       });
       assert.deepEqual(osSurfaces.player, osSurfaces.search);
       assert.deepEqual(osSurfaces.sidebar, osSurfaces.search);
-      assert.deepEqual(osSurfaces.clock, osSurfaces.search);
+      assert.deepEqual(osSurfaces.clock, {
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        backgroundImage: 'none',
+        backdropFilter: 'none'
+      });
       assert.deepEqual(osSurfaces.speech, osSurfaces.search);
       assert.equal(osSurfaces.player.backgroundImage.includes('linear-gradient'), true);
       assert.equal(osSurfaces.playButton.backgroundColor.includes('255'), true);
