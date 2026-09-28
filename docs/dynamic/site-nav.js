@@ -405,27 +405,19 @@
         control.classList.add('btn', 'btn-invisible', 'circle');
       });
       titleActions.append(player);
+    } else if (document.body.classList.contains('os-page')) {
+      const tools = document.createElement('div');
+      tools.className = 'site-os-tools';
+      const serialLink = document.createElement('a');
+      serialLink.className = 'site-serial-entry';
+      serialLink.href = '/serial/';
+      serialLink.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m6 0h4"/></svg><span>串口终端</span>';
+      tools.append(serialLink, player);
+      document.body.append(tools);
     } else {
       document.body.append(player);
     }
     document.body.append(audio);
-
-    function alignOsMusicPlayer() {
-      if (!document.body.classList.contains('os-page')) return;
-      if (!window.matchMedia('(min-width: 801px)').matches) return;
-      player.style.left = 'auto';
-      player.style.right = '24px';
-      player.style.top = '24px';
-      player.style.bottom = 'auto';
-    }
-
-    if (document.body.classList.contains('os-page')) {
-      window.requestAnimationFrame(alignOsMusicPlayer);
-      window.addEventListener('resize', alignOsMusicPlayer, { passive: true });
-      if ('ResizeObserver' in window) {
-        new ResizeObserver(alignOsMusicPlayer).observe(document.querySelector('.os-brand') || player);
-      }
-    }
 
     function updateTitleOverflow() {
       if (titleMeasureFrame) window.cancelAnimationFrame(titleMeasureFrame);
