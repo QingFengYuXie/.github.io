@@ -300,6 +300,55 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
       });
     });
 
+    await t.test('GB2312 persists, encodes text, receives split Chinese, rejects unsupported text and switches live to UTF-8', async () => {
+      await withPage({}, async (page) => {
+        assert.equal(await page.locator('#serial-encoding').inputValue(), 'utf-8');
+        await page.selectOption('#serial-encoding', 'gb2312');
+        assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).toolOptions.encoding, settingsKey), 'gb2312');
+        await page.reload();
+        assert.equal(await page.locator('#serial-encoding').inputValue(), 'gb2312');
+        await openPort(page);
+        await page.selectOption('#serial-log-type', 'text');
+        await setField(page, '#serial-timer-out', '0');
+        await setField(page, '#serial-send-content', '你好');
+        await page.click('#serial-send');
+        await waitForWrites(page, 1);
+        assert.deepEqual(await page.evaluate(() => window.__serial.port.writes[0]), [0xc4, 0xe3, 0xba, 0xc3]);
+
+        await clearLogs(page);
+        for (const bytes of [[0xd6], [0xd0, 0xce], [0xc4]]) {
+          await page.evaluate((value) => window.__serial.receive(value), bytes);
+        }
+        await page.waitForFunction(() => [...document.querySelectorAll('.log-entry[data-direction="rx"] .log-text')].map((item) => item.textContent).join('').includes('中文'));
+        assert.doesNotMatch(await page.locator('#serial-logs').innerText(), /�/);
+
+        await setField(page, '#serial-send-content', 'hello😀');
+        await page.click('#serial-send');
+        await page.waitForFunction(() => /GB2312.*无法编码/.test(document.getElementById('serial-message').textContent));
+        assert.equal(await page.evaluate(() => window.__serial.port.writes.length), 1);
+        await page.locator('#serial-hex-send').check();
+        await setField(page, '#serial-send-content', 'F0 9F 98 80 FF 00');
+        await page.click('#serial-send');
+        await waitForWrites(page, 2);
+        assert.deepEqual(await page.evaluate(() => window.__serial.port.writes[1]), [0xf0, 0x9f, 0x98, 0x80, 0xff, 0x00]);
+
+        await clearLogs(page);
+        await page.evaluate(() => window.__serial.receive([0xd6]));
+        await page.selectOption('#serial-encoding', 'utf-8');
+        for (const bytes of [[0xe4], [0xbd, 0xa0, 0xe5], [0xa5, 0xbd, 0xf0, 0x9f], [0x98, 0x80]]) {
+          await page.evaluate((value) => window.__serial.receive(value), bytes);
+        }
+        await page.waitForFunction(() => [...document.querySelectorAll('.log-entry[data-direction="rx"] .log-text')].map((item) => item.textContent).join('').includes('你好😀'));
+        await page.locator('#serial-hex-send').uncheck();
+        await setField(page, '#serial-send-content', '你好😀');
+        await page.click('#serial-send');
+        await waitForWrites(page, 3);
+        assert.deepEqual(await page.evaluate(() => window.__serial.port.writes[2]), [...Buffer.from('你好😀')]);
+        assert.equal(await page.evaluate(() => window.__serial.port.openCalls.length), 1, 'Changing encoding must keep the serial connection open');
+        assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).toolOptions.encoding, settingsKey), 'utf-8');
+      });
+    });
+
     await t.test('log formats, safe ANSI, clipboard, download and clearing work without right tools', async () => {
       await withPage({}, async (page) => {
         await openPort(page);
@@ -407,14 +456,27 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
       });
     });
 
-    await t.test('desktop fits one viewport with sidebar heading, independently scrolling dark logs and readable ANSI', async () => {
+    await t.test('desktop fits one viewport with compact sidebar, one toolbar row, independently scrolling dark logs and readable ANSI', async () => {
       await withPage({}, async (page) => {
+        const back = page.getByRole('link', { name: '返回我的 OS', exact: true });
+        assert.equal(await back.count(), 1);
+        assert.equal((await back.textContent()).trim(), '');
+        assert.equal(await back.getAttribute('title'), '返回我的 OS');
+        assert.equal(await back.getAttribute('aria-label'), '返回我的 OS');
+        assert.equal(await page.locator('label:has(#serial-baud) small').count(), 0);
+        assert.equal(await page.locator('#serial-buffer-size').getAttribute('type'), 'text');
+        assert.equal(await page.locator('#serial-buffer-size').getAttribute('inputmode'), 'numeric');
+        assert.equal(await page.locator('#serial-buffer-size').getAttribute('list'), null);
+        assert.equal(await page.locator('#buffer-list').count(), 0);
+        assert.equal(await page.locator('.send-label, #send-format').count(), 0);
+        assert.equal(await page.locator('#serial-send-content').getAttribute('aria-label'), '发送数据');
         const viewports = [
           { width: 1440, height: 900 },
           { width: 1366, height: 768 },
           { width: 1280, height: 720 },
           { width: 1024, height: 600 },
-          { width: 801, height: 600 }
+          { width: 801, height: 600 },
+          { width: 1024, height: 500 }
         ];
         async function assertCompactLayout(state) {
           const layout = await page.evaluate(() => {
@@ -424,6 +486,9 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
             };
             const sidebar = document.querySelector('.settings-panel');
             const terminal = document.querySelector('.terminal-panel');
+            const buffer = document.getElementById('serial-buffer-size');
+            const bufferUnit = [...buffer.closest('label').querySelectorAll('span')].find((span) => !span.children.length && span.textContent.trim() === '字节');
+            const note = sidebar.querySelector('.settings-note');
             const controls = ['serial-back', 'serial-port-list', 'serial-select-port', 'serial-baud',
               'serial-data-bits', 'serial-stop-bits', 'serial-parity', 'serial-buffer-size',
               'serial-flow-control', 'serial-open-or-close', 'serial-send-content', 'serial-send'];
@@ -437,6 +502,17 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
               sidebarOverflow: sidebar.scrollHeight - sidebar.clientHeight,
               sidebarTop: sidebar.scrollTop,
               terminalTop: terminal.scrollTop,
+              back: bounds(document.getElementById('serial-back')),
+              title: bounds(document.querySelector('.page-header h1')),
+              state: bounds(document.getElementById('connection-state')),
+              buffer: bounds(buffer),
+              bufferUnit: bufferUnit ? bounds(bufferUnit) : null,
+              footer: bounds(sidebar.querySelector('.page-footer')),
+              note: getComputedStyle(note).display === 'none' ? null : bounds(note),
+              logViewport: bounds(document.getElementById('log-viewport')),
+              toolbar: ['serial-log-type', 'serial-encoding', 'serial-timer-out', 'serial-show-time',
+                'serial-auto-scroll', 'serial-copy', 'serial-save', 'serial-clear']
+                .map((id) => ({ id, ...bounds(document.getElementById(id)) })),
               headingInSidebar: ['#serial-back', '.page-header', '.page-header h1', '#connection-state']
                 .every((selector) => sidebar.contains(document.querySelector(selector))),
               controls: controls.map((id) => ({ id, ...bounds(document.getElementById(id)) }))
@@ -447,10 +523,27 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
           assert.ok(layout.documentHeight <= layout.viewport.height + 1, `${label}: document overflows vertically (${layout.documentHeight})`);
           assert.equal(layout.documentTop, 0, `${label}: document unexpectedly scrolled`);
           assert.equal(layout.headingInSidebar, true, `${label}: page heading, return link and status belong inside the sidebar`);
+          assert.ok(layout.back.right <= layout.title.left + 1, `${label}: return icon belongs to the left of the title`);
+          const middle = (box) => (box.top + box.bottom) / 2;
+          assert.ok(Math.abs(middle(layout.back) - middle(layout.title)) <= 2, `${label}: return icon and title must share a row`);
+          assert.ok(layout.state.top >= Math.max(layout.back.bottom, layout.title.bottom) - 1, `${label}: state badge belongs on a separate row`);
+          assert.ok(layout.bufferUnit, `${label}: buffer unit must be visible`);
+          assert.ok(layout.bufferUnit.left >= layout.buffer.right - 1, `${label}: byte unit belongs to the right of the buffer input`);
+          const toolbarCenters = layout.toolbar.map(middle);
+          assert.ok(Math.max(...toolbarCenters) - Math.min(...toolbarCenters) <= 2, `${label}: all log controls must remain in one toolbar row`);
+          for (const box of layout.toolbar) {
+            assert.ok(box.width > 0 && box.height > 0, `${label}: toolbar control ${box.id} must remain visible`);
+            assert.ok(box.left >= layout.terminal.left && box.right <= layout.terminal.right + 1, `${label}: toolbar control ${box.id} overflows its panel`);
+          }
+          if (state === 'initial') assert.ok(layout.logViewport.height >= layout.viewport.height * 0.45, `${label}: compact controls must leave at least 45% of the viewport for logs`);
           assert.ok(Math.abs(layout.sidebar.top - layout.terminal.top) <= 1, `${label}: panel tops must align`);
-          assert.ok(layout.sidebarOverflow <= 1, `${label}: settings must remain visible without scrolling`);
+          assert.ok(layout.sidebarOverflow <= 1, `${label}: settings overflow by ${layout.sidebarOverflow}px (panel bottom ${layout.sidebar.bottom}, footer bottom ${layout.footer.bottom})`);
           assert.equal(layout.sidebarTop, 0, `${label}: sidebar unexpectedly scrolled`);
           assert.equal(layout.terminalTop, 0, `${label}: terminal wrapper unexpectedly scrolled`);
+          for (const [name, box] of Object.entries({ footer: layout.footer, note: layout.note })) {
+            if (!box) continue;
+            assert.ok(box.height > 0 && box.top >= layout.sidebar.top && box.bottom <= layout.sidebar.bottom + 1, `${label}: sidebar ${name} is clipped`);
+          }
           for (const [name, box] of Object.entries({ sidebar: layout.sidebar, terminal: layout.terminal })) {
             assert.ok(box.top >= -1 && box.bottom <= layout.viewport.height + 1, `${label}: ${name} is clipped vertically`);
             assert.ok(box.left >= -1 && box.right <= layout.viewport.width + 1, `${label}: ${name} is clipped horizontally`);

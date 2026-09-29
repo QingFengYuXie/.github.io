@@ -1,16 +1,17 @@
 /**
  * Adapted from itldg/web-serial-debug, commit c0fc58b9 (Apache-2.0).
- * Native OS UI, bounded logs, validated storage and streaming UTF-8 decoding.
+ * Native OS UI, bounded logs, validated storage and streaming text decoding.
  * Right-side command sets, config files, scripts and analytics were removed.
  * See LICENSE and NOTICE.md for provenance and third-party notices.
  */
 import { SerialController, DEFAULT_SERIAL_OPTIONS, validateSerialOptions } from './serial-controller.mjs?v=20260928-1';
+import { createSerialDecoder, encodeSerialText, normalizeSerialEncoding } from './serial-encoding.mjs?v=20260929-1';
 
 const $ = (id) => document.getElementById(id);
 const settingsKey = 'lightwind-serial-settings-v1';
 const defaultTools = Object.freeze({
   autoScroll: true, showTime: true, logType: 'hex&text', timeout: 50,
-  hexSend: false, addCRLF: false, loopInterval: 1000, sendContent: ''
+  hexSend: false, addCRLF: false, loopInterval: 1000, sendContent: '', encoding: 'utf-8'
 });
 const serialFields = {
   baudRate: 'serial-baud', dataBits: 'serial-data-bits', stopBits: 'serial-stop-bits',
@@ -19,13 +20,12 @@ const serialFields = {
 const toolFields = {
   autoScroll: 'serial-auto-scroll', showTime: 'serial-show-time', logType: 'serial-log-type',
   timeout: 'serial-timer-out', hexSend: 'serial-hex-send', addCRLF: 'serial-add-crlf',
-  loopInterval: 'serial-loop-send-time', sendContent: 'serial-send-content'
+  loopInterval: 'serial-loop-send-time', sendContent: 'serial-send-content', encoding: 'serial-encoding'
 };
 const maxRecords = 5000;
 const maxLogMemory = 4 * 1024 * 1024;
 const maxReceiveBatch = 64 * 1024;
 const maxPendingAnsi = 4096;
-const encoder = new TextEncoder();
 const reportedErrors = new WeakSet();
 let settingsWarning = '';
 let storageWarningShown = false;
@@ -41,7 +41,7 @@ let loopToken = 0;
 let receiveTimer;
 let receiveChunks = [];
 let receiveSize = 0;
-let receiveDecoder = new TextDecoder();
+let receiveDecoder = createSerialDecoder();
 let ansiParsers = {};
 let records = [];
 let logMemory = 0;
@@ -92,6 +92,7 @@ function loadSettings() {
       if (typeof tools[key] === 'boolean') toolOptions[key] = tools[key];
     }
     if (['hex&text', 'hex', 'text', 'ansi'].includes(tools.logType)) toolOptions.logType = tools.logType;
+    toolOptions.encoding = normalizeSerialEncoding(tools.encoding);
     toolOptions.timeout = validInteger(tools.timeout, defaultTools.timeout, 0, 60000);
     toolOptions.loopInterval = validInteger(tools.loopInterval, defaultTools.loopInterval, 1, 3600000);
     if (typeof tools.sendContent === 'string') toolOptions.sendContent = tools.sendContent.slice(0, 262144);
@@ -116,7 +117,7 @@ function populateSettings() {
     else $(id).value = String(toolOptions[key]);
   }
   document.body.dataset.showTime = String(toolOptions.showTime);
-  updateSendFormat();
+  receiveDecoder = createSerialDecoder(toolOptions.encoding);
 }
 
 function readSerialOptions() {
@@ -168,7 +169,7 @@ function updateControls() {
 function handleState({ state }) {
   if (state !== 'connected') stopLoop();
   if (state === 'connected') {
-    receiveDecoder = new TextDecoder();
+    receiveDecoder = createSerialDecoder(toolOptions.encoding);
     ansiParsers = {};
     hadConnection = true;
     showMessage('');
@@ -366,22 +367,22 @@ function finishReceive() {
   flushReceive();
   const remainder = receiveDecoder.decode();
   if (remainder) addRecord({ direction: 'rx', bytes: new Uint8Array(), text: remainder });
-  receiveDecoder = new TextDecoder();
+  receiveDecoder = createSerialDecoder(toolOptions.encoding);
 }
 
-function sent(bytes) {
+function sent(bytes, encoding) {
   sentCount += bytes.length;
-  addRecord({ direction: 'tx', bytes: bytes.slice(), text: new TextDecoder().decode(bytes) });
+  addRecord({ direction: 'tx', bytes: bytes.slice(), text: createSerialDecoder(encoding).decode(bytes) });
 }
 
-function encodeSendContent() {
+function encodeSendContent(encoding) {
   const value = $('serial-send-content').value;
   let bytes;
   if ($('serial-hex-send').checked) {
     const hex = value.replace(/\s/g, '');
     if (!/^[0-9a-f]*$/i.test(hex) || hex.length % 2 !== 0) throw new Error('HEX 数据须由偶数个十六进制字符组成，例如 48 65 6C 6C 6F。');
     bytes = Uint8Array.from(hex.match(/.{2}/g) || [], (pair) => parseInt(pair, 16));
-  } else bytes = encoder.encode(value);
+  } else bytes = encodeSerialText(value, encoding);
   if ($('serial-add-crlf').checked) {
     const framed = new Uint8Array(bytes.length + 2);
     framed.set(bytes);
@@ -390,6 +391,15 @@ function encodeSendContent() {
   }
   if (!bytes.length) throw new Error('请输入要发送的数据。');
   return bytes;
+}
+
+async function sendContent() {
+  // Each queued write keeps its encoding even if the selector changes while
+  // the serial device is still accepting an earlier write.
+  const encoding = toolOptions.encoding;
+  const bytes = encodeSendContent(encoding);
+  await controller.send(bytes);
+  sent(bytes, encoding);
 }
 
 function stopLoop() {
@@ -406,7 +416,7 @@ function startLoop() {
     if (token !== loopToken || controller?.state !== 'connected' || leaving) return;
     try {
       if (!$('serial-loop-send-time').reportValidity()) throw new Error('循环发送间隔须为 1 至 3600000 毫秒的整数。');
-      await controller.send(encodeSendContent());
+      await sendContent();
       if (token === loopToken && controller.state === 'connected') loopTimer = setTimeout(tick, toolOptions.loopInterval);
     } catch (error) {
       if (token === loopToken) stopLoop();
@@ -415,8 +425,6 @@ function startLoop() {
   };
   void tick();
 }
-
-function updateSendFormat() { $('send-format').textContent = toolOptions.hexSend ? 'HEX BYTES' : 'UTF-8 TEXT'; }
 
 function plainLogText() {
   return records.map((record) => {
@@ -437,7 +445,7 @@ function clearLogs() {
   clearTimeout(receiveTimer);
   receiveChunks = [];
   receiveSize = 0;
-  // Keep the UTF-8 decoder/ANSI state for a character or escape split at clear.
+  // Keep decoder/ANSI state for a character or escape split at clear.
   records = [];
   logMemory = 0;
   droppedRecords = 0;
@@ -450,7 +458,7 @@ function clearLogs() {
 loadSettings();
 populateSettings();
 if (window.isSecureContext && navigator.serial) {
-  controller = new SerialController({ serial: navigator.serial, onState: handleState, onData: receive, onSent: sent, onError: reportError });
+  controller = new SerialController({ serial: navigator.serial, onState: handleState, onData: receive, onError: reportError });
   void controller.updateOptions(serialOptions).catch(reportError);
   void refreshPorts({ selectFirst: true });
   navigator.serial.addEventListener('connect', refreshPorts);
@@ -497,10 +505,16 @@ for (const [key, id] of Object.entries(toolFields)) {
   field.addEventListener(key === 'sendContent' ? 'input' : 'change', () => {
     if (!field.reportValidity()) return;
     if (key === 'timeout') flushReceive();
+    if (key === 'encoding') finishReceive();
     toolOptions[key] = typeof defaultTools[key] === 'boolean' ? field.checked : typeof defaultTools[key] === 'number' ? Number(field.value) : field.value;
+    if (key === 'encoding') {
+      toolOptions.encoding = normalizeSerialEncoding(toolOptions.encoding);
+      field.value = toolOptions.encoding;
+      receiveDecoder = createSerialDecoder(toolOptions.encoding);
+      ansiParsers = {};
+    }
     saveSettings();
     document.body.dataset.showTime = String(toolOptions.showTime);
-    updateSendFormat();
     if (['logType', 'showTime', 'autoScroll'].includes(key)) scheduleRender(key === 'logType');
   });
 }
@@ -508,7 +522,7 @@ $('serial-loop-send').addEventListener('change', () => { if ($('serial-loop-send
 $('serial-send-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (controller?.state !== 'connected') return;
-  try { await controller.send(encodeSendContent()); }
+  try { await sendContent(); }
   catch (error) { reportError(error); }
 });
 $('serial-send-content').addEventListener('keydown', (event) => {
