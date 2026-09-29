@@ -407,22 +407,96 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
       });
     });
 
-    await t.test('narrow desktop keeps controls visible and the light theme persists when the system is dark', async () => {
+    await t.test('desktop fits one viewport with sidebar heading, independently scrolling dark logs and readable ANSI', async () => {
       await withPage({}, async (page) => {
-        for (const width of [1280, 1024]) {
-          await page.setViewportSize({ width, height: 768 });
-          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-          assert.equal(await page.locator('#serial-send').isVisible(), true);
-          assert.equal(await page.locator('#serial-back').isVisible(), true);
+        const viewports = [
+          { width: 1440, height: 900 },
+          { width: 1366, height: 768 },
+          { width: 1280, height: 720 },
+          { width: 1024, height: 600 },
+          { width: 801, height: 600 }
+        ];
+        async function assertCompactLayout(state) {
+          const layout = await page.evaluate(() => {
+            const bounds = (element) => {
+              const { top, bottom, left, right, width, height } = element.getBoundingClientRect();
+              return { top, bottom, left, right, width, height };
+            };
+            const sidebar = document.querySelector('.settings-panel');
+            const terminal = document.querySelector('.terminal-panel');
+            const controls = ['serial-back', 'serial-port-list', 'serial-select-port', 'serial-baud',
+              'serial-data-bits', 'serial-stop-bits', 'serial-parity', 'serial-buffer-size',
+              'serial-flow-control', 'serial-open-or-close', 'serial-send-content', 'serial-send'];
+            return {
+              viewport: { width: innerWidth, height: innerHeight },
+              documentWidth: document.documentElement.scrollWidth,
+              documentHeight: document.documentElement.scrollHeight,
+              documentTop: document.scrollingElement.scrollTop,
+              sidebar: bounds(sidebar),
+              terminal: bounds(terminal),
+              sidebarOverflow: sidebar.scrollHeight - sidebar.clientHeight,
+              sidebarTop: sidebar.scrollTop,
+              terminalTop: terminal.scrollTop,
+              headingInSidebar: ['#serial-back', '.page-header', '.page-header h1', '#connection-state']
+                .every((selector) => sidebar.contains(document.querySelector(selector))),
+              controls: controls.map((id) => ({ id, ...bounds(document.getElementById(id)) }))
+            };
+          });
+          const label = `${state} at ${layout.viewport.width}×${layout.viewport.height}`;
+          assert.ok(layout.documentWidth <= layout.viewport.width, `${label}: document overflows horizontally`);
+          assert.ok(layout.documentHeight <= layout.viewport.height + 1, `${label}: document overflows vertically (${layout.documentHeight})`);
+          assert.equal(layout.documentTop, 0, `${label}: document unexpectedly scrolled`);
+          assert.equal(layout.headingInSidebar, true, `${label}: page heading, return link and status belong inside the sidebar`);
+          assert.ok(Math.abs(layout.sidebar.top - layout.terminal.top) <= 1, `${label}: panel tops must align`);
+          assert.ok(layout.sidebarOverflow <= 1, `${label}: settings must remain visible without scrolling`);
+          assert.equal(layout.sidebarTop, 0, `${label}: sidebar unexpectedly scrolled`);
+          assert.equal(layout.terminalTop, 0, `${label}: terminal wrapper unexpectedly scrolled`);
+          for (const [name, box] of Object.entries({ sidebar: layout.sidebar, terminal: layout.terminal })) {
+            assert.ok(box.top >= -1 && box.bottom <= layout.viewport.height + 1, `${label}: ${name} is clipped vertically`);
+            assert.ok(box.left >= -1 && box.right <= layout.viewport.width + 1, `${label}: ${name} is clipped horizontally`);
+          }
+          for (const box of layout.controls) {
+            assert.ok(box.width > 0 && box.height > 0, `${label}: ${box.id} has no visible area`);
+            assert.ok(box.top >= -1 && box.bottom <= layout.viewport.height + 1, `${label}: ${box.id} is below or above the viewport`);
+            assert.ok(box.left >= -1 && box.right <= layout.viewport.width + 1, `${label}: ${box.id} is outside the viewport horizontally`);
+            const panel = box.id.startsWith('serial-send') ? layout.terminal : layout.sidebar;
+            assert.ok(box.top >= panel.top && box.bottom <= panel.bottom + 1, `${label}: ${box.id} is clipped by its panel`);
+          }
+        }
+        for (const viewport of viewports) {
+          await page.setViewportSize(viewport);
+          await assertCompactLayout('initial');
+          await page.evaluate(() => { window.__serial.cancelRequest = true; });
+          await page.click('#serial-select-port');
+          await page.waitForFunction(() => !document.getElementById('serial-message').hidden);
+          assert.match(await page.locator('#serial-message').innerText(), /取消/);
+          await assertCompactLayout('with notice');
         }
         await page.emulateMedia({ colorScheme: 'dark' });
         assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme), 'light');
         assert.equal(await page.locator('#log-viewport').isVisible(), true);
+        assert.equal(await page.locator('#log-viewport').evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(16, 23, 34)');
+        await page.evaluate(() => { window.__serial.cancelRequest = false; });
         await openPort(page);
-        await page.selectOption('#serial-log-type', 'ansi');
+        await page.selectOption('#serial-log-type', 'text');
         await setField(page, '#serial-timer-out', '0');
-        await receiveText(page, '\x1b[93mYELLOW\x1b[97mWHITE\x1b[0m');
-        await page.waitForFunction(() => document.getElementById('serial-logs').textContent.includes('YELLOWWHITE'));
+        await receiveText(page, Array.from({ length: 160 }, (_, index) => `FRAME ${index}: serial data remains inside the terminal\n`).join(''));
+        for (const viewport of viewports) {
+          await page.setViewportSize(viewport);
+          await page.waitForFunction(() => {
+            const logs = document.getElementById('log-viewport');
+            return logs.scrollHeight > logs.clientHeight + 100;
+          });
+          await page.locator('#log-viewport').evaluate((element) => { element.scrollTop = 0; });
+          await page.locator('#log-viewport').hover();
+          await page.mouse.wheel(0, 400);
+          await page.waitForFunction(() => document.getElementById('log-viewport').scrollTop > 0);
+          await assertCompactLayout('with scrolling logs');
+        }
+        await clearLogs(page);
+        await page.selectOption('#serial-log-type', 'ansi');
+        await receiveText(page, '\x1b[93mYELLOW\x1b[97mWHITE\x1b[30mBLACK\x1b[34mDEEPBLUE\x1b[0m');
+        await page.waitForFunction(() => document.getElementById('serial-logs').textContent.includes('YELLOWWHITEBLACKDEEPBLUE'));
         const contrasts = await page.evaluate(() => {
           const spans = [...document.querySelectorAll('.log-text [style*="color"]')];
           const luminance = (color) => {
@@ -433,7 +507,7 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
             return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
           };
           const surface = luminance(getComputedStyle(document.getElementById('log-viewport')).backgroundColor);
-          return ['YELLOW', 'WHITE'].map((text) => {
+          return ['YELLOW', 'WHITE', 'BLACK', 'DEEPBLUE'].map((text) => {
             const span = spans.find((item) => item.textContent === text);
             if (!span) throw new Error(`Missing ANSI foreground for ${text}`);
             const foreground = luminance(getComputedStyle(span).color);

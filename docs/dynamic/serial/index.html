@@ -8,24 +8,20 @@
     <meta name="theme-color" content="#f5f7fb" />
     <title>串口调试 · 轻风雨斜 OS</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/serial/styles.css?v=20260928-2" />
+    <link rel="stylesheet" href="/serial/styles.css?v=20260929-1" />
     <script src="/serial/vendor/ansi_up.min.js?v=5.1.0" defer></script>
-    <script type="module" src="/serial/script.js?v=20260928-2"></script>
+    <script type="module" src="/serial/script.js?v=20260929-1"></script>
   </head>
   <body class="serial-page" data-state="disconnected">
-    <header class="page-header">
-      <div class="page-heading">
-        <a class="back-link" id="serial-back" href="/" title="返回我的 OS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h13" /></svg><span>我的 OS</span></a>
-        <span class="header-divider" aria-hidden="true"></span>
-        <div><h1>串口调试</h1><p>连接设备，让每一条数据清晰可见。</p></div>
-      </div>
-      <span class="connection-state" id="connection-state" role="status"><i aria-hidden="true"></i><span>未连接</span></span>
-    </header>
-
-    <div class="message" id="serial-message" role="status" aria-live="polite" hidden></div>
-
     <main class="workspace">
       <aside class="settings-panel glass-panel" aria-labelledby="settings-heading">
+        <header class="page-header">
+          <a class="back-link" id="serial-back" href="/" title="返回我的 OS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h13" /></svg><span>返回我的 OS</span></a>
+          <div class="page-heading">
+            <h1>串口调试</h1>
+            <span class="connection-state" id="connection-state" role="status"><i aria-hidden="true"></i><span>未连接</span></span>
+          </div>
+        </header>
         <div class="panel-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v5a6 6 0 0 1-12 0V8Zm6 11v3" /></svg><h2 id="settings-heading">串口设置</h2></div>
         <form id="serial-options-form">
           <fieldset id="connection-fields">
@@ -47,7 +43,8 @@
           <button class="primary-button connect-button" id="serial-open-or-close" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.4 5.6a9 9 0 1 0 11.2 0" /></svg><span>打开串口</span></button>
           <p id="serial-status" class="device-status" aria-live="polite">尚未选择串口设备</p>
         </form>
-        <div class="settings-note"><span class="note-dot" aria-hidden="true"></span><p>参数自动保存在此浏览器。<br />串口数据仅在本机处理。</p></div>
+        <div class="settings-note"><span class="note-dot" aria-hidden="true"></span><p>参数自动保存，串口数据仅在本机处理。</p></div>
+        <footer class="page-footer"><a href="https://github.com/itldg/web-serial-debug" target="_blank" rel="noopener noreferrer">基于 Web Serial Debug ↗</a></footer>
       </aside>
 
       <section class="terminal-panel glass-panel" aria-labelledby="logs-heading">
@@ -60,6 +57,7 @@
           <label class="inline-field"><span>分包超时</span><span class="input-with-unit"><input id="serial-timer-out" type="number" min="0" max="60000" step="1" value="50" title="接收数据的间隔达到此值后合并显示；0 表示立即显示" aria-label="分包超时（毫秒）" required /><span>ms</span></span></label>
           <div class="display-checks"><label class="check"><input id="serial-show-time" type="checkbox" checked /><span>时间戳</span></label><label class="check"><input id="serial-auto-scroll" type="checkbox" checked /><span>自动滚动</span></label></div>
         </div>
+        <div class="message" id="serial-message" role="status" aria-live="polite" hidden></div>
         <div class="log-viewport" id="log-viewport" tabindex="0" aria-label="串口收发日志">
           <div class="empty-logs" id="empty-logs"><span class="empty-terminal" aria-hidden="true">&gt;_</span><h3>等待串口数据</h3><p>选择设备并打开串口后，<br />收发数据会显示在这里。</p><span class="empty-detail">TEXT / HEX / ANSI</span></div>
           <div id="serial-logs" role="log" aria-live="off" aria-label="数据记录"></div>
@@ -76,7 +74,6 @@
         </form>
       </section>
     </main>
-    <footer class="page-footer"><span>轻风雨斜 OS <i aria-hidden="true">/</i> 串口终端</span><a href="https://github.com/itldg/web-serial-debug" target="_blank" rel="noopener noreferrer">基于 Web Serial Debug · 开源项目 ↗</a></footer>
     <noscript><p class="noscript-message">请启用 JavaScript 后使用串口调试功能。</p></noscript>
   </body>
 </html>

@@ -26,6 +26,7 @@ FILE_MAPPINGS = (
 
 TREE_MAPPINGS = (
     ("static/serial", "docs/serial"),
+    ("static/serial", "docs/dynamic/serial"),
     ("static/os", "docs/os"),
     ("static/os", "docs/dynamic/os"),
     ("static/admin", "docs/admin"),

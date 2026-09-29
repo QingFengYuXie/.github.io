@@ -254,20 +254,22 @@ function addRecord(record) {
 
 function addSystemLog(text) { addRecord({ direction: 'system', text }); }
 
-function adaptAnsiToLightSurface(fragment) {
-  // ANSI's white/yellow foregrounds target dark terminals. Darken only colors
-  // without an explicit ANSI background so they remain legible on this page.
+function adaptAnsiToDarkSurface(fragment) {
+  // Lift dark ANSI foregrounds toward white while retaining their hue. Explicit
+  // ANSI backgrounds keep their original foreground/background pairing.
   const luminance = (rgb) => rgb.map((value) => {
     const channel = value / 255;
     return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
   }).reduce((total, channel, index) => total + channel * [.2126, .7152, .0722][index], 0);
-  const surfaceLuminance = luminance([248, 250, 252]); // .log-viewport: #f8fafc
+  const surfaceLuminance = luminance([16, 23, 34]); // .log-viewport: #101722
   for (const span of fragment.querySelectorAll('span[style]')) {
     if (!span.style.color || span.style.backgroundColor) continue;
     const channels = span.style.color.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
     if (!channels) continue;
     let rgb = channels.slice(1).map(Number);
-    while ((surfaceLuminance + .05) / (luminance(rgb) + .05) < 4.5) rgb = rgb.map((value) => Math.floor(value * .9));
+    while ((luminance(rgb) + .05) / (surfaceLuminance + .05) < 4.5) {
+      rgb = rgb.map((value) => Math.ceil(value + (255 - value) * .1));
+    }
     span.style.color = `rgb(${rgb.join(', ')})`;
   }
 }
@@ -300,7 +302,7 @@ function renderRecord(record) {
       const template = document.createElement('template');
       template.innerHTML = record.ansi;
       template.content.querySelectorAll('a').forEach((link) => link.replaceWith(document.createTextNode(link.textContent)));
-      adaptAnsiToLightSurface(template.content);
+      adaptAnsiToDarkSurface(template.content);
       text.append(template.content);
     } else text.textContent = record.text;
     content.append(text);
