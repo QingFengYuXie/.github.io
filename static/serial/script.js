@@ -169,9 +169,6 @@ function updateControls() {
   $('serial-send').disabled = !connected || busy;
   $('serial-loop-send').disabled = !connected || busy;
   $('connection-state').querySelector('span').textContent = ({ disconnected: '未连接', connecting: '连接中', connected: '已连接', closing: '关闭中' })[state];
-  $('serial-status').textContent = controller?.port
-    ? `${portLabel(controller.port)} · ${connected ? '已打开' : state === 'connecting' ? '正在打开' : state === 'closing' ? '正在关闭' : '尚未打开'}`
-    : '尚未选择串口设备';
 }
 
 function handleState({ state }) {

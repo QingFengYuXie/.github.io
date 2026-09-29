@@ -10,7 +10,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/serial/styles.css?v=20260929-4" />
     <script src="/serial/vendor/ansi_up.min.js?v=5.1.0" defer></script>
-    <script type="module" src="/serial/script.js?v=20260929-3"></script>
+    <script type="module" src="/serial/script.js?v=20260929-4"></script>
   </head>
   <body class="serial-page" data-state="disconnected">
     <main class="workspace">
@@ -26,7 +26,6 @@
           <button class="select-port secondary-button" id="serial-select-port" type="button">选择串口</button>
           <button class="primary-button connect-button" id="serial-open-or-close" type="button" disabled><span>打开串口</span></button>
         </div>
-        <div class="message" id="serial-message" role="status" aria-live="polite" hidden></div>
         <form id="serial-options-form">
           <fieldset id="connection-fields">
             <legend class="sr-only">设备与连接参数</legend>
@@ -51,8 +50,8 @@
             <label class="field buffer-field"><span>缓冲区</span><span class="buffer-input"><input id="serial-buffer-size" type="text" inputmode="numeric" pattern="[0-9]+" maxlength="8" value="1024" required /><span class="field-unit">字节</span></span></label>
             <label class="field"><span>流控制</span><select id="serial-flow-control"><option value="none">None</option><option value="hardware">RTS / CTS</option></select></label>
           </fieldset>
-          <p id="serial-status" class="device-status" aria-live="polite">尚未选择串口设备</p>
         </form>
+        <div class="message" id="serial-message" role="status" aria-live="polite" hidden></div>
         <div class="settings-note"><span class="note-dot" aria-hidden="true"></span><p>参数自动保存，串口数据仅在本机处理。</p></div>
         <footer class="page-footer"><a href="https://github.com/itldg/web-serial-debug" target="_blank" rel="noopener noreferrer">基于 Web Serial Debug ↗</a></footer>
       </aside>
