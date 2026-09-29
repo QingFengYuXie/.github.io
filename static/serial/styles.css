@@ -35,7 +35,7 @@ button:disabled { cursor: not-allowed; }
 input:disabled { opacity: .5; cursor: not-allowed; }
 svg { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 h1, h2, h3, p { margin: 0; }
-.page-header { flex-shrink: 0; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.page-header { flex-shrink: 0; margin-bottom: 14px; }
 .page-heading { display: flex; align-items: center; gap: 8px; }
 .back-link { display: inline-flex; flex: 0 0 32px; align-items: center; justify-content: center; width: 32px; height: 32px; color: #526178; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; }
 .back-link:hover { color: var(--accent); border-color: #bfdbfe; background: #eff6ff; }
@@ -51,36 +51,33 @@ body[data-state="connecting"] .connection-state i, body[data-state="closing"] .c
 .message[data-tone="success"] { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
 .workspace { display: grid; height: 100%; min-height: 0; grid-template-columns: 260px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 14px; padding: 14px; }
 .glass-panel { border: 1px solid var(--border); border-radius: 14px; background: #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, .025), 0 8px 28px rgba(15, 23, 42, .035); }
-.settings-panel { display: flex; flex-direction: column; min-height: 0; padding: 18px 16px; overflow-y: auto; }
+.settings-panel { --field-height: 36px; display: flex; flex-direction: column; min-height: 0; padding: 18px 16px; overflow-y: auto; }
 h2 { font-size: 14px; font-weight: 600; }
 #serial-options-form { flex-shrink: 0; margin-top: 0; }
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.field { display: grid; grid-template-columns: 62px minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 12px; }
-.field > span { display: flex; flex-direction: column; gap: 2px; color: #475569; font-size: 12px; }
-.field input, .field select { width: 100%; height: 34px; }
-.field small { color: var(--muted); font-size: 10px; }
+.field { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: stretch; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.field > span:first-child { display: flex; align-items: center; padding: 0 10px; color: #475569; border-right: 1px solid var(--border); border-radius: 7px 0 0 7px; background: #f8fafc; font-size: 12px; white-space: nowrap; }
+.field input, .field select { display: block; width: 100%; height: var(--field-height); border: 0; border-radius: 0 7px 7px 0; }
+.field select { padding-right: 4px; }
+.field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px #dbeafe; }
+.field input:focus-visible, .field select:focus-visible { outline: none; }
 .field > .baud-picker { position: relative; display: block; min-width: 0; color: var(--text); color-scheme: light; }
 .baud-picker input { padding-right: 32px; font-variant-numeric: tabular-nums; }
-.baud-toggle { position: absolute; top: 1px; right: 1px; bottom: 1px; display: flex; align-items: center; justify-content: center; width: 29px; padding: 0; border: 0; border-radius: 0 7px 7px 0; color: #526178; background: #fff; }
+.baud-toggle { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; width: 29px; padding: 0; border: 0; border-radius: 0 7px 7px 0; color: #526178; background: #fff; }
 .baud-toggle:hover:not(:disabled) { color: var(--accent); background: #eff6ff; }
 .baud-toggle svg { width: 16px; height: 16px; }
 .baud-options { position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 20; display: block; max-height: 224px; padding: 4px; overflow-y: auto; color: var(--text); border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(15, 23, 42, .14); scrollbar-color: #cbd5e1 #fff; }
 .baud-options [role="option"] { display: block; padding: 5px 7px; border-radius: 5px; color: var(--text); background: #fff; font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; cursor: pointer; }
 .baud-options [role="option"]:hover, .baud-options [aria-selected="true"], .baud-options [data-active="true"] { color: #1d4ed8; background: #eff6ff; }
-.field > .buffer-input { display: flex; flex-direction: row; align-items: center; gap: 7px; min-width: 0; }
+.field > .buffer-input { display: flex; align-items: center; min-width: 0; }
 .buffer-input input { flex: 1; width: 0; }
-.buffer-input .field-unit { flex-shrink: 0; color: var(--muted); font-size: 11px; }
-.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.field-pair .field { grid-template-columns: auto minmax(0, 1fr); gap: 6px; }
-.field-pair .field > span { white-space: nowrap; }
-.field-divider { height: 1px; margin: 14px 0; background: var(--border); }
+.buffer-input .field-unit { flex-shrink: 0; padding-right: 10px; color: var(--muted); font-size: 11px; }
 .secondary-button, .primary-button, .quiet-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 7px 14px; color: var(--text); background: #f8fafc; transition: background .15s, border-color .15s; }
 .secondary-button:hover:not(:disabled), .quiet-button:hover:not(:disabled) { border-color: #cbd5e1; background: #f1f5f9; }
 .primary-button { border-color: var(--accent); color: #fff; background: var(--accent); box-shadow: 0 2px 4px rgba(37, 99, 235, .12); }
 .primary-button:hover:not(:disabled) { border-color: #1d4ed8; background: #1d4ed8; }
-.select-port, .connect-button { width: 100%; }
-.select-port { margin-top: 0; }
-.connect-button { margin-top: 4px; }
+.connection-actions { display: grid; flex-shrink: 0; grid-template-columns: 1fr 1.35fr; gap: 10px; margin-bottom: 12px; }
+.connection-actions button { width: 100%; min-width: 0; padding-right: 8px; padding-left: 8px; white-space: nowrap; }
 body[data-state="connected"] .connect-button { border-color: #fecaca; color: #b42318; background: #fff1f2; box-shadow: none; }
 body[data-state="connected"] .connect-button:hover:not(:disabled) { border-color: #fca5a5; background: #ffe4e6; }
 .device-status { min-height: 18px; margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
@@ -162,22 +159,19 @@ body[data-show-time="false"] .log-entry { grid-template-columns: 30px minmax(0, 
 }
 @media (min-width: 801px) and (max-height: 680px) {
   .workspace { gap: 12px; padding: 12px; }
-  .settings-panel { padding: 14px 16px; }
-  .page-header { margin-bottom: 12px; padding-bottom: 12px; }
-  .field { margin-bottom: 9px; }
-  .field input, .field select { height: 30px; }
-  .field-divider { margin: 11px 0; }
+  .settings-panel { --field-height: 32px; padding: 14px 16px; }
+  .page-header { margin-bottom: 12px; }
+  .field { margin-bottom: 8px; }
+  .connection-actions { margin-bottom: 10px; }
   .select-port, .connect-button { min-height: 32px; padding-top: 5px; padding-bottom: 5px; }
   .device-status { margin-top: 6px; }
   .settings-note { padding-top: 10px; }
 }
 @media (min-width: 801px) and (max-height: 540px) {
-  .settings-panel { padding: 12px 14px; }
-  .page-header { margin-bottom: 10px; padding-bottom: 6px; }
+  .settings-panel { --field-height: 28px; padding: 12px 14px; }
+  .page-header { margin-bottom: 10px; }
   .message { max-height: 48px; margin-bottom: 8px; }
   .field { margin-bottom: 6px; }
-  .field input, .field select { height: 28px; }
-  .field-divider { margin: 8px 0; }
   .settings-note { display: none; }
   .page-footer { margin-top: auto; padding-top: 4px; }
   .send-panel { padding-top: 8px; padding-bottom: 8px; }
@@ -190,13 +184,6 @@ body[data-show-time="false"] .log-entry { grid-template-columns: 30px minmax(0, 
   .settings-panel { padding: 16px; }
   .log-toolbar { flex-wrap: wrap; }
   .log-viewport { flex: 0 0 300px; }
-  #connection-fields { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 0 14px; }
-  .field { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .field > span { flex-direction: row; justify-content: space-between; }
-  .field-pair .field { grid-template-columns: minmax(0, 1fr); }
-  .select-port { margin-bottom: 12px; }
-  .field-divider { display: none; }
-  .field-pair { gap: 10px; }
   .settings-note { padding-top: 14px; }
 }
 @media (max-width: 480px) {

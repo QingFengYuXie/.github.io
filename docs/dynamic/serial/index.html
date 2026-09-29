@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#f5f7fb" />
     <title>串口调试 · 轻风雨斜 OS</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/serial/styles.css?v=20260929-3" />
+    <link rel="stylesheet" href="/serial/styles.css?v=20260929-4" />
     <script src="/serial/vendor/ansi_up.min.js?v=5.1.0" defer></script>
     <script type="module" src="/serial/script.js?v=20260929-3"></script>
   </head>
@@ -22,13 +22,15 @@
             <span class="connection-state" id="connection-state" role="status"><i aria-hidden="true"></i><span>未连接</span></span>
           </div>
         </header>
+        <div class="connection-actions" role="group" aria-label="串口连接操作">
+          <button class="select-port secondary-button" id="serial-select-port" type="button">选择串口</button>
+          <button class="primary-button connect-button" id="serial-open-or-close" type="button" disabled><span>打开串口</span></button>
+        </div>
         <div class="message" id="serial-message" role="status" aria-live="polite" hidden></div>
         <form id="serial-options-form">
           <fieldset id="connection-fields">
             <legend class="sr-only">设备与连接参数</legend>
-            <label class="field"><span>已授权设备</span><select id="serial-port-list"><option value="">暂无已授权设备</option></select></label>
-            <button class="select-port secondary-button" id="serial-select-port" type="button"><span aria-hidden="true">＋</span> 选择串口设备</button>
-            <div class="field-divider"></div>
+            <label class="field"><span>设备</span><select id="serial-port-list" aria-label="已授权串口设备"><option value="">暂无已授权设备</option></select></label>
             <label class="field"><span id="baud-label">波特率</span><span class="baud-picker">
               <input id="serial-baud" type="text" inputmode="numeric" pattern="[0-9]+" maxlength="10" value="115200" autocomplete="off" spellcheck="false" role="combobox" aria-labelledby="baud-label" aria-controls="baud-options" aria-expanded="false" aria-autocomplete="none" required />
               <button id="serial-baud-toggle" class="baud-toggle" type="button" tabindex="-1" title="常用波特率" aria-label="常用波特率" aria-haspopup="listbox" aria-controls="baud-options" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg></button>
@@ -43,15 +45,12 @@
                 <span id="baud-option-921600" role="option" data-value="921600" aria-selected="false">921600</span>
               </span>
             </span></label>
-            <div class="field-pair">
-              <label class="field"><span>数据位</span><select id="serial-data-bits"><option value="8">8</option><option value="7">7</option></select></label>
-              <label class="field"><span>停止位</span><select id="serial-stop-bits"><option value="1">1</option><option value="2">2</option></select></label>
-            </div>
-            <label class="field"><span>校验位</span><select id="serial-parity"><option value="none">无校验 · None</option><option value="even">偶校验 · Even</option><option value="odd">奇校验 · Odd</option></select></label>
+            <label class="field"><span>数据位</span><select id="serial-data-bits"><option value="8">8</option><option value="7">7</option></select></label>
+            <label class="field"><span>停止位</span><select id="serial-stop-bits"><option value="1">1</option><option value="2">2</option></select></label>
+            <label class="field"><span>校验位</span><select id="serial-parity"><option value="none">None</option><option value="even">Even</option><option value="odd">Odd</option></select></label>
             <label class="field buffer-field"><span>缓冲区</span><span class="buffer-input"><input id="serial-buffer-size" type="text" inputmode="numeric" pattern="[0-9]+" maxlength="8" value="1024" required /><span class="field-unit">字节</span></span></label>
-            <label class="field"><span>流控制</span><select id="serial-flow-control"><option value="none">无 · None</option><option value="hardware">硬件 · RTS / CTS</option></select></label>
+            <label class="field"><span>流控制</span><select id="serial-flow-control"><option value="none">None</option><option value="hardware">RTS / CTS</option></select></label>
           </fieldset>
-          <button class="primary-button connect-button" id="serial-open-or-close" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.4 5.6a9 9 0 1 0 11.2 0" /></svg><span>打开串口</span></button>
           <p id="serial-status" class="device-status" aria-live="polite">尚未选择串口设备</p>
         </form>
         <div class="settings-note"><span class="note-dot" aria-hidden="true"></span><p>参数自动保存，串口数据仅在本机处理。</p></div>
