@@ -8,29 +8,41 @@
     <meta name="theme-color" content="#f5f7fb" />
     <title>串口调试 · 轻风雨斜 OS</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/serial/styles.css?v=20260929-2" />
+    <link rel="stylesheet" href="/serial/styles.css?v=20260929-3" />
     <script src="/serial/vendor/ansi_up.min.js?v=5.1.0" defer></script>
-    <script type="module" src="/serial/script.js?v=20260929-2"></script>
+    <script type="module" src="/serial/script.js?v=20260929-3"></script>
   </head>
   <body class="serial-page" data-state="disconnected">
     <main class="workspace">
-      <aside class="settings-panel glass-panel" aria-labelledby="settings-heading">
+      <aside class="settings-panel glass-panel" aria-label="串口设置与系统提示">
         <header class="page-header">
           <div class="page-heading">
             <a class="back-link" id="serial-back" href="/" title="返回我的 OS" aria-label="返回我的 OS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h13" /></svg></a>
             <h1>串口调试</h1>
+            <span class="connection-state" id="connection-state" role="status"><i aria-hidden="true"></i><span>未连接</span></span>
           </div>
-          <span class="connection-state" id="connection-state" role="status"><i aria-hidden="true"></i><span>未连接</span></span>
         </header>
-        <div class="panel-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v5a6 6 0 0 1-12 0V8Zm6 11v3" /></svg><h2 id="settings-heading">串口设置</h2></div>
+        <div class="message" id="serial-message" role="status" aria-live="polite" hidden></div>
         <form id="serial-options-form">
           <fieldset id="connection-fields">
             <legend class="sr-only">设备与连接参数</legend>
             <label class="field"><span>已授权设备</span><select id="serial-port-list"><option value="">暂无已授权设备</option></select></label>
             <button class="select-port secondary-button" id="serial-select-port" type="button"><span aria-hidden="true">＋</span> 选择串口设备</button>
             <div class="field-divider"></div>
-            <label class="field"><span>波特率</span><input id="serial-baud" type="number" min="1" max="4294967295" step="1" value="115200" list="baud-list" required /></label>
-            <datalist id="baud-list"><option value="110"></option><option value="300"></option><option value="600"></option><option value="1200"></option><option value="2400"></option><option value="4800"></option><option value="7200"></option><option value="9600"></option><option value="14400"></option><option value="19200"></option><option value="28800"></option><option value="38400"></option><option value="56000"></option><option value="57600"></option><option value="76800"></option><option value="115200"></option><option value="230400"></option><option value="460800"></option><option value="921600"></option></datalist>
+            <label class="field"><span id="baud-label">波特率</span><span class="baud-picker">
+              <input id="serial-baud" type="text" inputmode="numeric" pattern="[0-9]+" maxlength="10" value="115200" autocomplete="off" spellcheck="false" role="combobox" aria-labelledby="baud-label" aria-controls="baud-options" aria-expanded="false" aria-autocomplete="none" required />
+              <button id="serial-baud-toggle" class="baud-toggle" type="button" tabindex="-1" title="常用波特率" aria-label="常用波特率" aria-haspopup="listbox" aria-controls="baud-options" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg></button>
+              <span id="baud-options" class="baud-options" role="listbox" aria-labelledby="baud-label" hidden>
+                <span id="baud-option-9600" role="option" data-value="9600" aria-selected="false">9600</span>
+                <span id="baud-option-19200" role="option" data-value="19200" aria-selected="false">19200</span>
+                <span id="baud-option-38400" role="option" data-value="38400" aria-selected="false">38400</span>
+                <span id="baud-option-57600" role="option" data-value="57600" aria-selected="false">57600</span>
+                <span id="baud-option-115200" role="option" data-value="115200" aria-selected="true">115200</span>
+                <span id="baud-option-230400" role="option" data-value="230400" aria-selected="false">230400</span>
+                <span id="baud-option-460800" role="option" data-value="460800" aria-selected="false">460800</span>
+                <span id="baud-option-921600" role="option" data-value="921600" aria-selected="false">921600</span>
+              </span>
+            </span></label>
             <div class="field-pair">
               <label class="field"><span>数据位</span><select id="serial-data-bits"><option value="8">8</option><option value="7">7</option></select></label>
               <label class="field"><span>停止位</span><select id="serial-stop-bits"><option value="1">1</option><option value="2">2</option></select></label>
@@ -55,7 +67,6 @@
           <div class="display-checks"><label class="check"><input id="serial-show-time" type="checkbox" checked /><span>时间戳</span></label><label class="check"><input id="serial-auto-scroll" type="checkbox" checked /><span>自动滚动</span></label></div>
           <div class="log-actions"><button id="serial-copy" class="quiet-button" type="button" disabled>复制</button><button id="serial-save" class="quiet-button" type="button" disabled>下载日志</button><span aria-hidden="true"></span><button id="serial-clear" class="quiet-button" type="button" disabled>清空</button></div>
         </header>
-        <div class="message" id="serial-message" role="status" aria-live="polite" hidden></div>
         <div class="log-viewport" id="log-viewport" tabindex="0" aria-label="串口收发日志">
           <div class="empty-logs" id="empty-logs"><span class="empty-terminal" aria-hidden="true">&gt;_</span><h3>等待串口数据</h3><p>选择设备并打开串口后，<br />收发数据会显示在这里。</p><span class="empty-detail">TEXT / HEX / ANSI</span></div>
           <div id="serial-logs" role="log" aria-live="off" aria-label="数据记录"></div>

@@ -162,6 +162,7 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
       await page.goto(`${origin}/serial/`);
       await page.waitForSelector('#serial-send-content');
       await callback(page, context);
+      assert.equal(await page.locator('#serial-logs .log-entry[data-direction="system"]').count(), 0, 'System notices belong in the sidebar, outside the RX/TX terminal');
       assert.deepEqual(errors, [], 'The serial page must not produce uncaught errors');
     } finally {
       await context.close();
@@ -243,6 +244,57 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
         await page.click('#serial-open-or-close');
         await page.waitForFunction(() => document.getElementById('serial-send').disabled && window.__serial.port.closeCalls === 1);
         assert.equal(await page.evaluate(() => window.__serial.port.readable), null);
+      });
+    });
+
+    await t.test('white baud combobox supports common rates, custom entry, persistence, keyboard selection and dismissal', async () => {
+      await withPage({}, async (page) => {
+        const commonRates = ['9600', '19200', '38400', '57600', '115200', '230400', '460800', '921600'];
+        const input = page.locator('#serial-baud');
+        const toggle = page.locator('#serial-baud-toggle');
+        const popup = page.locator('#baud-options');
+        await page.emulateMedia({ colorScheme: 'dark' });
+        assert.equal(await input.getAttribute('type'), 'text');
+        assert.equal(await input.getAttribute('inputmode'), 'numeric');
+        assert.equal(await input.getAttribute('list'), null);
+        assert.equal(await page.locator('#baud-list').count(), 0);
+        await toggle.click();
+        await popup.waitFor({ state: 'visible' });
+        assert.equal(await popup.getAttribute('role'), 'listbox');
+        assert.equal(await popup.evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(255, 255, 255)');
+        assert.deepEqual((await popup.getByRole('option').allTextContents()).map((text) => text.trim()), commonRates);
+        await input.press('Escape');
+        await popup.waitFor({ state: 'hidden' });
+
+        await toggle.click();
+        await popup.waitFor({ state: 'visible' });
+        await page.locator('#serial-send-content').click();
+        await popup.waitFor({ state: 'hidden' });
+        await toggle.click();
+        await popup.getByRole('option', { name: '57600', exact: true }).click();
+        assert.equal(await input.inputValue(), '57600');
+        await popup.waitFor({ state: 'hidden' });
+        assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).serialOptions.baudRate, settingsKey), 57600);
+        await page.reload();
+        assert.equal(await input.inputValue(), '57600');
+        assert.equal(await popup.isVisible(), false);
+        await openPort(page);
+        assert.equal(await page.evaluate(() => window.__serial.port.openCalls[0].baudRate), 57600);
+
+        await setField(page, '#serial-baud', '250000');
+        await page.waitForFunction(() => window.__serial.port.openCalls.length === 2 && !document.getElementById('serial-send').disabled);
+        assert.equal(await page.evaluate(() => window.__serial.port.openCalls[1].baudRate), 250000);
+        assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).serialOptions.baudRate, settingsKey), 250000);
+        await page.click('#serial-open-or-close');
+        await page.waitForFunction(() => document.getElementById('serial-send').disabled);
+        await input.press('ArrowDown');
+        await popup.waitFor({ state: 'visible' });
+        await input.press('ArrowDown');
+        await input.press('Enter');
+        await popup.waitFor({ state: 'hidden' });
+        const selectedRate = await input.inputValue();
+        assert.ok(commonRates.includes(selectedRate), `Keyboard selection produced ${selectedRate}`);
+        assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).serialOptions.baudRate, settingsKey), Number(selectedRate));
       });
     });
 
@@ -463,6 +515,7 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
         assert.equal((await back.textContent()).trim(), '');
         assert.equal(await back.getAttribute('title'), '返回我的 OS');
         assert.equal(await back.getAttribute('aria-label'), '返回我的 OS');
+        assert.equal(await page.locator('#settings-heading').count(), 0);
         assert.equal(await page.locator('label:has(#serial-baud) small').count(), 0);
         assert.equal(await page.locator('#serial-buffer-size').getAttribute('type'), 'text');
         assert.equal(await page.locator('#serial-buffer-size').getAttribute('inputmode'), 'numeric');
@@ -505,6 +558,8 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
               back: bounds(document.getElementById('serial-back')),
               title: bounds(document.querySelector('.page-header h1')),
               state: bounds(document.getElementById('connection-state')),
+              message: bounds(document.getElementById('serial-message')),
+              messageInSidebar: sidebar.contains(document.getElementById('serial-message')) && !terminal.contains(document.getElementById('serial-message')),
               buffer: bounds(buffer),
               bufferUnit: bufferUnit ? bounds(bufferUnit) : null,
               footer: bounds(sidebar.querySelector('.page-footer')),
@@ -523,10 +578,16 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
           assert.ok(layout.documentHeight <= layout.viewport.height + 1, `${label}: document overflows vertically (${layout.documentHeight})`);
           assert.equal(layout.documentTop, 0, `${label}: document unexpectedly scrolled`);
           assert.equal(layout.headingInSidebar, true, `${label}: page heading, return link and status belong inside the sidebar`);
+          assert.equal(layout.messageInSidebar, true, `${label}: connection notices belong in the sidebar`);
           assert.ok(layout.back.right <= layout.title.left + 1, `${label}: return icon belongs to the left of the title`);
           const middle = (box) => (box.top + box.bottom) / 2;
           assert.ok(Math.abs(middle(layout.back) - middle(layout.title)) <= 2, `${label}: return icon and title must share a row`);
-          assert.ok(layout.state.top >= Math.max(layout.back.bottom, layout.title.bottom) - 1, `${label}: state badge belongs on a separate row`);
+          assert.ok(layout.state.left >= layout.title.right - 1, `${label}: state badge belongs to the right of the title`);
+          assert.ok(Math.abs(middle(layout.state) - middle(layout.title)) <= 2, `${label}: state badge and title must share a row`);
+          if (state === 'with notice') {
+            assert.ok(layout.message.top >= Math.max(layout.back.bottom, layout.title.bottom, layout.state.bottom) - 1, `${label}: connection notice belongs beneath the title row`);
+            assert.ok(layout.message.left >= layout.sidebar.left && layout.message.right <= layout.sidebar.right + 1, `${label}: connection notice is outside the sidebar`);
+          }
           assert.ok(layout.bufferUnit, `${label}: buffer unit must be visible`);
           assert.ok(layout.bufferUnit.left >= layout.buffer.right - 1, `${label}: byte unit belongs to the right of the buffer input`);
           const toolbarCenters = layout.toolbar.map(middle);
@@ -555,15 +616,19 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
             const panel = box.id.startsWith('serial-send') ? layout.terminal : layout.sidebar;
             assert.ok(box.top >= panel.top && box.bottom <= panel.bottom + 1, `${label}: ${box.id} is clipped by its panel`);
           }
+          return layout;
         }
         for (const viewport of viewports) {
           await page.setViewportSize(viewport);
-          await assertCompactLayout('initial');
+          const initial = await assertCompactLayout('initial');
           await page.evaluate(() => { window.__serial.cancelRequest = true; });
           await page.click('#serial-select-port');
           await page.waitForFunction(() => !document.getElementById('serial-message').hidden);
           assert.match(await page.locator('#serial-message').innerText(), /取消/);
-          await assertCompactLayout('with notice');
+          const notified = await assertCompactLayout('with notice');
+          assert.deepEqual(notified.terminal, initial.terminal, 'Sidebar notices must not change terminal geometry');
+          assert.deepEqual(notified.logViewport, initial.logViewport, 'Sidebar notices must not reduce log space');
+          assert.equal(await page.locator('#serial-logs .log-entry').count(), 0, 'Selecting or cancelling a device must not add terminal records');
         }
         await page.emulateMedia({ colorScheme: 'dark' });
         assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme), 'light');

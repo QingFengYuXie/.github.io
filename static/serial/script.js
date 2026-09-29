@@ -6,6 +6,7 @@
  */
 import { SerialController, DEFAULT_SERIAL_OPTIONS, validateSerialOptions } from './serial-controller.mjs?v=20260928-1';
 import { createSerialDecoder, encodeSerialText, normalizeSerialEncoding } from './serial-encoding.mjs?v=20260929-1';
+import { createBaudPicker } from './baud-picker.mjs?v=20260929-1';
 
 const $ = (id) => document.getElementById(id);
 const settingsKey = 'lightwind-serial-settings-v1';
@@ -36,6 +37,8 @@ let availablePorts = [];
 let selecting = false;
 let leaving = false;
 let hadConnection = false;
+let connectionFailed = false;
+let baudPicker;
 let loopTimer;
 let loopToken = 0;
 let receiveTimer;
@@ -72,7 +75,11 @@ function reportError(error) {
   };
   const text = descriptions[error?.name] || error?.message || String(error);
   showMessage(text, 'error');
-  addSystemLog(text);
+}
+
+function reportConnectionError(error) {
+  connectionFailed = true;
+  reportError(error);
 }
 
 function validInteger(value, fallback, minimum, maximum) {
@@ -154,6 +161,7 @@ function updateControls() {
   const connected = state === 'connected';
   document.body.dataset.state = state;
   $('connection-fields').disabled = !supported || busy;
+  baudPicker?.syncDisabled();
   $('serial-select-port').disabled = !supported || busy;
   $('serial-port-list').disabled = !supported || busy || !availablePorts.length;
   $('serial-open-or-close').disabled = !supported || busy || !controller.port;
@@ -168,16 +176,16 @@ function updateControls() {
 
 function handleState({ state }) {
   if (state !== 'connected') stopLoop();
+  if (state === 'connecting') connectionFailed = false;
   if (state === 'connected') {
     receiveDecoder = createSerialDecoder(toolOptions.encoding);
     ansiParsers = {};
     hadConnection = true;
-    showMessage('');
-    addSystemLog(`已打开 ${portLabel(controller.port)} · ${controller.options.baudRate} baud`);
+    showMessage(`已打开 ${portLabel(controller.port)} · ${controller.options.baudRate} baud`, 'success');
   } else if (state === 'disconnected' && hadConnection) {
     finishReceive();
     hadConnection = false;
-    addSystemLog('串口已关闭或断开。');
+    if (!connectionFailed) showMessage('串口已关闭或断开。');
   }
   renderPorts();
   updateControls();
@@ -240,7 +248,7 @@ function ansiHTML(text, direction) {
 
 function addRecord(record) {
   record.time = Date.now();
-  if (record.direction !== 'system') record.ansi = ansiHTML(record.text, record.direction);
+  record.ansi = ansiHTML(record.text, record.direction);
   record.cost = (record.bytes?.byteLength || 0) + record.text.length * 2 + (record.ansi?.length || 0) * 2 + 128;
   records.push(record);
   logMemory += record.cost;
@@ -252,8 +260,6 @@ function addRecord(record) {
   }
   scheduleRender();
 }
-
-function addSystemLog(text) { addRecord({ direction: 'system', text }); }
 
 function adaptAnsiToDarkSurface(fragment) {
   // Lift dark ANSI foregrounds toward white while retaining their hue. Explicit
@@ -285,7 +291,7 @@ function renderRecord(record) {
   time.textContent = formatTime(record.time);
   const direction = document.createElement('span');
   direction.className = 'log-direction';
-  direction.textContent = ({ rx: 'RX', tx: 'TX', system: 'SYS' })[record.direction];
+  direction.textContent = ({ rx: 'RX', tx: 'TX' })[record.direction];
   const content = document.createElement('div');
   content.className = 'log-content';
   const mode = toolOptions.logType;
@@ -295,7 +301,7 @@ function renderRecord(record) {
     hex.textContent = hexText(record.bytes);
     content.append(hex);
   }
-  if (record.direction === 'system' || mode !== 'hex') {
+  if (mode !== 'hex') {
     const text = document.createElement('div');
     text.className = 'log-text';
     if (mode === 'ansi' && record.ansi !== null && record.ansi !== undefined) {
@@ -428,8 +434,7 @@ function startLoop() {
 
 function plainLogText() {
   return records.map((record) => {
-    const prefix = `${toolOptions.showTime ? `[${formatTime(record.time)}] ` : ''}${({ rx: 'RX', tx: 'TX', system: 'SYS' })[record.direction]} `;
-    if (record.direction === 'system') return prefix + record.text;
+    const prefix = `${toolOptions.showTime ? `[${formatTime(record.time)}] ` : ''}${({ rx: 'RX', tx: 'TX' })[record.direction]} `;
     if (toolOptions.logType === 'hex') return prefix + hexText(record.bytes);
     if (toolOptions.logType === 'hex&text') return prefix + hexText(record.bytes) + '\n' + record.text;
     if (toolOptions.logType === 'ansi' && record.ansi != null) {
@@ -457,8 +462,9 @@ function clearLogs() {
 
 loadSettings();
 populateSettings();
+baudPicker = createBaudPicker({ input: $('serial-baud'), toggle: $('serial-baud-toggle'), listbox: $('baud-options') });
 if (window.isSecureContext && navigator.serial) {
-  controller = new SerialController({ serial: navigator.serial, onState: handleState, onData: receive, onError: reportError });
+  controller = new SerialController({ serial: navigator.serial, onState: handleState, onData: receive, onError: reportConnectionError });
   void controller.updateOptions(serialOptions).catch(reportError);
   void refreshPorts({ selectFirst: true });
   navigator.serial.addEventListener('connect', refreshPorts);
@@ -477,14 +483,20 @@ $('serial-select-port').addEventListener('click', () => deviceAction(async () =>
   if (leaving) return;
   await controller.selectPort(port);
   if (!availablePorts.includes(port)) availablePorts.push(port);
-  showMessage('已选择串口设备。');
+  if (controller.state !== 'connected') showMessage('已选择串口设备。');
 }));
 $('serial-port-list').addEventListener('change', () => deviceAction(async () => {
   const port = availablePorts[Number($('serial-port-list').value)];
-  if (port) await controller.selectPort(port);
+  if (port) {
+    await controller.selectPort(port);
+    if (controller.state !== 'connected') showMessage('已选择串口设备。');
+  }
 }));
 $('serial-open-or-close').addEventListener('click', () => deviceAction(async () => {
-  if (controller.state === 'connected') await controller.close();
+  if (controller.state === 'connected') {
+    await controller.close();
+    if (!connectionFailed) showMessage('串口已关闭。', 'success');
+  }
   else {
     serialOptions = readSerialOptions();
     saveSettings();
