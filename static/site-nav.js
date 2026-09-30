@@ -411,6 +411,8 @@
       const serialLink = document.createElement('a');
       serialLink.className = 'site-serial-entry';
       serialLink.href = '/serial/';
+      serialLink.target = '_blank';
+      serialLink.rel = 'noopener noreferrer';
       serialLink.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m6 0h4"/></svg><span>串口终端</span>';
       tools.append(serialLink, player);
       document.body.append(tools);

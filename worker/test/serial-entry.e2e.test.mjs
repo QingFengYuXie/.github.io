@@ -66,7 +66,8 @@ test('OS serial entry stays beside music on desktop and hidden on mobile', { ski
     await page.waitForTimeout(700);
     const entry = page.locator('.site-serial-entry');
     assert.equal(await entry.getAttribute('href'), '/serial/');
-    assert.equal(await entry.getAttribute('target'), null);
+    assert.equal(await entry.getAttribute('target'), '_blank');
+    assert.match(await entry.getAttribute('rel'), /noopener/);
     assert.equal(await entry.textContent(), '串口终端');
     assert.equal(await entry.locator('svg[aria-hidden="true"]').count(), 1);
     const snapshotDirectory = path.join(workerRoot, '.wrangler/serial-entry');
@@ -106,13 +107,13 @@ test('OS serial entry stays beside music on desktop and hidden on mobile', { ski
       if (width === 1440 || width === 801) await page.screenshot({ path: path.join(snapshotDirectory, `os-${width}.png`) });
     }
 
-    const responsePromise = page.waitForResponse((response) => response.url() === `${origin}/serial/`);
+    const popupPromise = context.waitForEvent('page');
     await entry.click();
-    assert.equal((await responsePromise).status(), 200);
-    await page.waitForURL(`${origin}/serial/`);
-    assert.equal(context.pages().length, 1, 'entry navigates in the current tab');
-    assert.match(await page.title(), /串口调试/);
-    assert.equal((await page.reload()).status(), 200, 'direct serial page reload works');
+    const serialPage = await popupPromise;
+    await serialPage.waitForURL(`${origin}/serial/`);
+    assert.equal(context.pages().length, 2, 'entry opens a new tab');
+    assert.match(await serialPage.title(), /串口调试/);
+    assert.equal((await serialPage.reload()).status(), 200, 'direct serial page reload works');
 
     for (const route of ['/dynamic/', '/about.html']) {
       await page.goto(`${origin}${route}`);
