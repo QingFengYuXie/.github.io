@@ -265,7 +265,7 @@ function adaptAnsiToDarkSurface(fragment) {
     const channel = value / 255;
     return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
   }).reduce((total, channel, index) => total + channel * [.2126, .7152, .0722][index], 0);
-  const surfaceLuminance = luminance([16, 23, 34]); // .log-viewport: #101722
+  const surfaceLuminance = luminance([0, 0, 0]); // .log-viewport: #000
   for (const span of fragment.querySelectorAll('span[style]')) {
     if (!span.style.color || span.style.backgroundColor) continue;
     const channels = span.style.color.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);

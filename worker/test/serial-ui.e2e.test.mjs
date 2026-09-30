@@ -633,7 +633,7 @@ test('Edge serial terminal UI and simulated serial I/O', { skip: !canRunEdge, ti
         await page.emulateMedia({ colorScheme: 'dark' });
         assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme), 'light');
         assert.equal(await page.locator('#log-viewport').isVisible(), true);
-        assert.equal(await page.locator('#log-viewport').evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(16, 23, 34)');
+        assert.equal(await page.locator('#log-viewport').evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(0, 0, 0)');
         await page.evaluate(() => { window.__serial.cancelRequest = false; });
         await openPort(page);
         await page.selectOption('#serial-log-type', 'text');
